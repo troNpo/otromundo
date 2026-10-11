@@ -1,0 +1,45 @@
+{
+  "Cycling_Road": {
+    "nombre_es": "Ciclismo de Carretera",
+    "subcategorias": {
+      "Route Essentials": {
+        "nombre_es": "Puntos de interés en ruta",
+        "elementos": [
+          { "categoria": "Drinking water", "nombre_es": "Fuentes de agua potable", "tag": "amenity=drinking_water" },
+          { "categoria": "Water Wells", "nombre_es": "Pozos de agua", "tag": "man_made=water_well" },
+          { "categoria": "Spring", "nombre_es": "Manantiales y fuentes naturales", "tag": "natural=spring" },
+          { "categoria": "BicycleTube Vending", "nombre_es": "Máquinas de cámaras de aire", "tag": "vending=bicycle_tube" },
+          { "categoria": "Cycle Self Repair", "nombre_es": "Estaciones de reparación autoservicio", "tag": "amenity=bicycle_repair_station" },
+          { "categoria": "Bicycle Shop", "nombre_es": "Tiendas de bicicletas", "tag": "shop=bicycle" }
+        ]
+      },
+      "Orography and Navigation": {
+        "nombre_es": "Orografía y Hitos Geográficos",
+        "elementos": [
+          { "categoria": "Mountain pass", "nombre_es": "Puertos de montaña", "tag": "mountain_pass=yes" },
+          { "categoria": "Peak", "nombre_es": "Cimas y picos", "tag": "natural=peak" },
+          { "categoria": "Viewpoints", "nombre_es": "Miradores", "tag": "tourism=viewpoint" },
+          { "categoria": "Survey points", "nombre_es": "Vértices geodésicos", "tag": "man_made=survey_point" }
+        ]
+      },
+      "Food and Cafes": {
+        "nombre_es": "Avituallamiento y Hostelería",
+        "elementos": [
+          { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" },
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" }
+        ]
+      },
+      "Safety and Logistics": {
+        "nombre_es": "Seguridad y Logística",
+        "elementos": [
+          { "categoria": "Shelter", "nombre_es": "Refugios", "tag": "amenity=shelter" },
+          { "categoria": "Toilets", "nombre_es": "Aseos públicos", "tag": "amenity=toilets" },
+          { "categoria": "Cycle Parking", "nombre_es": "Aparcabicicletas", "tag": "amenity=bicycle_parking" },
+          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
+        ]
+      }
+    }
+  }
+}

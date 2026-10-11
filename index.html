@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OtroMundo</title>
+    
+    <!-- MapLibre GL CSS -->
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- BARRA SUPERIOR DE ACCIONES -->
+    <header class="top-bar">
+        <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
+            <img src="./ui-icons/fi-rr-global-research.svg" alt="Búsqueda PDI" class="icon-inline">
+            <div class="header-title"> Busqueda tronPOI's en linea</div>
+        </div>
+        <div class="header-actions">
+            <button id="btn-help" title="Ayuda"><img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda"></button>
+            <button id="btn-clear" title="Limpiar"><img src="./ui-icons/fi-rr-cross-small.svg" alt="Limpiar"></button>
+            <button id="btn-search" title="Buscar"><img src="./ui-icons/fi-rr-check.svg" alt="Buscar"></button>
+        </div>
+    </header>
+
+    <!-- SECCIÓN DEL MAPA ACORDEÓN -->
+    <div class="map-accordion-section">
+        <button id="btn-toggle-map" class="accordion-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="./ui-icons/fi-rr-map.svg" alt="Mapa" class="icon-inline"> 
+                <span>Vista previa del área</span>
+            </div>
+            <span class="accordion-arrow"></span>
+        </button>
+        <div id="map-container-collapse" class="accordion-content" style="display: none;">
+            <div id="mini-map"></div>
+        </div>
+    </div>
+
+    <!-- CONTROL DE RADIO Y SUPERFICIE -->
+    <div class="radius-control-panel">
+        <label>Radio: <span id="radius-value">5</span> km</label>
+        <input type="range" id="search-radius" min="1" max="15" value="5">
+        <div id="info-area">Superficie del área: 78.5 km²</div>
+    </div>
+
+    <!-- BARRA DE PERFILES (PESTAÑAS CON ICONOS REALES) -->
+    <div class="profile-tabs-bar">
+        <button class="profile-tab active" data-profile="hiking" title="Senderismo">
+            <img src="./ui-icons/fi-rr-hiking.svg" alt="Senderismo">
+            <span>Senderismo</span>
+        </button>
+        <button class="profile-tab" data-profile="ciclo" title="Ciclismo de Carretera">
+            <img src="./ui-icons/fi-rr-biking.svg" alt="Carretera">
+            <span>Carretera</span>
+        </button>
+        <button class="profile-tab" data-profile="mtb" title="Ciclismo de Montaña">
+            <img src="./ui-icons/fi-rr-biking-mountain.svg" alt="MTB">
+            <span>MTB</span>
+        </button>
+    </div>
+
+    <!-- CABECERA DE CATEGORÍAS -->
+    <div class="categories-header-bar">
+        <div class="categories-title-group">
+            <span>Categorías</span>
+            <button id="btn-edit-mode" title="Editar visibilidad y añadir"><img src="./ui-icons/fi-rr-pencil.svg" alt="Editar"></button>
+        </div>
+        
+        <div class="edit-actions-group" style="display: none;">
+            <button id="btn-add-custom-cat" title="Añadir desde JSON maestro"><img src="./ui-icons/fi-rr-square-dashed-circle-plus.svg" alt="Añadir categoría"></button>
+            <button id="btn-validate-edit" title="Validar"><img src="./ui-icons/fi-rr-check.svg" alt="Validar"></button>
+            <button id="btn-restore-edit" title="Restaurar por defecto"><img src="./ui-icons/fi-rr-rotate-reverse.svg" alt="Restaurar"></button>
+        </div>
+
+        <div class="expand-group">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-expand-all">
+                <span class="slider-switch"></span>
+            </label>
+            <span>Expandir</span>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DEL ÁRBOL DE CATEGORÍAS -->
+    <main id="category-container">
+        <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
+    </main>
+
+    <!-- PANEL DE RESULTADOS -->
+    <div id="results-panel" class="app-panel" style="display: none;">
+        <header class="app-header red-bar">
+            <button id="btn-back" class="icon-btn" title="Volver">
+                <img src="./ui-icons/fi-rr-left.svg" alt="Back">
+            </button>
+            <div class="header-title-group">
+                <button id="btn-results-list" class="icon-btn badge-container">
+                    <img src="./ui-icons/fi-rr-list.svg" alt="Resultados">
+                    <span id="results-badge" class="badge">0</span>
+                </button>
+                <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
+                    <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
+                </button>
+                <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
+                    <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
+                </button>
+                <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
+                    <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
+                </button>
+            </div>
+        </header>
+
+        <div id="quick-search-container" class="quick-search-bar" style="display: none;">
+            <input type="text" id="quick-search-input" placeholder="Filtrar por nombre...">
+        </div>
+
+        <div class="categories-nav-wrapper">
+            <div class="scroll-indicator left"></div>
+            <div id="categories-chips-container" class="categories-chips-scroll"></div>
+            <div class="scroll-indicator right"></div>
+        </div>
+
+        <div id="nodes-container" class="nodes-vertical-scroll"></div>
+    </div>
+
+    <!-- Scripts modulares -->
+    <script src="profile-loader.js"></script>
+    <script src="overpass-client.js⁠"></script>
+    <script src="app.js"></script>
+</body>
+</html>

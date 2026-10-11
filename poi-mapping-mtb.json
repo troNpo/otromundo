@@ -1,0 +1,58 @@
+{
+  "Cycling_MTB": {
+    "nombre_es": "Ciclismo de Montaña (MTB)",
+    "subcategorias": {
+      "Route Essentials and Water": {
+        "nombre_es": "Puntos de agua y asistencia en ruta",
+        "elementos": [
+          { "categoria": "Drinking water", "nombre_es": "Fuentes de agua potable", "tag": "amenity=drinking_water" },
+          { "categoria": "Springs", "nombre_es": "Manantiales y fuentes naturales", "tag": "natural=spring" },
+          { "categoria": "Water Wells", "nombre_es": "Pozos de agua", "tag": "man_made=water_well" },
+          { "categoria": "WateringPlace", "nombre_es": "Abrevaderos", "tag": "amenity=watering_place" },
+          { "categoria": "Water points", "nombre_es": "Puntos de agua en cauces", "tag": "waterway=water_point" },
+          { "categoria": "Cycle Self Repair", "nombre_es": "Estaciones de reparación autoservicio", "tag": "amenity=bicycle_repair_station" },
+          { "categoria": "Bicycle Shop", "nombre_es": "Tiendas de bicicletas", "tag": "shop=bicycle" }
+        ]
+      },
+      "Orography and Terrain": {
+        "nombre_es": "Orografía y Hitos de Montaña",
+        "elementos": [
+          { "categoria": "Peaks", "nombre_es": "Cimas y picos", "tag": "natural=peak" },
+          { "categoria": "Mountain pass", "nombre_es": "Puertos de montaña y collados", "tag": "mountain_pass=yes" },
+          { "categoria": "Viewpoints", "nombre_es": "Miradores", "tag": "tourism=viewpoint" },
+          { "categoria": "Survey points", "nombre_es": "Vértices geodésicos", "tag": "man_made=survey_point" },
+          { "categoria": "Outcrops", "nombre_es": "Afloramientos rocosos", "tag": "geological=outcrop" }
+        ]
+      },
+      "Food and Cafes": {
+        "nombre_es": "Avituallamiento y Hostelería",
+        "elementos": [
+          { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" },
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" }
+        ]
+      },
+      "Shelter and Safety": {
+        "nombre_es": "Refugios y Seguridad",
+        "elementos": [
+          { "categoria": "Alpine Huts", "nombre_es": "Refugios de montaña", "tag": "tourism=alpine_hut" },
+          { "categoria": "Shelter", "nombre_es": "Refugios y casetas", "tag": "amenity=shelter" },
+          { "categoria": "Hunting stands", "nombre_es": "Puestos de caza", "tag": "amenity=hunting_stand" },
+          { "categoria": "Emergency phones", "nombre_es": "Teléfonos de emergencia", "tag": "emergency=phone" },
+          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
+        ]
+      },
+      "Environment and Infrastructure": {
+        "nombre_es": "Entorno e Infraestructura",
+        "elementos": [
+          { "categoria": "Nature reserves", "nombre_es": "Reservas naturales", "tag": "leisure=nature_reserve" },
+          { "categoria": "Watermills", "nombre_es": "Molinos de agua", "tag": "man_made=watermill" },
+          { "categoria": "Water towers", "nombre_es": "Depósitos y torres de agua", "tag": "man_made=water_tower" },
+          { "categoria": "Picnic sites", "nombre_es": "Áreas recreativas y merenderos", "tag": "tourism=picnic_site" },
+          { "categoria": "Information", "nombre_es": "Paneles informativos", "tag": "tourism=information" }
+        ]
+      }
+    }
+  }
+}

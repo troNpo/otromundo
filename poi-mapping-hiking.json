@@ -1,0 +1,55 @@
+{
+  "Hiking": {
+    "nombre_es": "Senderismo y Excursionismo",
+    "subcategorias": {
+      "Mountain Infrastructure and Shelters": {
+        "nombre_es": "Refugios e Infraestructura de Montaña",
+        "elementos": [
+          { "categoria": "Alpine Huts", "nombre_es": "Refugios de montaña", "tag": "tourism=alpine_hut" },
+          { "categoria": "Wilderness Huts", "nombre_es": "Refugios silvestres", "tag": "tourism=wilderness_hut" },
+          { "categoria": "Shelter", "nombre_es": "Refugios y casetas", "tag": "amenity=shelter" },
+          { "categoria": "Observation Towers", "nombre_es": "Torres de observación", "tag": "man_made=tower" },
+          { "categoria": "Communication Towers", "nombre_es": "Torres de comunicación", "tag": "man_made=mast" }
+        ]
+      },
+      "Water and Hydration": {
+        "nombre_es": "Agua e Hidratación",
+        "elementos": [
+          { "categoria": "Drinking water", "nombre_es": "Fuentes de agua potable", "tag": "amenity=drinking_water" },
+          { "categoria": "Springs", "nombre_es": "Manantiales y fuentes", "tag": "natural=spring" },
+          { "categoria": "Water Wells", "nombre_es": "Pozos de agua", "tag": "man_made=water_well" },
+          { "categoria": "WateringPlace", "nombre_es": "Abrevaderos", "tag": "amenity=watering_place" }
+        ]
+      },
+      "Peaks and Viewpoints": {
+        "nombre_es": "Cumbres, Vistas y Orografía",
+        "elementos": [
+          { "categoria": "Peaks", "nombre_es": "Cimas y picos", "tag": "natural=peak" },
+          { "categoria": "Viewpoints", "nombre_es": "Miradores", "tag": "tourism=viewpoint" },
+          { "categoria": "Volcanoes", "nombre_es": "Volcanes", "tag": "natural=volcano" }
+        ]
+      },
+      "Food and Supplies": {
+        "nombre_es": "Alimentación y Avituallamiento",
+        "elementos": [
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
+          { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" },
+          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
+        ]
+      },
+      "Rest and Information": {
+        "nombre_es": "Descanso, Entorno e Información",
+        "elementos": [
+          { "categoria": "Benches", "nombre_es": "Bancos de descanso", "tag": "amenity=bench" },
+          { "categoria": "Picnic sites", "nombre_es": "Áreas de picnic y merenderos", "tag": "tourism=picnic_site" },
+          { "categoria": "Information", "nombre_es": "Paneles informativos y cartelería", "tag": "tourism=information" },
+          { "categoria": "Nature reserves", "nombre_es": "Reservas naturales", "tag": "leisure=nature_reserve" },
+          { "categoria": "Hunting Stand", "nombre_es": "Puestos de caza", "tag": "amenity=hunting_stand" },
+          { "categoria": "Toilets", "nombre_es": "Aseos públicos", "tag": "amenity=toilets" }
+        ]
+      }
+    }
+  }
+}
