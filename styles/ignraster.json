@@ -1,0 +1,39 @@
+{
+  "version": 8,
+  "name": "IGN Raster",
+  "metadata": {"maputnik:renderer": "mbgljs"},
+  "terrain": {
+    "source": "ign-dem"
+  },
+  "sources": {
+    "hht5a76qo": {
+      "type": "raster",
+      "scheme": "tms",
+      "tiles": [
+        "https://tms-mapa-raster.ign.es/1.0.0/mapa-raster/{z}/{x}/{y}.jpeg"
+      ],
+      "minzoom": 0,
+      "maxzoom": 19
+    },
+    "ign-dem": {
+      "type": "raster-dem",
+      "tiles": [
+        "https://xyz-mdt.idee.es/1.0.0/raster-dem/{z}/{x}/{y}.png"
+      ],
+      "encoding": "mapbox",
+      "tileSize": 512,
+      "minzoom": 5,
+      "maxzoom": 15
+    }
+  },
+  "sprite": "",
+  "glyphs": "https://orangemug.github.io/font-glyphs/glyphs/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "layer-ign-raster",
+      "type": "raster",
+      "source": "hht5a76qo"
+    }
+  ],
+  "id": "ignraster-style"
+}

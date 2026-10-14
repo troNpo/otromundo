@@ -1,0 +1,51 @@
+{
+  "version": 8,
+  "name": "EsriSat otromundo",
+  "attribution": "Powered by Esri",
+
+  "terrain": {
+    "source": "terrarium-dem"
+  },
+
+  "sources": {
+    "terrarium-dem": {
+      "type": "raster-dem",
+      "tiles": [
+        "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
+      ],
+      "tileSize": 512,
+      "encoding": "terrarium"
+    },
+
+    "esri-sat": {
+      "type": "raster",
+      "tiles": [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      ],
+      "tileSize": 256,
+      "attribution": "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+    }
+  },
+
+  "layers": [
+    {
+      "id": "esri-sat",
+      "type": "raster",
+      "source": "esri-sat",
+      "minzoom": 0,
+      "maxzoom": 19,
+      "paint": {
+        "raster-opacity": 1
+      }
+    },
+
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "terrarium-dem",
+      "paint": {
+        "hillshade-exaggeration": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "version": 8,
+  "name": "OpenTopoMap otromundo",
+  "attribution": "© OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)",
+
+  "terrain": {
+    "source": "terrarium-dem"
+  },
+
+  "sources": {
+    "terrarium-dem": {
+      "type": "raster-dem",
+      "tiles": [
+        "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
+      ],
+      "tileSize": 512,
+      "encoding": "terrarium"
+    },
+
+    "opentopomap": {
+      "type": "raster",
+      "tiles": [
+        "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+        "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+        "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)"
+    }
+  },
+
+  "layers": [
+    {
+      "id": "opentopomap",
+      "type": "raster",
+      "source": "opentopomap",
+      "minzoom": 0,
+      "maxzoom": 17,
+      "paint": {
+        "raster-opacity": 1
+      }
+    },
+
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "terrarium-dem",
+      "paint": {
+        "hillshade-exaggeration": 0
+      }
+    }
+  ]
+}
