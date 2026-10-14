@@ -41,7 +41,7 @@ body, html {
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(18, 18, 20, 0.95);
+    background: #121212;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--primary-cyan);
@@ -52,7 +52,7 @@ body, html {
     border-radius: 36px;
     z-index: 1000;
     transition: transform 0.3s ease, opacity 0.3s ease;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: none !important;
 }
 
 #bottom-toolbar.hidden {
@@ -72,6 +72,7 @@ body, html {
     justify-content: center;
     border-radius: 50%;
     transition: background 0.2s, transform 0.1s;
+    box-shadow: none !important;
 }
 
 .tool-btn img {
@@ -92,7 +93,7 @@ body, html {
     left: 0;
     width: 100%;
     height: 50vh;
-    background: rgba(18, 18, 20, 0.98);
+    background: #121212;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--primary-cyan);
@@ -105,6 +106,7 @@ body, html {
     box-sizing: border-box;
     transform: translateY(100%);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none !important;
 }
 
 #layer-selector-modal.active {
@@ -141,6 +143,7 @@ body, html {
     justify-content: center;
     border-radius: 50%;
     transition: background 0.2s;
+    box-shadow: none !important;
 }
 
 #btn-back img {
@@ -191,6 +194,7 @@ body, html {
     box-sizing: border-box;
     transform: translateY(100%);
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none !important;
 }
 
 .fullscreen-panel:not(.hidden) {
@@ -381,6 +385,7 @@ body, html {
     align-items: center;
     justify-content: center;
     gap: 10px;
+    box-shadow: none !important;
 }
 
 .control-card {
@@ -436,7 +441,7 @@ body, html {
     position: absolute;
     top: 20px;
     right: 20px;
-    background: rgba(18, 18, 20, 0.95);
+    background: #121212;
     backdrop-filter: blur(12px);
     border: 1px solid var(--primary-cyan);
     color: #ffffff;
@@ -448,6 +453,7 @@ body, html {
     justify-content: center;
     cursor: pointer;
     z-index: 1000;
+    box-shadow: none !important;
 }
 
 .recenter-float-btn img {
@@ -470,13 +476,14 @@ body, html {
     z-index: 1000;
     display: flex;
     align-items: center;
-    background: rgba(18, 18, 20, 0.95);
+    background: #121212;
     backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 4px 10px;
     gap: 8px;
     color: var(--text-main);
+    box-shadow: none !important;
 }
 
 .banner-item {
@@ -532,6 +539,7 @@ body, html {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    box-shadow: none !important;
 }
 
 .search-icon-img {
@@ -562,13 +570,14 @@ body, html {
     top: 38px;
     left: 0;
     width: 220px;
-    background: rgba(18, 18, 20, 0.98);
+    background: #121212;
     backdrop-filter: blur(12px);
     border: 1px solid var(--primary-cyan);
     border-radius: 12px;
     max-height: 200px;
     overflow-y: auto;
     z-index: 1001;
+    box-shadow: none !important;
 }
 
 /* --- PANEL DE POIS --- */
@@ -580,7 +589,7 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: none !important;
     z-index: 10;
 }
 
@@ -606,6 +615,7 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: none !important;
 }
 
 .top-bar img, .icon-inline {
@@ -643,6 +653,7 @@ body, html {
     gap: 6px;
     font-size: 0.85rem;
     cursor: pointer;
+    box-shadow: none !important;
 }
 
 .profile-tab img {
@@ -705,6 +716,7 @@ body, html {
     justify-content: center;
     border-radius: 4px;
     transition: background 0.2s;
+    box-shadow: none !important;
 }
 
 .edit-actions-group button:hover,
@@ -877,6 +889,7 @@ body.is-editing .category-node.category-hidden-by-user {
     display: none;
     align-items: center;
     justify-content: center;
+    box-shadow: none !important;
 }
 
 body.is-editing .btn-toggle-visibility {
@@ -969,6 +982,7 @@ body.is-editing .btn-toggle-visibility {
     flex-shrink: 0;
     color: var(--text-muted);
     transition: background 0.2s, border-color 0.2s;
+    box-shadow: none !important;
 }
 
 .category-chip.active {
@@ -996,6 +1010,7 @@ body.is-editing .btn-toggle-visibility {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    box-shadow: none !important;
 }
 
 .node-name {
@@ -1017,7 +1032,7 @@ body.is-editing .btn-toggle-visibility {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: none !important;
     z-index: 10;
     flex-shrink: 0;
 }
@@ -1039,6 +1054,7 @@ body.is-editing .btn-toggle-visibility {
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
+    box-shadow: none !important;
 }
 
 #results-panel .icon-btn:hover,
@@ -1080,6 +1096,7 @@ body.is-editing .btn-toggle-visibility {
 .maplibregl-ctrl-bottom-left {
     display: none !important;
 }
+
 /* --- CORRECCIÓN DEFINITIVA PARA BOTONES DE RETROCESO (CENTRO DE CONTROL Y PANELES) --- */
 .back-btn, 
 #btn-close-panel, 
@@ -1094,6 +1111,7 @@ body.is-editing .btn-toggle-visibility {
     justify-content: center;
     border-radius: 50%;
     transition: background 0.2s;
+    box-shadow: none !important;
 }
 
 .back-btn:hover, 
@@ -1111,4 +1129,19 @@ body.is-editing .btn-toggle-visibility {
     display: block;
 }
 
+/* --- ELIMINAR FONDO BLANCO Y SOMBRAS DEL POPUP DE MAPLIBRE --- */
+.maplibregl-popup-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
 
+/* Ocultar la punta o flecha blanca por defecto del popup si interfiere con el diseño */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-right .maplibregl-popup-tip,
+.maplibregl-popup-tip {
+    display: none !important;
+}

@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const trashBtn = document.createElement('button');
                     trashBtn.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 50%;";
-                    trashBtn.innerHTML = `<img src="ui/fi-rr-trash.svg" style="width: 16px; height: 16px; display: block;" alt="Borrar">`;
+                    trashBtn.innerHTML = `<img src="ui-icons/fi-rr-trash.svg" style="width: 16px; height: 16px; display: block;" alt="Borrar">`;
                     trashBtn.title = "Borrar marcador";
 
                     // Acción del botón de papelera
