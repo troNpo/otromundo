@@ -2,133 +2,314 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OtroMundo</title>
-    
-    <!-- MapLibre GL CSS -->
-    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
+    <title>otromundo</title>
+    <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="style.css" rel="stylesheet" />
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR DE ACCIONES -->
-    <header class="top-bar">
-        <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
-            <img src="./ui-icons/fi-rr-global-research.svg" alt="Búsqueda PDI" class="icon-inline">
-            <div class="header-title"> tronPOI's</div>
-        </div>
-        <div class="header-actions">
-            <button id="btn-help" title="Ayuda"><img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda"></button>
-            <button id="btn-clear" title="Limpiar"><img src="./ui-icons/fi-rr-cross-small.svg" alt="Limpiar"></button>
-            <button id="btn-search" title="Buscar"><img src="./ui-icons/fi-rr-check.svg" alt="Buscar"></button>
-        </div>
-    </header>
+    <!-- Contenedor del mapa -->
+    <div id="map"></div>
 
-    <!-- SECCIÓN DEL MAPA ACORDEÓN -->
-    <div class="map-accordion-section">
-        <button id="btn-toggle-map" class="accordion-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <img src="./ui-icons/fi-rr-map.svg" alt="Mapa" class="icon-inline"> 
-                <span>Vista previa del área</span>
-            </div>
-            <span class="accordion-arrow"></span>
-        </button>
-        <div id="map-container-collapse" class="accordion-content" style="display: none;">
-            <div id="mini-map"></div>
-        </div>
-    </div>
-
-    <!-- CONTROL DE RADIO Y SUPERFICIE -->
-    <div class="radius-control-panel">
-        <label>Radio: <span id="radius-value">5</span> km</label>
-        <input type="range" id="search-radius" min="1" max="15" value="5">
-        <div id="info-area">Superficie del área: 78.5 km²</div>
-    </div>
-
-    <!-- BARRA DE PERFILES (PESTAÑAS CON ICONOS REALES) -->
-    <div class="profile-tabs-bar">
-        <button class="profile-tab active" data-profile="hiking" title="Senderismo">
-            <img src="./ui-icons/fi-rr-hiking.svg" alt="Senderismo">
-            <span>Senderismo</span>
-        </button>
-        <button class="profile-tab" data-profile="ciclo" title="Ciclismo de Carretera">
-            <img src="./ui-icons/fi-rr-biking.svg" alt="Carretera">
-            <span>Carretera</span>
-        </button>
-        <button class="profile-tab" data-profile="mtb" title="Ciclismo de Montaña">
-            <img src="./ui-icons/fi-rr-biking-mountain.svg" alt="MTB">
-            <span>MTB</span>
-        </button>
-    </div>
-
-    <!-- CABECERA DE CATEGORÍAS -->
-    <div class="categories-header-bar">
-        <div class="categories-title-group">
-            <span>Categorías</span>
-            <button id="btn-edit-mode" title="Editar visibilidad y añadir"><img src="./ui-icons/fi-rr-pencil.svg" alt="Editar"></button>
-        </div>
+    <!-- Banner Superior Izquierdo: Brújula, Escala y Buscador Integrados -->
+    <div id="top-left-banner" class="top-left-banner-container">
         
-        <div class="edit-actions-group" style="display: none;">
-            <button id="btn-add-custom-cat" title="Añadir desde JSON maestro"><img src="./ui-icons/fi-rr-square-dashed-circle-plus.svg" alt="Añadir categoría"></button>
-            <button id="btn-validate-edit" title="Validar"><img src="./ui-icons/fi-rr-check.svg" alt="Validar"></button>
-            <button id="btn-restore-edit" title="Restaurar por defecto"><img src="./ui-icons/fi-rr-rotate-reverse.svg" alt="Restaurar"></button>
+        <!-- 1. Brújula -->
+        <div id="compass-container" class="banner-item compass-item" title="Restaurar Norte">
+            <img id="compass-icon" src="ui-icons/brujula.png" alt="Brújula" />
         </div>
 
-        <div class="expand-group">
-            <label class="toggle-switch">
-                <input type="checkbox" id="toggle-expand-all">
-                <span class="slider-switch"></span>
-            </label>
-            <span>Expandir</span>
+        <!-- 2. Escala Compacta -->
+        <div id="scale-container" class="banner-item scale-item">
+            <img src="ui-icons/fi-rr-measuring-tape.svg" alt="Escala" class="scale-icon" />
+            <span id="scale-text">-- m</span>
+        </div>
+
+        <!-- 3. Buscador Integrado Inline -->
+        <div id="banner-search-container" class="banner-item search-item">
+            <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
+                <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
+            </button>
+            <input type="text" id="input-banner-search" class="banner-search-input hidden" placeholder="Buscar..." autocomplete="off" enterkeyhint="search" />
+            
+            <!-- Desplegable de resultados -->
+            <div id="visor-search-dropdown" class="search-dropdown hidden"></div>
+        </div>
+
+    </div>
+
+    <!-- Elemento visual del Cursor Central en el mapa -->
+    <div id="map-center-cursor" class="map-cursor-container">
+        <img src="ui-icons/cen-map.svg" alt="Cursor otromundo">
+    </div>
+
+    <!-- Botón flotante para recentrar el GPS (oculto por defecto) -->
+    <button id="btn-recenter" class="recenter-float-btn hidden" title="Recentrar GPS">
+        <img src="ui-icons/fi-rr-location-arrow.svg" alt="Recentrar">
+    </button>
+
+    <!-- Panel deslizante de Selección de Mapas (Media pantalla) -->
+    <div id="layer-selector-modal">
+        <div class="selector-header">
+            <button id="btn-back" title="Volver">
+                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
+            </button>
+            <h4>SELECCIONAR MAPA</h4>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="map-options-list">
+            <label><input type="radio" name="basemap" value="styles/osm.json" checked> OpenStreetMap</label>
+            <label><input type="radio" name="basemap" value="styles/ignraster.json"> IGN Raster</label>
+            <label><input type="radio" name="basemap" value="styles/opentopomaps.json"> OpenTopoMap</label>
+            <label><input type="radio" name="basemap" value="styles/esri.json"> Esri Satélite</label>
         </div>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL DEL ÁRBOL DE CATEGORÍAS -->
-    <main id="category-container">
-        <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
-    </main>
-
-    <!-- PANEL DE RESULTADOS -->
-    <div id="results-panel" class="app-panel" style="display: none;">
-        <header class="app-header red-bar">
-            <button id="btn-back" class="icon-btn" title="Volver">
-                <img src="./ui-icons/fi-rr-left.svg" alt="Back">
+    <!-- Panel Global: Centro de Control (Pantalla completa oculto por defecto) -->
+    <div id="control-center-panel" class="fullscreen-panel hidden">
+        <!-- Cabecera del panel -->
+        <div class="panel-header">
+            <button id="btn-close-panel" class="back-btn" title="Volver">
+                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
             </button>
-            <div class="header-title-group">
-                <button id="btn-results-list" class="icon-btn badge-container">
-                    <img src="./ui-icons/fi-rr-list.svg" alt="Resultados">
-                    <span id="results-badge" class="badge">0</span>
+            <h2>Centro de Control</h2>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <!-- Contenido del Panel -->
+        <div class="panel-body">
+            
+            <!-- Tarjeta de Ajustes Visuales (Acordeón) -->
+            <div class="card-accordion">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <div class="accordion-title">
+                        <img src="ui-icons/fi-rr-settings-sliders.svg" width="20" height="20" alt="Ajustes">
+                        <span>Ajustes Visuales y Estilo</span>
+                    </div>
+                    <span class="accordion-arrow">▼</span>
+                </div>
+                
+                <div class="accordion-content">
+                    <!-- Selector de Estilo por Defecto -->
+                    <div class="control-group">
+                        <label for="select-style">Estilo por defecto del mapa:</label>
+                        <select id="select-style">
+                            <option value="styles/osm.json">OpenStreetMap</option>
+                            <option value="styles/ignraster.json">IGN Raster</option>
+                            <option value="styles/opentopomaps.json">OpenTopoMap</option>
+                            <option value="styles/esri.json">Esri Satélite</option>
+                        </select>
+                    </div>
+
+                    <hr class="control-divider">
+
+                    <!-- Control de Interruptor Deslizante para el Cursor Central -->
+                    <div class="control-group-row">
+                        <label for="toggle-cursor">Mostrar Cursor Central (X):</label>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-cursor" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="range-cursor-size">Tamaño del Cursor: <span id="size-val">75</span>px</label>
+                        <input type="range" id="range-cursor-size" class="custom-range" min="30" max="120" value="75">
+                    </div>
+
+                    <hr class="control-divider">
+
+                    <!-- Control de Inclinación (Pitch) -->
+                    <div class="control-group">
+                        <label for="range-pitch">Inclinación Máxima / Pitch: <span id="pitch-val">0</span>°</label>
+                        <input type="range" id="range-pitch" class="custom-range" min="0" max="85" value="0">
+                    </div>
+
+                    <hr class="control-divider">
+
+                    <!-- Botón de Validar / Guardar dentro de la tarjeta -->
+                    <button id="btn-save-settings" class="action-btn-save">
+                        <img src="ui-icons/fi-rr-autosave.svg" alt="Guardar">
+                        <span>Guardar Ajustes</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Puntos de Interés (Abre el panel de búsqueda de POIs) -->
+            <div id="btn-poi-card" class="control-card">
+                <div class="control-card-icon-wrapper">
+                    <img src="./ui-icons/fi-rr-global-research.svg" alt="Icono POI" class="control-icon">
+                </div>
+                <span class="control-card-title">Puntos de Interés</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= PANEL COMPLETO DE BÚSQUEDA DE POIs ================= -->
+    <div id="poi-fullscreen-panel" class="fullscreen-panel hidden">
+        <!-- BARRA SUPERIOR DE ACCIONES -->
+        <header class="top-bar">
+            <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
+                <button id="btn-back-to-control" class="back-btn" title="Volver al Centro de Control">
+                    <img src="ui-icons/fi-rr-left.svg" alt="Volver">
                 </button>
-                <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
-                    <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
-                </button>
-                <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
-                    <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
-                </button>
-                <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
-                    <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
-                </button>
+                <img src="./ui-icons/fi-rr-global-research.svg" alt="Búsqueda PDI" class="icon-inline">
+                <div class="header-title">Busqueda de puntos de interes</div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-help" title="Ayuda"><img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda"></button>
+                <button id="btn-clear" title="Limpiar"><img src="./ui-icons/fi-rr-cross-small.svg" alt="Limpiar"></button>
+                <button id="btn-search" title="Buscar"><img src="./ui-icons/fi-rr-check.svg" alt="Buscar"></button>
             </div>
         </header>
 
-        <div id="quick-search-container" class="quick-search-bar" style="display: none;">
-            <input type="text" id="quick-search-input" placeholder="Filtrar por nombre...">
+        <!-- BOTÓN ÚNICO DE AJUSTE DE ZONA DE BÚSQUEDA -->
+        <div class="radius-control-panel" style="text-align: center; padding: 16px;">
+            <button id="btn-open-spatial-modal" style="width: 100%; background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); color: var(--primary-cyan); padding: 12px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <img src="./ui-icons/fi-rr-map.svg" alt="Mapa" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                <span>Ajustar zona de búsqueda</span>
+            </button>
+        </div>
+        <!-- BARRA DE BÚSQUEDA RÁPIDA EN EL ÁRBOL DE CATEGORÍAS -->
+        <div style="padding: 10px 16px; background: rgba(18,18,20,0.6); border-bottom: 1px solid var(--border-color);">
+            <input type="text" id="tree-search-filter" placeholder="Buscar categoría o PDI actual..." style="width:100%; padding:10px 12px; background:#121212; border:1px solid var(--border-color); color:white; border-radius:10px; outline:none; font-size:0.9rem;">
         </div>
 
-        <div class="categories-nav-wrapper">
-            <div class="scroll-indicator left"></div>
-            <div id="categories-chips-container" class="categories-chips-scroll"></div>
-            <div class="scroll-indicator right"></div>
+        <!-- BARRA DE PERFILES -->
+        <div class="profile-tabs-bar">
+            <button class="profile-tab active" data-profile="hiking" title="Senderismo">
+                <img src="./ui-icons/fi-rr-hiking.svg" alt="Senderismo">
+                <span>Senderismo</span>
+            </button>
+            <button class="profile-tab" data-profile="ciclo" title="Ciclismo de Carretera">
+                <img src="./ui-icons/fi-rr-biking.svg" alt="Carretera">
+                <span>Carretera</span>
+            </button>
+            <button class="profile-tab" data-profile="mtb" title="Ciclismo de Montaña">
+                <img src="./ui-icons/fi-rr-biking-mountain.svg" alt="MTB">
+                <span>MTB</span>
+            </button>
         </div>
 
-        <div id="nodes-container" class="nodes-vertical-scroll"></div>
+        <!-- CABECERA DE CATEGORÍAS -->
+        <div class="categories-header-bar">
+            <div class="categories-title-group">
+                <span>Categorías</span>
+                <button id="btn-edit-mode" title="Editar visibilidad y añadir"><img src="./ui-icons/fi-rr-pencil.svg" alt="Editar"></button>
+            </div>
+            
+            <div class="edit-actions-group" style="display: none;">
+                <button id="btn-add-custom-cat" title="Añadir desde JSON maestro"><img src="./ui-icons/fi-rr-square-dashed-circle-plus.svg" alt="Añadir categoría"></button>
+                <button id="btn-validate-edit" title="Validar"><img src="./ui-icons/fi-rr-check.svg" alt="Validar"></button>
+                <button id="btn-restore-edit" title="Restaurar por defecto"><img src="./ui-icons/fi-rr-rotate-reverse.svg" alt="Restaurar"></button>
+            </div>
+
+            <div class="expand-group">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-expand-all">
+                    <span class="slider-switch"></span>
+                </label>
+                <span>Expandir</span>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR PRINCIPAL DEL ÁRBOL DE CATEGORÍAS -->
+        <main id="category-container">
+            <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
+        </main>
+
+        <!-- PANEL DE RESULTADOS -->
+        <div id="results-panel" class="app-panel" style="display: none;">
+            <header class="app-header red-bar">
+                <button id="btn-back-results" class="icon-btn" title="Volver">
+                    <img src="./ui-icons/fi-rr-left.svg" alt="Back">
+                </button>
+                <div class="header-title-group">
+                    <button id="btn-results-list" class="icon-btn badge-container">
+                        <img src="./ui-icons/fi-rr-list.svg" alt="Resultados">
+                        <span id="results-badge" class="badge">0</span>
+                    </button>
+                    <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
+                        <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
+                    </button>
+                    <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
+                        <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
+                    </button>
+                    <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
+                        <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
+                    </button>
+                </div>
+            </header>
+
+            <div id="quick-search-container" class="quick-search-bar" style="display: none;">
+                <input type="text" id="quick-search-input" placeholder="Filtrar por nombre...">
+            </div>
+
+            <div class="categories-nav-wrapper">
+                <div class="scroll-indicator left"></div>
+                <div id="categories-chips-container" class="categories-chips-scroll"></div>
+                <div class="scroll-indicator right"></div>
+            </div>
+
+            <div id="nodes-container" class="nodes-vertical-scroll"></div>
+        </div>
     </div>
 
-    <!-- Scripts modulares -->
+    <!-- Barra de herramientas inferior -->
+    <div id="bottom-toolbar">
+        <button id="btn-menu" class="tool-btn" title="Centro de Control">
+            <img src="ui-icons/fi-rr-menu-burger.svg" alt="Menú">
+        </button>
+
+        <button id="btn-map" class="tool-btn" title="Capas de Mapa">
+            <img src="ui-icons/fi-rr-map.svg" alt="Mapa">
+        </button>
+        
+        <button id="btn-gps" class="tool-btn" title="GPS">
+            <img id="gps-icon" src="ui-icons/fi-rr-location-crosshairs-slash.svg" alt="GPS Inactivo">
+        </button>
+        
+        <button id="btn-zoomin" class="tool-btn" title="Acercar">
+            <img src="ui-icons/fi-rr-zoom-in.svg" alt="Acercar">
+        </button>
+        
+        <button id="btn-zoomout" class="tool-btn" title="Alejar">
+            <img src="ui-icons/fi-rr-zoom-out.svg" alt="Alejar">
+        </button>
+    </div>
+
+    <!-- PANEL INFERIOR FLOTANTE PARA AJUSTAR LA ZONA DE BÚSQUEDA -->
+    <div id="spatial-adjustment-modal" class="fullscreen-panel hidden" style="z-index: 10005; background: transparent; justify-content: flex-end;">
+        <div style="background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; width: 100%; box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; gap: 14px;">
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <div style="color: var(--primary-cyan); font-weight: 600; font-size: 1rem;">Ajustar zona de búsqueda</div>
+                <button id="btn-close-spatial-modal" style="background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
+                    <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.9rem; color: var(--text-main);">Radio: <strong id="modal-radius-value" style="color: var(--primary-cyan);">5</strong> km</span>
+                <span id="modal-info-area" style="font-size: 0.8rem; color: var(--text-muted);">Superficie: 78.5 km²</span>
+            </div>
+
+            <!-- Deslizador compacto en vivo -->
+            <input type="range" id="modal-search-radius" min="1" max="15" value="5" style="width: 100%; accent-color: var(--primary-cyan); cursor: pointer; height: 6px;">
+
+            <button id="btn-confirm-spatial" style="width: 100%; background: var(--primary-cyan); color: #121212; border: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 4px;">Aceptar y Guardar</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <script src="script.js"></script>
+    <script src="geocoder.js"></script>
     <script src="profile-loader.js"></script>
-    <script src="overpass-client.js⁠"></script>
+    <script src="overpass-client.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

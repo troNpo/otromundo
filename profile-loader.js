@@ -84,21 +84,21 @@ async function cargarPerfilJSON(nombrePerfil) {
 function fusionarConCustomsLocales(nombrePerfil) {
     if (!datosPerfilActual) return;
     const clavePerfil = Object.keys(datosPerfilActual)[0];
+    if (!datosPerfilActual[clavePerfil] || !datosPerfilActual[clavePerfil].subcategorias) return;
+    
     const subcategorias = datosPerfilActual[clavePerfil].subcategorias;
 
     try {
         const customsGuardados = JSON.parse(localStorage.getItem(getStorageKeyCustom(nombrePerfil))) || {};
         Object.keys(customsGuardados).forEach(subKey => {
             if (subcategorias[subKey]) {
-                // Añadir elementos personalizados que no existan previamente
-                customsGuardados[subKey].forEach(elemCustom => {
+                customsGuardados[subKey].elementos.forEach(elemCustom => {
                     const existe = subcategorias[subKey].elementos.some(e => e.tag === elemCustom.tag);
                     if (!existe) {
                         subcategorias[subKey].elementos.push(elemCustom);
                     }
                 });
             } else {
-                // Si la subcategoría entera es nueva
                 subcategorias[subKey] = customsGuardados[subKey];
             }
         });
@@ -114,16 +114,20 @@ function renderizarArbolDesdeJSON(jsonData) {
     const clavePerfil = Object.keys(jsonData)[0];
     const datosPerfil = jsonData[clavePerfil];
 
-    if (!datosPerfil || !datosPerfil.subcategorias) {
-        container.innerHTML = "<p style='color: #ff5252; padding: 15px;'>Estructura de JSON no válida.</p>";
+    // Verificación robusta para asegurar que accedemos al nivel de subcategorías correctamente
+    const subcategorias = datosPerfil && datosPerfil.subcategorias ? datosPerfil.subcategorias : jsonData;
+
+    if (!subcategorias || Object.keys(subcategorias).length === 0) {
+        container.innerHTML = "<p style='color: #ff5252; padding: 15px;'>Estructura de JSON no válida o vacía.</p>";
         return;
     }
 
-    const subcategorias = datosPerfil.subcategorias;
     const ocultosGuardados = JSON.parse(localStorage.getItem(getStorageKeyHidden(perfilActualNombre))) || [];
 
     Object.keys(subcategorias).forEach(subKey => {
         const subCat = subcategorias[subKey];
+        if (!subCat) return;
+
         const nodeDiv = document.createElement("div");
         nodeDiv.className = "category-node";
         nodeDiv.setAttribute("data-subkey", subKey);
@@ -136,6 +140,7 @@ function renderizarArbolDesdeJSON(jsonData) {
         rowDiv.className = "category-row";
 
         const hasElements = subCat.elementos && subCat.elementos.length > 0;
+        const nombreCategoria = subCat.nombre_es || subKey;
 
         rowDiv.innerHTML = `
             <div class="category-left">
@@ -143,12 +148,13 @@ function renderizarArbolDesdeJSON(jsonData) {
                     <img src="./ui-icons/fi-rr-eye.svg" alt="Visibilidad">
                 </button>
                 <input type="checkbox" class="cat-checkbox">
-                <span>${subCat.nombre_es}</span>
+                <span>${nombreCategoria}</span>
             </div>
-            <div class="category-arrow" style="${hasElements ? '' : 'visibility: hidden;'}"></div>
+            <div class="category-arrow" style="width: 16px; height: 16px; display: inline-block; transition: transform 0.2s ease; margin-left: auto; flex-shrink: 0; ${hasElements ? '' : 'visibility: hidden;'}">
+                <img src="./ui-icons/fi-rr-angle-circle-right.svg" alt="Desplegar" style="width: 100%; height: 100%; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%); display: block;">
+            </div>
         `;
 
-        // Control de visibilidad (ojo)
         const btnEye = rowDiv.querySelector(".btn-toggle-visibility");
         btnEye.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -167,7 +173,7 @@ function renderizarArbolDesdeJSON(jsonData) {
             });
 
             subCat.elementos.forEach(elem => {
-                const [tagKey, tagValue] = elem.tag.includes("=") ? elem.tag.split("=") : [elem.tag, "yes"];
+                const [tagKey, tagValue] = elem.tag.includes("=") ? elem.tag.split("=").map(s => s.trim()) : [elem.tag.trim(), "yes"];
 
                 const mapRow = document.createElement("div");
                 mapRow.className = "category-row category-leaf";
@@ -186,7 +192,6 @@ function renderizarArbolDesdeJSON(jsonData) {
             nodeDiv.appendChild(childrenDiv);
         }
 
-        // Cascada de selección en checkboxes
         checkbox.addEventListener("change", () => {
             const descendantChecks = nodeDiv.querySelectorAll("input[type='checkbox']");
             descendantChecks.forEach(ch => {
@@ -225,22 +230,22 @@ async function abrirModalSelectorMaestro() {
     if (!modal) {
         modal = document.createElement("div");
         modal.id = "master-json-modal";
-        modal.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;";
+        modal.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;";
 
         modal.innerHTML = `
-            <div style="background:#1a1a1a;border:1px solid #333;width:100%;max-width:500px;max-height:80vh;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;color:#e0e0e0;">
-                <div style="padding:12px 15px;background:#b71c1c;color:white;display:flex;justify-content:space-between;align-items:center;font-weight:bold;">
-                    <span>Añadir puntos de interes</span>
+            <div style="background:#121212;border:1px solid var(--primary-cyan);width:100%;max-width:500px;max-height:80vh;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;color:#e0e0e0;box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+                <div style="padding:14px 18px;background:rgba(0, 229, 255, 0.12);color:var(--primary-cyan);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;font-weight:600;">
+                    <span>Añadir puntos de interés</span>
                     <button id="close-master-modal" style="background:transparent;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;">
-                        <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width:20px;height:20px;filter:brightness(0) invert(1);">
+                        <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width:20px;height:20px;filter:brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                     </button>
                 </div>
-                <div style="padding:10px;border-bottom:1px solid #333;">
-                    <input type="text" id="master-search-filter" placeholder="Buscar categoría en maestro..." style="width:100%;padding:8px;background:#121212;border:1px solid #404040;color:white;border-radius:4px;">
+                <div style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);background:#1a1a1a;">
+                    <input type="text" id="master-search-filter" placeholder="Buscar categoría en maestro..." style="width:100%;padding:10px 12px;background:#121212;border:1px solid var(--border-color);color:white;border-radius:10px;outline:none;">
                 </div>
-                <div id="master-modal-content" style="flex:1;overflow-y:auto;padding:15px;"></div>
-                <div style="padding:10px 15px;background:#161616;text-align:right;border-top:1px solid #333;">
-                    <button id="btn-save-master-selection" style="background:#b71c1c;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">Añadir seleccionados</button>
+                <div id="master-modal-content" style="flex:1;overflow-y:auto;padding:15px;background:#121212;"></div>
+                <div style="padding:12px 18px;background:#161616;text-align:right;border-top:1px solid var(--border-color);">
+                    <button id="btn-save-master-selection" style="background:var(--primary-cyan);color:#121212;border:none;padding:10px 20px;border-radius:10px;font-weight:bold;cursor:pointer;">Añadir seleccionados</button>
                 </div>
             </div>
         `;
@@ -251,10 +256,27 @@ async function abrirModalSelectorMaestro() {
         });
 
         modal.querySelector("#master-search-filter").addEventListener("input", (e) => {
-            const filtro = e.target.value.toLowerCase();
-            modal.querySelectorAll(".master-item-row").forEach(row => {
+            const filtro = e.target.value.toLowerCase().trim();
+            const filas = modal.querySelectorAll(".master-item-row");
+            
+            filas.forEach(row => {
                 const texto = row.textContent.toLowerCase();
-                row.style.display = texto.includes(filtro) ? "flex" : "none";
+                if (texto.includes(filtro)) {
+                    row.style.display = "flex";
+                    const grupoPadre = row.closest("div[style*='margin-bottom']");
+                    if (grupoPadre) grupoPadre.style.display = "block";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+
+            modal.querySelectorAll("#master-modal-content > div").forEach(grupo => {
+                const visibles = grupo.querySelectorAll(".master-item-row[style*='flex']");
+                if (filtro === "") {
+                    grupo.style.display = "block";
+                } else {
+                    grupo.style.display = visibles.length > 0 ? "block" : "none";
+                }
             });
         });
 
@@ -283,10 +305,10 @@ function poblarContenidoModalMaestro(modal) {
             const subCat = subcatsMaster[subKey];
             
             const groupDiv = document.createElement("div");
-            groupDiv.style.marginBottom = "10px";
+            groupDiv.style.marginBottom = "14px";
             
             const titleDiv = document.createElement("div");
-            titleDiv.style.cssText = "font-weight:bold;color:#ff5252;margin-bottom:5px;font-size:0.9rem;";
+            titleDiv.style.cssText = "font-weight:600;color:var(--primary-cyan);margin-bottom:6px;font-size:0.9rem;border-bottom:1px solid rgba(0,229,255,0.15);padding-bottom:4px;";
             titleDiv.textContent = subCat.nombre_es;
             groupDiv.appendChild(titleDiv);
 
@@ -294,9 +316,8 @@ function poblarContenidoModalMaestro(modal) {
                 subCat.elementos.forEach(elem => {
                     const itemRow = document.createElement("label");
                     itemRow.className = "master-item-row";
-                    itemRow.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.85rem;cursor:pointer;";
+                    itemRow.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 0;font-size:0.85rem;cursor:pointer;color:#e0e0e0;";
                     
-                    // Se omite la visualización de los tags entre paréntesis
                     itemRow.innerHTML = `
                         <input type="checkbox" data-subkey="${subKey}" data-subname="${subCat.nombre_es}" data-tag="${elem.tag}" data-namees="${elem.nombre_es}">
                         <span>${elem.nombre_es}</span>
@@ -340,3 +361,43 @@ function procesarSeleccionMaestro(modal) {
 
     localStorage.setItem(getStorageKeyCustom(perfilActualNombre), JSON.stringify(customsGuardados));
 }
+
+// --- FILTRADO EN VIVO DEL ÁRBOL DE CATEGORÍAS PRINCIPAL ---
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        const treeSearchInput = document.getElementById("tree-search-filter");
+        if (treeSearchInput) {
+            treeSearchInput.addEventListener("input", (e) => {
+                const filtro = e.target.value.toLowerCase().trim();
+                const nodos = document.querySelectorAll("#category-container .category-node");
+
+                nodos.forEach(node => {
+                    const textoNodo = node.textContent.toLowerCase();
+                    const hojas = node.querySelectorAll(".category-leaf");
+                    let coincideHoja = false;
+
+                    hojas.forEach(hoja => {
+                        const textoHoja = hoja.textContent.toLowerCase();
+                        if (textoHoja.includes(filtro)) {
+                            hoja.style.display = "flex";
+                            coincideHoja = true;
+                        } else {
+                            hoja.style.display = filtro === "" ? "flex" : "none";
+                        }
+                    });
+
+                    if (textoNodo.includes(filtro) || coincideHoja || filtro === "") {
+                        node.style.display = "block";
+                        if (filtro !== "") {
+                            node.classList.add("active");
+                        } else {
+                            node.classList.remove("active");
+                        }
+                    } else {
+                        node.style.display = "none";
+                    }
+                });
+            });
+        }
+    }, 500);
+});
