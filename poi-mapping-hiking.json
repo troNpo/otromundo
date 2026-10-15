@@ -32,9 +32,9 @@
       "Food and Supplies": {
         "nombre_es": "Alimentación y Avituallamiento",
         "elementos": [
-          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
           { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
-          { "categoria": "Pubs / Bars", "nombre_es": "Bares", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares y pubs", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
           { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" },
           { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
         ]

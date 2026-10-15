@@ -2,8 +2,8 @@
   "Cycling_MTB": {
     "nombre_es": "Ciclismo de Montaña (MTB)",
     "subcategorias": {
-      "Route Essentials and Water": {
-        "nombre_es": "Puntos de agua y asistencia en ruta",
+      "Route Essentials and Mechanics": {
+        "nombre_es": "Mecánica y Asistencia en Ruta",
         "elementos": [
           { "categoria": "Drinking water", "nombre_es": "Fuentes de agua potable", "tag": "amenity=drinking_water" },
           { "categoria": "Springs", "nombre_es": "Manantiales y fuentes naturales", "tag": "natural=spring" },
@@ -14,8 +14,8 @@
           { "categoria": "Bicycle Shop", "nombre_es": "Tiendas de bicicletas", "tag": "shop=bicycle" }
         ]
       },
-      "Orography and Terrain": {
-        "nombre_es": "Orografía y Hitos de Montaña",
+      "Peaks and Viewpoints": {
+        "nombre_es": "Cumbres, Vistas y Orografía",
         "elementos": [
           { "categoria": "Peaks", "nombre_es": "Cimas y picos", "tag": "natural=peak" },
           { "categoria": "Mountain pass", "nombre_es": "Puertos de montaña y collados", "tag": "mountain_pass=yes" },
@@ -24,13 +24,14 @@
           { "categoria": "Outcrops", "nombre_es": "Afloramientos rocosos", "tag": "geological=outcrop" }
         ]
       },
-      "Food and Cafes": {
-        "nombre_es": "Avituallamiento y Hostelería",
+      "Food and Supplies": {
+        "nombre_es": "Alimentación y Avituallamiento",
         "elementos": [
           { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
-          { "categoria": "Pubs / Bars", "nombre_es": "Bares", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares y pubs", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
           { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" },
-          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" }
+          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
         ]
       },
       "Shelter and Safety": {
@@ -39,12 +40,11 @@
           { "categoria": "Alpine Huts", "nombre_es": "Refugios de montaña", "tag": "tourism=alpine_hut" },
           { "categoria": "Shelter", "nombre_es": "Refugios y casetas", "tag": "amenity=shelter" },
           { "categoria": "Hunting stands", "nombre_es": "Puestos de caza", "tag": "amenity=hunting_stand" },
-          { "categoria": "Emergency phones", "nombre_es": "Teléfonos de emergencia", "tag": "emergency=phone" },
-          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" }
+          { "categoria": "Emergency phones", "nombre_es": "Teléfonos de emergencia", "tag": "emergency=phone" }
         ]
       },
-      "Environment and Infrastructure": {
-        "nombre_es": "Entorno e Infraestructura",
+      "Rest and Information": {
+        "nombre_es": "Descanso, Entorno e Información",
         "elementos": [
           { "categoria": "Nature reserves", "nombre_es": "Reservas naturales", "tag": "leisure=nature_reserve" },
           { "categoria": "Watermills", "nombre_es": "Molinos de agua", "tag": "man_made=watermill" },
