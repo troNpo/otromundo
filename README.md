@@ -1,4 +1,5 @@
-* Open.troNpo.Mundo
+<img width="1254" height="1254" alt="1EFEF01E-727B-4755-8297-30A7AB0106E4" src="https://github.com/user-attachments/assets/9519962a-c2d6-40c3-a099-10fdc840b939" />
+
 >pasando los bocetos de mí cabeza a códigos.
 >
 Fase 0:visor mapalibre y estilos 3D
