@@ -1,22 +1,22 @@
 // script.js
 
-// 1. Cargar preferencias guardadas en localStorage apuntando a la carpeta styles/[span_0](start_span)[span_0](end_span)
+// 1. Cargar preferencias guardadas en localStorage apuntando a la carpeta styles/
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
 const savedCursorShow = localStorage.getItem('otromundo_cursor_show') !== 'false';
 const savedCursorSize = localStorage.getItem('otromundo_cursor_size') || '75';
 const savedPitch = localStorage.getItem('otromundo_pitch') || '0';
 
-// 2. Inicialización del mapa con MapLibre GL JS[span_1](start_span)[span_1](end_span)
+// 2. Inicialización del mapa con MapLibre GL JS
 const map = new maplibregl.Map({
     container: 'map',
     style: savedStyle, 
-    center: [-5.9304, 37.3414], // Montequinto / Sevilla[span_2](start_span)[span_2](end_span)
+    center: [-5.9304, 37.3414], // Montequinto / Sevilla
     zoom: 12,
     pitch: parseFloat(savedPitch),
     attributionControl: false
 });
 
-// Control de geolocalización[span_3](start_span)[span_3](end_span)
+// Control de geolocalización
 const geolocateControl = new maplibregl.GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
@@ -24,7 +24,7 @@ const geolocateControl = new maplibregl.GeolocateControl({
 });
 map.addControl(geolocateControl);
 
-// --- LÓGICA DEL PANEL DESLIZANTE DE MAPAS Y BARRA INFERIOR ---[span_4](start_span)[span_4](end_span)
+// --- LÓGICA DEL PANEL DESLIZANTE DE MAPAS Y BARRA INFERIOR ---
 const btnMap = document.getElementById('btn-map');
 const btnBack = document.getElementById('btn-back');
 const modalSelector = document.getElementById('layer-selector-modal');
@@ -42,12 +42,22 @@ btnMap?.addEventListener('click', () => {
     });
 
     modalSelector.classList.add('active');
-    bottomToolbar.classList.add('hidden');
+    
+    // Si la barra flotante de PDI está activa, mantenemos la barra general oculta
+    const poiToolbar = document.getElementById('poi-map-toolbar');
+    if (!poiToolbar) {
+        bottomToolbar.classList.add('hidden');
+    }
 });
 
 function closeLayerSelector() {
     modalSelector.classList.remove('active');
-    bottomToolbar.classList.remove('hidden');
+    
+    // Solo restauramos la barra general si NO estamos en la vista de mapa con PDI activos
+    const poiToolbar = document.getElementById('poi-map-toolbar');
+    if (!poiToolbar) {
+        bottomToolbar.classList.remove('hidden');
+    }
 }
 
 btnBack?.addEventListener('click', closeLayerSelector);
@@ -62,10 +72,16 @@ layerRadios.forEach(radio => {
         if (selectStyle) {
             selectStyle.value = selectedStyle;
         }
+
+        // Forzar que la barra general siga oculta si nos encontramos en el modo PDI
+        const poiToolbar = document.getElementById('poi-map-toolbar');
+        if (poiToolbar && bottomToolbar) {
+            bottomToolbar.classList.add('hidden');
+        }
     });
 });
 
-// --- LÓGICA DE LA BARRA INFERIOR (GPS y Zoom) ---[span_5](start_span)[span_5](end_span)
+// --- LÓGICA DE LA BARRA INFERIOR (GPS y Zoom) ---
 const btnGps = document.getElementById('btn-gps');
 const gpsIcon = document.getElementById('gps-icon');
 let isGpsActive = false;
@@ -88,7 +104,7 @@ document.getElementById('btn-zoomout')?.addEventListener('click', () => {
     map.zoomOut({ duration: 300 });
 });
 
-// --- LÓGICA DEL CENTRO DE CONTROL Y AJUSTES ---[span_6](start_span)[span_6](end_span)
+// --- LÓGICA DEL CENTRO DE CONTROL Y AJUSTES ---
 const btnMenu = document.getElementById('btn-menu');
 const btnClosePanel = document.getElementById('btn-close-panel');
 const controlCenterPanel = document.getElementById('control-center-panel');
@@ -104,7 +120,7 @@ btnClosePanel?.addEventListener('click', () => {
     bottomToolbar.classList.remove('hidden');
 });
 
-// Función global para acordeón[span_7](start_span)[span_7](end_span)
+// Función global para acordeón
 window.toggleAccordion = function(headerElement) {
     const card = headerElement.closest('.card-accordion');
     if (!card) return;
@@ -122,7 +138,7 @@ window.toggleAccordion = function(headerElement) {
     }
 };
 
-// Controles de Ajustes[span_8](start_span)[span_8](end_span)
+// Controles de Ajustes
 const cursorContainer = document.getElementById('map-center-cursor');
 const toggleCursor = document.getElementById('toggle-cursor');
 const rangeCursorSize = document.getElementById('range-cursor-size');
@@ -189,7 +205,7 @@ if (btnSaveSettings) {
     });
 }
 
-// Botón flotante de recentrado GPS[span_9](start_span)[span_9](end_span)
+// Botón flotante de recentrado GPS
 const btnRecenter = document.getElementById('btn-recenter');
 let userMovedMapManually = false;
 

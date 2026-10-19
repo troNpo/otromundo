@@ -157,10 +157,12 @@
                     <img src="ui-icons/fi-rr-left.svg" alt="Volver">
                 </button>
                 <img src="./ui-icons/fi-rr-global-research.svg" alt="Búsqueda PDI" class="icon-inline">
-                <div class="header-title">Busqueda de puntos de interes</div>
+                <div class="header-title">Gestor busqueda PDI</div>
             </div>
             <div class="header-actions">
-                <button id="btn-help" title="Ayuda"><img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda"></button>
+                <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </a>
                 <button id="btn-clear" title="Limpiar"><img src="./ui-icons/fi-rr-cross-small.svg" alt="Limpiar"></button>
                 <button id="btn-search" title="Buscar"><img src="./ui-icons/fi-rr-check.svg" alt="Buscar"></button>
             </div>
@@ -184,13 +186,9 @@
                 <img src="./ui-icons/fi-rr-hiking.svg" alt="Senderismo">
                 <span>Senderismo</span>
             </button>
-            <button class="profile-tab" data-profile="ciclo" title="Ciclismo de Carretera">
-                <img src="./ui-icons/fi-rr-biking.svg" alt="Carretera">
-                <span>Carretera</span>
-            </button>
-            <button class="profile-tab" data-profile="mtb" title="Ciclismo de Montaña">
-                <img src="./ui-icons/fi-rr-biking-mountain.svg" alt="MTB">
-                <span>MTB</span>
+            <button class="profile-tab" data-profile="ciclo" title="Ciclismo y MTB">
+                <img src="./ui-icons/fi-rr-biking.svg" alt="Ciclismo y MTB">
+                <span>Ciclismo y MTB</span>
             </button>
         </div>
 
@@ -221,17 +219,18 @@
             <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
         </main>
 
-        <!-- PANEL DE RESULTADOS -->
+        <!-- PANEL GESTOR DE PDI -->
         <div id="results-panel" class="app-panel" style="display: none;">
-            <header class="app-header red-bar">
-                <button id="btn-back-results" class="icon-btn" title="Volver">
-                    <img src="./ui-icons/fi-rr-left.svg" alt="Back">
-                </button>
-                <div class="header-title-group">
-                    <button id="btn-results-list" class="icon-btn badge-container">
-                        <img src="./ui-icons/fi-rr-list.svg" alt="Resultados">
-                        <span id="results-badge" class="badge">0</span>
+            <header class="app-header red-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="btn-back-results" class="icon-btn" title="Volver">
+                        <img src="./ui-icons/fi-rr-left.svg" alt="Back">
                     </button>
+                    <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-cyan);">Gestor de PDI</h3>
+                    <span id="results-badge" class="badge" style="background: rgba(0,229,255,0.15); color: var(--primary-cyan); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0</span>
+                </div>
+                
+                <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
                     <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
                         <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
                     </button>
@@ -241,6 +240,9 @@
                     <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
                         <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
                     </button>
+                    <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
+                        <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                    </a>
                 </div>
             </header>
 
@@ -304,12 +306,48 @@
         </div>
     </div>
 
+    <!-- ================= PANEL INFERIOR FLOTANTE DE DETALLE DE PDI EN EL MAPA ================= -->
+    <div id="map-poi-detail-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: auto; max-height: 50vh; background: #121212; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 2000; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.7);">
+        
+        <!-- Cabecera unificada idéntica al selector de mapas -->
+        <div class="selector-header" style="border-top-left-radius: 24px; border-top-right-radius: 24px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background-color: rgba(0, 229, 255, 0.12); border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; flex-direction: column;">
+                <span id="detail-poi-category" style="font-size: 0.7rem; color: var(--primary-cyan); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Categoría</span>
+                <h4 id="detail-poi-title" style="margin: 2px 0 0 0; color: var(--text-main); font-size: 16px; font-weight: 600;">Nombre del PDI</h4>
+            </div>
+            <button id="detail-btn-close" class="back-btn" title="Cerrar" style="background: transparent; border: none; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+            </button>
+        </div>
+
+        <!-- Cuerpo del panel con la información y la botonera simétrica -->
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+            <div id="detail-poi-meta" style="font-size: 0.9rem; color: var(--text-muted);">Distancia y coordenadas</div>
+            
+            <!-- Botonera simétrica de 3 acciones -->
+            <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px;">
+                <button id="detail-btn-action" class="action-btn" title="Ver en el listado" style="background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); padding: 10px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--primary-cyan); font-size: 0.9rem; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-map.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Listado">
+                    <span>Listado</span>
+                </button>
+                <button id="detail-btn-delete" class="action-btn" title="Eliminar PDI" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; padding: 10px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #e74c3c; font-size: 0.9rem; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-trash.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">
+                </button>
+                <button id="detail-btn-options" class="action-btn" title="Más opciones" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); padding: 10px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #fff; font-size: 0.9rem; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-menu-burger.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(100%);" alt="Opciones">
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Scripts -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="script.js"></script>
     <script src="geocoder.js"></script>
     <script src="profile-loader.js"></script>
-    <script src="overpass-client.js"></script>
+    <script src="nominatim-client.js"></script>
+    <!-- <script src="whats-here.js"></script> --> <!-- Próximamente para la exploración Overpass -->
     <script src="app.js"></script>
 </body>
 </html>
