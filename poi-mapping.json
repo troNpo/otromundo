@@ -5,111 +5,121 @@
       "Food and Drink": {
         "nombre_es": "Alimentación y Hostelería",
         "elementos": [
-          { "categoria": "Restaurants", "nombre_es": "Restaurantes", "tag": "amenity=restaurant" },
-          { "categoria": "Food counter areas", "nombre_es": "Zonas de comida", "tag": "amenity=food_court" },
+          { "categoria": "Restaurants", "nombre_es": "Restaurante", "tag": "amenity=restaurant" },
+          { "categoria": "Food counter areas", "nombre_es": "Comida", "tag": "amenity=food_court" },
           { "categoria": "Fast food restaurants", "nombre_es": "Comida rápida", "tag": "amenity=fast_food" },
           { "categoria": "Drinking water sources", "nombre_es": "Agua potable", "tag": "amenity=drinking_water" },
-          { "categoria": "Public grills", "nombre_es": "Barbacoas públicas", "tag": "amenity=bbq" },
-          { "categoria": "Pubs", "nombre_es": "Bares", "tag": "amenity=pub" },
-          { "categoria": "Bars", "nombre_es": "Bares de copas", "tag": "amenity=bar" },
-          { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
-          { "categoria": "Beer gardens", "nombre_es": "Patios cerveceros", "tag": "amenity=biergarten / amenity=beer_garden" },
-          { "categoria": "Ice cream shops", "nombre_es": "Heladerías", "tag": "amenity=ice_cream / shop=ice_cream" },
-          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
-          { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" }
+          { "categoria": "Public grills", "nombre_es": "Barbacoa", "tag": "amenity=bbq" },
+          { "categoria": "Pubs", "nombre_es": "Bar", "tag": "amenity=pub" },
+          { "categoria": "Bars", "nombre_es": "Bar", "tag": "amenity=bar" },
+          { "categoria": "Cafes", "nombre_es": "Cafetería", "tag": "amenity=cafe" },
+          { "categoria": "Beer gardens", "nombre_es": "Cervecería", "tag": "amenity=biergarten" },
+          { "categoria": "Ice cream shops", "nombre_es": "Heladería", "tag": "amenity=ice_cream" },
+          { "categoria": "Bakeries", "nombre_es": "Panadería", "tag": "shop=bakery" },
+          { "categoria": "Supermarkets", "nombre_es": "Supermercado", "tag": "shop=supermarket" }
         ]
       },
       "Transport and Mobility": {
         "nombre_es": "Transporte y Movilidad",
         "elementos": [
-          { "categoria": "Ferry terminals", "nombre_es": "Terminales de ferry", "tag": "amenity=ferry_terminal" },
-          { "categoria": "Bus stations", "nombre_es": "Estaciones de autobús", "tag": "amenity=bus_station" },
-          { "categoria": "Bus stops", "nombre_es": "Paradas de autobús", "tag": "highway=bus_stop" },
-          { "categoria": "Taxi stands", "nombre_es": "Paradas de taxi", "tag": "amenity=taxi" },
-          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" },
-          { "categoria": "Car parking places", "nombre_es": "Aparcamientos", "tag": "amenity=parking" },
-          { "categoria": "Motorcycle parking places", "nombre_es": "Aparcamientos para motos", "tag": "amenity=motorcycle_parking" },
-          { "categoria": "Car rental stations", "nombre_es": "Alquiler de coches", "tag": "amenity=car_rental" },
-          { "categoria": "Electric vehicle charging facilities", "nombre_es": "Puntos de recarga para vehículos eléctricos", "tag": "amenity=charging_station" },
-          { "categoria": "Platforms", "nombre_es": "Andenes / Plataformas", "tag": "public_transport=platform" },
-          { "categoria": "Stations", "nombre_es": "Estaciones", "tag": "public_transport=station" },
-          { "categoria": "Stop positions", "nombre_es": "Posiciones de parada", "tag": "public_transport=stop_position" }
+          { "categoria": "Ferry terminals", "nombre_es": "Ferry", "tag": "amenity=ferry_terminal" },
+          { "categoria": "Bus stations", "nombre_es": "Autobús", "tag": "amenity=bus_station" },
+          { "categoria": "Bus stops", "nombre_es": "Parada", "tag": "highway=bus_stop" },
+          { "categoria": "Taxi stands", "nombre_es": "Taxi", "tag": "amenity=taxi" },
+          { "categoria": "Fuel stations", "nombre_es": "Gasolinera", "tag": "amenity=fuel" },
+          { "categoria": "Car parking places", "nombre_es": "Aparcamiento", "tag": "amenity=parking" },
+          { "categoria": "Motorcycle parking places", "nombre_es": "Moto", "tag": "amenity=motorcycle_parking" },
+          { "categoria": "Car rental stations", "nombre_es": "Alquiler", "tag": "amenity=car_rental" },
+          { "categoria": "Electric vehicle charging facilities", "nombre_es": "Recarga", "tag": "amenity=charging_station" },
+          { "categoria": "Platforms", "nombre_es": "Andén", "tag": "public_transport=platform" },
+          { "categoria": "Stations", "nombre_es": "Estación", "tag": "public_transport=station" },
+          { "categoria": "Stop positions", "nombre_es": "Parada", "tag": "public_transport=stop_position" }
         ]
       },
       "Bicycle Infrastructure": {
         "nombre_es": "Infraestructura Ciclista",
         "elementos": [
           { "categoria": "Cycle parking places", "nombre_es": "Aparcabicicletas", "tag": "amenity=bicycle_parking" },
-          { "categoria": "Cycle rental stations", "nombre_es": "Alquiler de bicicletas", "tag": "amenity=bicycle_rental" },
-          { "categoria": "Cycle shops", "nombre_es": "Tiendas de bicicletas", "tag": "shop=bicycle" },
-          { "categoria": "Cycle vending", "nombre_es": "Máquinas de cámaras de aire", "tag": "vending=bicycle_tube" },
-          { "categoria": "Cycle self repair", "nombre_es": "Estaciones de reparación", "tag": "amenity=bicycle_repair_station" }
+          { "categoria": "Cycle rental stations", "nombre_es": "Alquiler", "tag": "amenity=bicycle_rental" },
+          { "categoria": "Cycle shops", "nombre_es": "Bicicletas", "tag": "shop=bicycle" },
+          { "categoria": "Cycle vending", "nombre_es": "Cámaras", "tag": "vending=bicycle_tube" },
+          { "categoria": "Cycle self repair", "nombre_es": "Reparación", "tag": "amenity=bicycle_repair_station" }
         ]
       },
       "Nature and Orography": {
         "nombre_es": "Naturaleza, Relieve y Orografía",
         "elementos": [
-          { "categoria": "Peak", "nombre_es": "Cima / Pico", "tag": "natural=peak" },
-          { "categoria": "Mountain pass", "nombre_es": "Puerto de montaña", "tag": "mountain_pass=yes" },
+          { "categoria": "Peak", "nombre_es": "Pico", "tag": "natural=peak" },
+          { "categoria": "Mountain pass", "nombre_es": "Puerto", "tag": "mountain_pass=yes" },
           { "categoria": "Volcano", "nombre_es": "Volcán", "tag": "natural=volcano" },
           { "categoria": "Geyser", "nombre_es": "Géiser", "tag": "natural=geyser" },
-          { "categoria": "Spring", "nombre_es": "Manantial / Fuente natural", "tag": "natural=spring" },
-          { "categoria": "Geological sites", "nombre_es": "Afloramientos rocosos y yacimientos", "tag": "geological=outcrop" },
-          { "categoria": "Nature reserves", "nombre_es": "Reservas naturales", "tag": "leisure=nature_reserve" },
-          { "categoria": "Parks and Gardens", "nombre_es": "Parques y jardines", "tag": "leisure=park" },
-          { "categoria": "Fishing sites", "nombre_es": "Zonas de pesca", "tag": "leisure=fishing" },
-          { "categoria": "Water features", "nombre_es": "Cascadas, rápidos y puntos de agua", "tag": "waterway=waterfall" }
+          { "categoria": "Spring", "nombre_es": "Manantial", "tag": "natural=spring" },
+          { "categoria": "Geological sites", "nombre_es": "Afloramiento", "tag": "geological=outcrop" },
+          { "categoria": "Nature reserves", "nombre_es": "Reserva", "tag": "leisure=nature_reserve" },
+          { "categoria": "Parks and Gardens", "nombre_es": "Parque", "tag": "leisure=park" },
+          { "categoria": "Fishing sites", "nombre_es": "Pesca", "tag": "leisure=fishing" },
+          { "categoria": "Water features", "nombre_es": "Cascada", "tag": "waterway=waterfall" },
+          { "categoria": "Caves", "nombre_es": "Cueva", "tag": "natural=cave_entrance" },
+          { "categoria": "Sinkholes", "nombre_es": "Sima", "tag": "natural=sinkhole" },
+          { "categoria": "Mines", "nombre_es": "Mina", "tag": "man_made=adit" },
+          { "categoria": "Rocks", "nombre_es": "Roca", "tag": "natural=rock" },
+          { "categoria": "Cliffs", "nombre_es": "Acantilado", "tag": "natural=cliff" }
         ]
       },
       "Tourism and Culture": {
         "nombre_es": "Turismo, Cultura y Ocio",
         "elementos": [
-          { "categoria": "Alpine huts", "nombre_es": "Refugios de montaña", "tag": "tourism=alpine_hut" },
-          { "categoria": "Attractions", "nombre_es": "Atracciones turísticas", "tag": "tourism=attraction" },
-          { "categoria": "Artworks", "nombre_es": "Obras de arte", "tag": "tourism=artwork" },
-          { "categoria": "Viewpoints", "nombre_es": "Miradores", "tag": "tourism=viewpoint" },
-          { "categoria": "Picnic sites", "nombre_es": "Merenderos y áreas recreativas", "tag": "tourism=picnic_site" },
-          { "categoria": "Information", "nombre_es": "Información turística", "tag": "tourism=information" },
-          { "categoria": "Museums", "nombre_es": "Museos", "tag": "tourism=museum" },
-          { "categoria": "Accommodation", "nombre_es": "Hoteles, albergues y campings", "tag": "tourism=hotel" },
-          { "categoria": "Cinemas and Theatres", "nombre_es": "Cines y teatros", "tag": "amenity=cinema" },
-          { "categoria": "Arts centers", "nombre_es": "Centros de arte", "tag": "amenity=arts_centre" }
+          { "categoria": "Alpine huts", "nombre_es": "Refugio alpino", "tag": "tourism=alpine_hut" },
+          { "categoria": "Wilderness huts", "nombre_es": "Refugio libre", "tag": "tourism=wilderness_hut" },
+          { "categoria": "Camping", "nombre_es": "Camping", "tag": "tourism=camp_site" },
+          { "categoria": "Hostels", "nombre_es": "Albergue", "tag": "tourism=hostel" },
+          { "categoria": "Attractions", "nombre_es": "Atracción", "tag": "tourism=attraction" },
+          { "categoria": "Artworks", "nombre_es": "Arte", "tag": "tourism=artwork" },
+          { "categoria": "Viewpoints", "nombre_es": "Mirador", "tag": "tourism=viewpoint" },
+          { "categoria": "Picnic sites", "nombre_es": "Merendero", "tag": "tourism=picnic_site" },
+          { "categoria": "Information", "nombre_es": "Información", "tag": "tourism=information" },
+          { "categoria": "Museums", "nombre_es": "Museo", "tag": "tourism=museum" },
+          { "categoria": "Accommodation", "nombre_es": "Hotel", "tag": "tourism=hotel" },
+          { "categoria": "Cinemas and Theatres", "nombre_es": "Cine", "tag": "amenity=cinema" },
+          { "categoria": "Arts centers", "nombre_es": "Centro", "tag": "amenity=arts_centre" }
         ]
       },
       "History and Heritage": {
         "nombre_es": "Patrimonio e Historia",
         "elementos": [
-          { "categoria": "Castles", "nombre_es": "Castillos y palacios", "tag": "historic=castle" },
+          { "categoria": "Castles", "nombre_es": "Castillo", "tag": "historic=castle" },
           { "categoria": "Ruins", "nombre_es": "Ruinas", "tag": "historic=ruins" },
-          { "categoria": "Archaeological sites", "nombre_es": "Yacimientos arqueológicos", "tag": "historic=archaeological_site" },
-          { "categoria": "Monuments and Memorials", "nombre_es": "Monumentos y conmemorativos", "tag": "historic=monument" },
-          { "categoria": "Forts", "nombre_es": "Fuertes y fortificaciones", "tag": "historic=fort" },
-          { "categoria": "Wayside crosses and shrines", "nombre_es": "Cruces de término y peirones", "tag": "historic=wayside_cross" },
-          { "categoria": "Boundary stones", "nombre_es": "Mojones y piedras de límite", "tag": "historic=boundary_stone" }
+          { "categoria": "Archaeological sites", "nombre_es": "Yacimiento", "tag": "historic=archaeological_site" },
+          { "categoria": "Monuments and Memorials", "nombre_es": "Monumento", "tag": "historic=monument" },
+          { "categoria": "Forts", "nombre_es": "Fuerte", "tag": "historic=fort" },
+          { "categoria": "Wayside crosses and shrines", "nombre_es": "Cruz", "tag": "historic=wayside_cross" },
+          { "categoria": "Boundary stones", "nombre_es": "Mojón", "tag": "historic=boundary_stone" }
         ]
       },
       "Infrastructure and Man-Made": {
         "nombre_es": "Estructuras e Infraestructuras",
         "elementos": [
-          { "categoria": "Lighthouses", "nombre_es": "Faros", "tag": "man_made=lighthouse" },
-          { "categoria": "Survey points", "nombre_es": "Puntos geodésicos", "tag": "man_made=survey_point" },
-          { "categoria": "Towers", "nombre_es": "Torres y antenas", "tag": "man_made=tower" },
-          { "categoria": "Water storage", "nombre_es": "Pozos, depósitos y torres de agua", "tag": "man_made=water_well" },
-          { "categoria": "Watermills and Windmills", "nombre_es": "Molinos de agua y viento", "tag": "man_made=watermill" },
-          { "categoria": "Airports", "nombre_es": "Aeropuertos y helipuertos", "tag": "aeroway=aerodrome" }
+          { "categoria": "Lighthouses", "nombre_es": "Faro", "tag": "man_made=lighthouse" },
+          { "categoria": "Survey points", "nombre_es": "Vértice", "tag": "man_made=survey_point" },
+          { "categoria": "Towers", "nombre_es": "Torre", "tag": "man_made=tower" },
+          { "categoria": "Water storage", "nombre_es": "Depósito", "tag": "man_made=water_well" },
+          { "categoria": "Watermills and Windmills", "nombre_es": "Molino", "tag": "man_made=watermill" },
+          { "categoria": "Airports", "nombre_es": "Aeropuerto", "tag": "aeroway=aerodrome" }
         ]
       },
       "Services and Safety": {
         "nombre_es": "Servicios, Emergencia y Utilidades",
         "elementos": [
-          { "categoria": "Pharmacies and Health", "nombre_es": "Farmacias, hospitales y clínicas", "tag": "amenity=pharmacy" },
-          { "categoria": "Emergency stations", "nombre_es": "Teléfonos y estaciones de emergencia", "tag": "emergency=phone" },
-          { "categoria": "Public toilets", "nombre_es": "Aseos públicos", "tag": "amenity=toilets" },
-          { "categoria": "Bad weather shelters", "nombre_es": "Refugios para mal tiempo", "tag": "amenity=shelter" },
-          { "categoria": "Financial", "nombre_es": "Cajeros y bancos", "tag": "amenity=atm" },
-          { "categoria": "Post and Administrative", "nombre_es": "Oficinas de correos y ayuntamientos", "tag": "amenity=townhall" },
-          { "categoria": "Police and Fire", "nombre_es": "Comisarías y bomberos", "tag": "amenity=police" },
-          { "categoria": "Shops and DIY", "nombre_es": "Tiendas, ferreterías y deportes", "tag": "shop=sports" }
+          { "categoria": "Pharmacies and Health", "nombre_es": "Farmacia", "tag": "amenity=pharmacy" },
+          { "categoria": "Emergency stations", "nombre_es": "Emergencia", "tag": "emergency=phone" },
+          { "categoria": "Mountain rescue", "nombre_es": "Rescate", "tag": "emergency=mountain_rescue" },
+          { "categoria": "Defibrillators", "nombre_es": "Desfibrilador", "tag": "emergency=defibrillator" },
+          { "categoria": "Public toilets", "nombre_es": "Aseos", "tag": "amenity=toilets" },
+          { "categoria": "Bad weather shelters", "nombre_es": "Refugio", "tag": "amenity=shelter" },
+          { "categoria": "Financial", "nombre_es": "Cajero", "tag": "amenity=atm" },
+          { "categoria": "Post and Administrative", "nombre_es": "Correos", "tag": "amenity=townhall" },
+          { "categoria": "Police and Fire", "nombre_es": "Policía", "tag": "amenity=police" },
+          { "categoria": "Shops and DIY", "nombre_es": "Deportes", "tag": "shop=sports" }
         ]
       }
     }
