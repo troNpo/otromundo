@@ -13,3 +13,5 @@ Este proyecto se apoya en potentes librerías de código abierto y servicios car
 * **[Nominatim](https://nominatim.org/)**: Motor de búsqueda y geocodificación oficial de OpenStreetMap utilizado para la localización de PDI.
 * **[IGN (Instituto Geográfico Nacional)](https://www.ign.es/)**: Proveedor de servicios de mapas ráster y fuentes oficiales de cartografía y elevación.
 * **[Esri](https://www.esri.com/)**: Proveedor de capas de imágenes satelitales y cartografía base global.
+* **[Flaticon (UIcons)](https://www.flaticon.com/)**: Proveedor de la iconografía de interfaz para los botones, menús y barras de navegación.
+
