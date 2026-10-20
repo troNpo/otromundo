@@ -67,8 +67,36 @@ function initNominatimModule() {
     }
 }
 
-// --- FUNCIÓN PRINCIPAL DE CONSULTA A NOMINATIM ---
+// --- 1. FUNCIÓN PRINCIPAL DE CONSULTA A NOMINATIM (Actualizada con opción de acumular) ---
 async function ejecutarConsultaNominatim(lat, lon) {
+    const checkboxes = document.querySelectorAll(".subcat-checkbox:checked");
+    
+    if (checkboxes.length === 0) {
+        showToast("⚠️ Marca al menos una categoría");
+        alert("Por favor, selecciona al menos una categoría o elemento.");
+        return;
+    }
+
+    // Comprobamos si ya existen resultados previos para preguntar al usuario
+    let acumularResultados = false;
+    if (currentNominatimElements && currentNominatimElements.length > 0) {
+        acumularResultados = confirm(
+            "¿Deseas acumular estos nuevos PDI con los resultados de la búsqueda anterior?\n\n" +
+            "• Aceptar: Sumar los nuevos puntos a los ya existentes.\n" +
+            "• Cancelar: Borrar los anteriores y hacer una búsqueda limpia."
+        );
+    }
+
+    // Si el usuario decide NO acumular, limpiamos los datos y marcadores viejos del mapa
+    if (!acumularResultados) {
+        if (activeMapMarkers && activeMapMarkers.length > 0) {
+            activeMapMarkers.forEach(markerObj => markerObj.marker.remove());
+            activeMapMarkers = [];
+        }
+        currentNominatimElements = [];
+        selectedNodesMap.clear();
+    }
+
     showToast("Consultando Nominatim API...");
 
     const radiusSlider = document.getElementById("search-radius");
@@ -77,14 +105,6 @@ async function ejecutarConsultaNominatim(lat, lon) {
     const latDelta = searchRadiusKm / 111.0;
     const lonDelta = searchRadiusKm / (111.0 * Math.cos(lat * (Math.PI / 180)));
     const viewbox = `${lon - lonDelta},${lat + latDelta},${lon + lonDelta},${lat - latDelta}`;
-
-    const checkboxes = document.querySelectorAll(".subcat-checkbox:checked");
-    
-    if (checkboxes.length === 0) {
-        showToast("⚠️ Marca al menos una categoría");
-        alert("Por favor, selecciona al menos una categoría o elemento.");
-        return;
-    }
 
     let searchTerms = [];
     checkboxes.forEach(chk => {
@@ -136,11 +156,29 @@ async function ejecutarConsultaNominatim(lat, lon) {
 
         const resultsArrays = await Promise.all(promises);
         
+        // Mapa para fusionar o almacenar resultados evitando duplicados (place_id)
         const uniqueElementsMap = new Map();
+        
+        // Si decidió acumular, reinsertamos los elementos que ya teníamos en memoria
+        if (acumularResultados && currentNominatimElements) {
+            currentNominatimElements.forEach(el => uniqueElementsMap.set(el.id, el));
+        }
+
+        // Añadimos los nuevos resultados obtenidos de la API
         resultsArrays.forEach(arr => {
             arr.forEach(item => {
                 if (!uniqueElementsMap.has(item.place_id)) {
-                    uniqueElementsMap.set(item.place_id, item);
+                    uniqueElementsMap.set(item.place_id, {
+                        id: item.place_id,
+                        type: "node",
+                        lat: parseFloat(item.lat),
+                        lon: parseFloat(item.lon),
+                        tags: {
+                            name: item.display_name ? item.display_name.split(',')[0] : "Punto sin nombre",
+                            [item.class || 'amenity']: item.type || 'yes',
+                            display_full: item.display_name
+                        }
+                    });
                 }
             });
         });
@@ -153,32 +191,16 @@ async function ejecutarConsultaNominatim(lat, lon) {
             return;
         }
 
-        data.sort((itemA, itemB) => {
-            const distA = calcularDistanciaKm(lat, lon, parseFloat(itemA.lat), parseFloat(itemA.lon));
-            const distB = calcularDistanciaKm(lat, lon, parseFloat(itemB.lat), parseFloat(itemB.lon));
-            return distA - distB;
-        });
-
-        currentNominatimElements = data.map(item => ({
-            id: item.place_id,
-            type: "node",
-            lat: parseFloat(item.lat),
-            lon: parseFloat(item.lon),
-            tags: {
-                name: item.display_name ? item.display_name.split(',')[0] : "Punto sin nombre",
-                [item.class || 'amenity']: item.type || 'yes',
-                display_full: item.display_name
-            }
-        }));
+        currentNominatimElements = data;
         
         selectedNodesMap.clear();
         currentNominatimElements.forEach(el => selectedNodesMap.set(el.id, true));
 
-        showToast(`¡Éxito! ${currentNominatimElements.length} PDI encontrados`);
+        showToast(`¡Éxito! Total PDI en gestor: ${currentNominatimElements.length}`);
         mostrarPanelResultados();
 
     } catch (e) {
-        console.error("Error en Nominatim API:", e);
+        console.error("Error Nominatim API:", e);
         showToast("❌ Error de conexión con Nominatim");
         alert("Ocurrió un error al conectar con la API de Nominatim. Prueba a reducir el radio.");
     }
@@ -208,7 +230,14 @@ function mostrarPanelResultados() {
     initMapViewButton(); // Aseguramos que el botón superior responda siempre
 }
 
+// --- 2. FUNCIÓN DE RETORNO (Actualizada con limpieza automática de checkboxes) ---
 function volverAPanelBusqueda() {
+    // Desmarcamos automáticamente todos los checkboxes para dejar limpia la interfaz
+    document.querySelectorAll(".subcat-checkbox").forEach(chk => chk.checked = false);
+    
+    // Informamos al usuario de forma visual
+    showToast("🔄 Criterios limpios. Tus resultados anteriores siguen guardados.", 4000);
+
     const resultsPanel = document.getElementById("results-panel");
     if (resultsPanel) {
         resultsPanel.style.display = "none";
@@ -223,6 +252,9 @@ function volverAPanelBusqueda() {
         });
     }
     ocultarPanelDetalleMapa();
+    
+    const existingToolbar = document.getElementById("poi-map-toolbar");
+    if (existingToolbar) existingToolbar.remove();
 }
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
