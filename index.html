@@ -17,31 +17,36 @@
     <div id="map"></div>
 
     <!-- Banner Superior Izquierdo: Brújula, Escala y Buscador Integrados -->
+        
     <div id="top-left-banner" class="top-left-banner-container">
         
-        <!-- 1. Brújula -->
-        <div id="compass-container" class="banner-item compass-item" title="Restaurar Norte">
-            <img id="compass-icon" src="ui-icons/brujula.png" alt="Brújula" />
+        <!-- Brújula Circular Destacada -->
+        <div id="compass-container" class="banner-key-head compass-item" title="Restaurar Norte">
+            <img id="compass-icon" src="ui-icons/brujula.PNG" alt="Brújula" />
         </div>
 
-        <!-- 2. Escala Compacta -->
-        <div id="scale-container" class="banner-item scale-item">
-            <img src="ui-icons/fi-rr-measuring-tape.svg" alt="Escala" class="scale-icon" />
-            <span id="scale-text">-- m</span>
-        </div>
+        <!-- Cuerpo Escala + Buscador -->
+        <div class="banner-key-body">
+            <!-- 1. Escala Compacta -->
+            <div id="scale-container" class="banner-item scale-item">
+                <img src="ui-icons/fi-rr-measuring-tape.svg" alt="Escala" class="scale-icon" />
+                <span id="scale-text">-- m</span>
+            </div>
 
-        <!-- 3. Buscador Integrado Inline -->
-        <div id="banner-search-container" class="banner-item search-item">
-            <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
-                <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
-            </button>
-            <input type="text" id="input-banner-search" class="banner-search-input hidden" placeholder="Buscar..." autocomplete="off" enterkeyhint="search" />
-            
-            <!-- Desplegable de resultados -->
-            <div id="visor-search-dropdown" class="search-dropdown hidden"></div>
+            <!-- 2. Buscador Integrado Inline -->
+            <div id="banner-search-container" class="banner-item search-item">
+                <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
+                    <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
+                </button>
+                <input type="text" id="input-banner-search" class="banner-search-input hidden" placeholder="Buscar..." autocomplete="off" enterkeyhint="search" />
+                
+                <!-- Desplegable de resultados -->
+                <div id="visor-search-dropdown" class="search-dropdown hidden"></div>
+            </div>
         </div>
 
     </div>
+
 
     <!-- Elemento visual del Cursor Central en el mapa -->
     <div id="map-center-cursor" class="map-cursor-container">
