@@ -258,12 +258,12 @@
             </div>
         </header>
 
-        <!-- Barra de Búsqueda Rápida por Nombre (Oculta por defecto, usa inputs del CSS general) -->
+        <!-- Barra de Búsqueda Rápida por Nombre -->
         <div id="quick-search-container" style="display: none; padding: 10px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
             <input type="text" id="quick-search-input" placeholder="Filtrar PDI por nombre..." style="width: 100%; background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 12px; font-size: 14px; outline: none;">
         </div>
 
-        <!-- Barra de Acciones Masivas (Integrada a la misma altura, se muestra si hay selección) -->
+        <!-- Barra de Acciones Masivas -->
         <div id="bulk-action-bar" style="display: none; align-items: center; justify-content: space-between; padding: 8px 16px; background: rgba(0, 229, 255, 0.1); border-bottom: 1px solid var(--primary-cyan); font-size: 13px;">
             <span id="bulk-counter-text" style="color: var(--primary-cyan); font-weight: 600;">0 seleccionados</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -336,7 +336,7 @@
     <!-- ================= PANEL INFERIOR FLOTANTE DE DETALLE DE PDI EN EL MAPA ================= -->
     <div id="map-poi-detail-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: auto; max-height: 50vh; background: #121212; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 2000; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.7);">
         
-        <!-- Cabecera unificada idéntica al selector de mapas -->
+        <!-- Cabecera unificada -->
         <div class="selector-header" style="border-top-left-radius: 24px; border-top-right-radius: 24px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background-color: rgba(0, 229, 255, 0.12); border-bottom: 1px solid var(--border-color);">
             <div style="display: flex; flex-direction: column;">
                 <span id="detail-poi-category" style="font-size: 0.7rem; color: var(--primary-cyan); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Categoría</span>
@@ -351,8 +351,11 @@
         <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
             <div id="detail-poi-meta" style="font-size: 0.9rem; color: var(--text-muted);">Distancia y coordenadas</div>
             
-            <!-- Botonera simétrica de 3 acciones -->
-            <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px;">
+            <!-- Botonera simétrica con el botón de información integrado al mismo nivel -->
+            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 4px;">
+                <button id="detail-btn-info" class="action-btn" title="Ver etiquetas OSM" style="display: none; background: rgba(0,229,255,0.1); border: 1px solid var(--primary-cyan); padding: 10px 12px; border-radius: 12px; cursor: pointer; align-items: center; gap: 6px; color: var(--primary-cyan); font-size: 0.9rem;">
+                    <img src="./ui-icons/fi-rr-info.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Info">
+                </button>
                 <button id="detail-btn-action" class="action-btn" title="Ver en el listado" style="background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); padding: 10px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--primary-cyan); font-size: 0.9rem; font-weight: 600;">
                     <img src="./ui-icons/fi-rr-list.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Listado">
                     <span>Listado</span>
@@ -367,14 +370,62 @@
         </div>
     </div>
 
+    <!-- ================= PANEL DE OPCIONES AVANZADAS DE PDI ================= -->
+    <div id="advanced-options-panel" class="fullscreen-panel hidden" style="z-index: 20005;">
+        <div class="panel-header">
+            <button id="btn-close-advanced" class="back-btn" title="Volver">
+                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
+            </button>
+            <h2>Opciones Avanzadas PDI</h2>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="panel-body" style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+            <div id="advanced-poi-title" style="font-weight: bold; color: var(--primary-cyan); font-size: 1.05rem; padding: 4px 8px;">Nombre del PDI</div>
+            
+            <div class="control-card" id="adv-btn-share" style="border-radius: 12px; cursor: pointer;">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-share.svg" class="control-icon" alt="Compartir"></div>
+                <span class="control-card-title">Compartir posición y enlaces</span>
+            </div>
+
+            <!-- TEXTO ACTUALIZADO -->
+            <div class="control-card" id="adv-btn-native-share" style="border-radius: 12px; cursor: pointer;">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-share.svg" class="control-icon" alt="App externa"></div>
+                <span class="control-card-title">Abrir en otra app</span>
+            </div>
+
+            <div class="control-card" id="adv-btn-streetview" style="border-radius: 12px; cursor: pointer;">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-street-view.svg" class="control-icon" alt="Street View"></div>
+                <span class="control-card-title">Abrir en Street View (Google Maps)</span>
+            </div>
+
+            <!-- TEXTO ACTUALIZADO -->
+            <div class="control-card" id="adv-btn-enrich" style="border-radius: 12px; cursor: pointer; border: 1px solid var(--primary-cyan); background: rgba(0,229,255,0.05);">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-file-circle-info.svg" class="control-icon" alt="Enriquecer"></div>
+                <span class="control-card-title" style="color: var(--primary-cyan); font-weight: 600;">Enriquecer datos desde OSM</span>
+            </div>
+
+            <!-- BOTÓN "Ver objeto en OpenStreetMap.org" ELIMINADO POR REDUNDANCIA -->
+
+            <div class="control-card" id="adv-btn-edit" style="border-radius: 12px; cursor: pointer;">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-tools.svg" class="control-icon" alt="Editar OSM"></div>
+                <span class="control-card-title">Contribuir / Editar en OpenStreetMap</span>
+            </div>
+
+            <div class="control-card" id="adv-btn-download-kml" style="border-radius: 12px; cursor: pointer;">
+                <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-file-download.svg" class="control-icon" alt="KML"></div>
+                <span class="control-card-title">Descargar PDI individual (KML)</span>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Scripts -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="script.js"></script>
     <script src="geocoder.js"></script>
     <script src="profile-loader.js"></script>
+    <script src="overpass-client.js"></script>
     <script src="nominatim-client.js"></script>
-    <!-- <script src="whats-here.js"></script> --> <!-- Próximamente para la exploración Overpass -->
     <script src="app.js"></script>
 </body>
 </html>

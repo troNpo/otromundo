@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initDetailPanelEvents();
     initMapViewButton();
     initHeaderActionButtons();
+    initAdvancedOptionsEvents();
 });
 
 if (document.readyState === "interactive" || document.readyState === "complete") {
@@ -49,6 +50,7 @@ if (document.readyState === "interactive" || document.readyState === "complete")
     initDetailPanelEvents();
     initMapViewButton();
     initHeaderActionButtons();
+    initAdvancedOptionsEvents();
 }
 
 function initNominatimModule() {
@@ -72,7 +74,6 @@ function initNominatimModule() {
 
 // --- GESTIÓN DE LOS BOTONES Y BARRA DE ACCIONES MASIVAS ---
 function initHeaderActionButtons() {
-    // 1. LUPA: Alternar input de búsqueda rápida por nombre
     const btnToggleSearch = document.getElementById("btn-toggle-search");
     const quickSearchContainer = document.getElementById("quick-search-container");
     const quickSearchInput = document.getElementById("quick-search-input");
@@ -95,7 +96,6 @@ function initHeaderActionButtons() {
         };
     }
 
-    // 2. CHECKLIST: Marcar / Desmarcar todo
     const btnSelectAll = document.getElementById("btn-select-all");
     if (btnSelectAll) {
         btnSelectAll.onclick = (e) => {
@@ -108,15 +108,12 @@ function initHeaderActionButtons() {
                 chk.checked = !allChecked;
             });
 
-            // Limpiamos historial al marcar/desmarcar todo de golpe
             userInteractionHistory = [];
-
             actualizarBarraAccionesMasivas();
             showToast(allChecked ? "☑️ Todos desmarcados" : "✅ Todos marcados");
         };
     }
 
-    // 3. BOTÓN BORRAR EN LA BARRA MASIVA
     const btnBulkDelete = document.getElementById("btn-bulk-delete");
     if (btnBulkDelete) {
         btnBulkDelete.onclick = (e) => {
@@ -125,7 +122,6 @@ function initHeaderActionButtons() {
         };
     }
 
-    // 4. BOTÓN DESMARCAR/MARCAR POR RANGO (fi-rr-arrows-from-dotted-line.svg)
     const btnBulkRangeUncheck = document.getElementById("btn-bulk-range-uncheck");
     if (btnBulkRangeUncheck) {
         btnBulkRangeUncheck.onclick = (e) => {
@@ -134,7 +130,6 @@ function initHeaderActionButtons() {
         };
     }
 
-    // 5. DESCARGA KML
     const btnDownload = document.getElementById("btn-download-preset");
     if (btnDownload) {
         btnDownload.onclick = (e) => {
@@ -181,7 +176,6 @@ function ejecutarDesmarcadoPorRango() {
     const checkboxes = Array.from(document.querySelectorAll(".poi-select-checkbox"));
     if (checkboxes.length === 0) return;
 
-    // Filtramos el historial para asegurarnos de que los IDs siguen vigentes en pantalla
     const validHistory = userInteractionHistory.filter(id => {
         return checkboxes.some(chk => parseInt(chk.getAttribute("data-id")) === id);
     });
@@ -191,7 +185,6 @@ function ejecutarDesmarcadoPorRango() {
         return;
     }
 
-    // Tomamos estrictamente los DOS ÚLTIMOS elementos con los que el usuario ha interactuado
     const id1 = validHistory[validHistory.length - 2];
     const id2 = validHistory[validHistory.length - 1];
 
@@ -209,12 +202,11 @@ function ejecutarDesmarcadoPorRango() {
     const minIdx = Math.min(index1, index2);
     const maxIdx = Math.max(index1, index2);
 
-    // Determinamos la acción según el estado actual de esos dos extremos
-    const actionMark = chk1.checked && chk2.checked;     // Si ambos están marcados -> rellenamos/marcamos el medio
-    const actionUnmark = !chk1.checked && !chk2.checked; // Si ambos están desmarcados -> vaciamos/desmarcamos el medio
+    const actionMark = chk1.checked && chk2.checked;
+    const actionUnmark = !chk1.checked && !chk2.checked;
 
     if (!actionMark && !actionUnmark) {
-        showToast("⚠️ Los dos extremos seleccionados deben tener el mismo estado (ambos marcados o ambos desmarcados)");
+        showToast("⚠️ Los dos extremos seleccionados deben tener el mismo estado");
         return;
     }
 
@@ -227,11 +219,7 @@ function ejecutarDesmarcadoPorRango() {
     }
 
     actualizarBarraAccionesMasivas();
-    if (actionMark) {
-        showToast(`✨ Rango procesado: ${contador} tarjetas marcadas en el bloque`);
-    } else {
-        showToast(`✨ Rango procesado: ${contador} tarjetas desmarcadas en el bloque`);
-    }
+    showToast(actionMark ? `✨ Rango procesado: ${contador} marcadas` : `✨ Rango procesado: ${contador} desmarcadas`);
 }
 
 // --- EJECUTAR BORRADO MASIVO ---
@@ -420,9 +408,14 @@ async function ejecutarConsultaNominatim(lat, lon) {
         resultsArrays.forEach(arr => {
             arr.forEach(item => {
                 if (!uniqueElementsMap.has(item.place_id)) {
+                    let osmType = "node";
+                    if (item.osm_type === "way") osmType = "way";
+                    else if (item.osm_type === "relation") osmType = "relation";
+
                     uniqueElementsMap.set(item.place_id, {
-                        id: item.place_id,
-                        type: "node",
+                        id: item.osm_id || item.place_id,
+                        osm_type: osmType,
+                        type: osmType,
                         lat: parseFloat(item.lat),
                         lon: parseFloat(item.lon),
                         tags: {
@@ -454,7 +447,57 @@ async function ejecutarConsultaNominatim(lat, lon) {
     } catch (e) {
         console.error("Error Nominatim API:", e);
         showToast("❌ Error de conexión con Nominatim");
-        alert("Ocurrió un error al conectar con la API de Nominatim. Prueba a reducir el radio.");
+        alert("Ocurrió un error al conectar con la API de Nominatim.");
+    }
+}
+
+// --- FUNCIÓN DE ENRIQUECIMIENTO DIRECTO DESDE LA API OFICIAL DE OSM ---
+async function enriquecerPoiDesdeOSM(poi) {
+    const osmType = poi.osm_type || poi.type || 'node';
+    const osmId = poi.id;
+
+    if (!osmId) {
+        showToast("⚠️ El PDI no tiene un ID de OSM válido");
+        return null;
+    }
+
+    showToast(`Consultando API oficial de OSM (${osmType}/${osmId})...`);
+
+    const url = `https://api.openstreetmap.org/api/0.6/${osmType}/${osmId}.json`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.elements || data.elements.length === 0) {
+            showToast("⚠️ No se encontraron datos en la API de OSM");
+            return null;
+        }
+
+        const elementoOsm = data.elements[0];
+
+        poi.tagsEnriquecidas = elementoOsm.tags || {};
+        poi.enriquecido = true;
+
+        if (elementoOsm.tags && elementoOsm.tags.name) {
+            poi.tags.name = elementoOsm.tags.name;
+        }
+
+        if (elementoOsm.lat && elementoOsm.lon) {
+            poi.lat = parseFloat(elementoOsm.lat);
+            poi.lon = parseFloat(elementoOsm.lon);
+        }
+
+        showToast("✅ Datos obtenidos directamente de OSM");
+        return poi.tagsEnriquecidas;
+
+    } catch (error) {
+        console.error("Error al consultar la API de OSM:", error);
+        showToast("❌ Error al conectar con la API de OSM");
+        return null;
     }
 }
 
@@ -676,7 +719,7 @@ function poblarPanelResultados() {
     }
 }
 
-// --- RENDERIZADO DE TARJETAS CON CHECKBOX Y BOTONES DE ACCIÓN ---
+// --- RENDERIZADO DE TARJETAS CON CHECKBOX, ACORDEÓN DINÁMICO OCULTO Y BOTONES DE ACCIÓN ---
 function renderizarNodosCategoria(nodosList) {
     const nodesContainer = document.getElementById("nodes-container");
     if (!nodesContainer) return;
@@ -718,6 +761,45 @@ function renderizarNodosCategoria(nodosList) {
             const distancia = calcularDistanciaKm(currentLat, currentLon, node.lat, node.lon).toFixed(1);
             const colorTag = obtenerColorPorTag(node.tags);
 
+            let accordionHtml = "";
+            let infoBtnHtml = "";
+
+            if (node.enriquecido && node.tagsEnriquecidas) {
+                const tags = node.tagsEnriquecidas;
+                let details = [];
+                const keysIgnorar = ["display_full", "normalized_name"];
+
+                Object.keys(tags).forEach(key => {
+                    if (keysIgnorar.includes(key)) return;
+                    const val = tags[key];
+                    if (!val) return;
+
+                    if (key === "phone" || key.includes("contact:phone")) {
+                        details.push(`📞 <b>${key}:</b> <a href="tel:${val}" style="color:var(--primary-cyan);">${val}</a>`);
+                    } else if (key === "website" || val.toString().startsWith("http")) {
+                        details.push(`🌐 <b>${key}:</b> <a href="${val}" target="_blank" style="color:var(--primary-cyan);">${val}</a>`);
+                    } else {
+                        details.push(`<code>${key}</code>: <b>${val}</b>`);
+                    }
+                });
+
+                if (details.length === 0) {
+                    details.push("ℹ️ Sin etiquetas adicionales en OSM.");
+                }
+
+                infoBtnHtml = `
+                    <button class="action-btn btn-toggle-info" data-id="${node.id}" title="Ver etiquetas OSM" style="background: rgba(0,229,255,0.1); border: 1px solid var(--primary-cyan); padding: 6px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--primary-cyan); font-size: 0.8rem;">
+                        <img src="./ui-icons/fi-rr-info.svg" width="14" height="14" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Info">
+                    </button>
+                `;
+
+                accordionHtml = `
+                    <div id="info-accordion-${node.id}" class="poi-accordion hidden" style="display: none; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px; margin-top: 6px; font-size: 0.8rem; flex-direction: column; gap: 4px; font-family: monospace;">
+                        ${details.map(d => `<div style="word-break: break-all;">${d}</div>`).join('')}
+                    </div>
+                `;
+            }
+
             const card = document.createElement("div");
             card.className = "node-card";
             card.id = `poi-card-${node.id}`;
@@ -739,12 +821,16 @@ function renderizarNodosCategoria(nodosList) {
                         <input type="checkbox" class="poi-select-checkbox" data-id="${node.id}" style="width: 18px; height: 18px; accent-color: var(--primary-cyan); cursor: pointer;" title="Seleccionar para borrado masivo">
                         <div class="node-info" style="flex: 1;">
                             <div class="node-name" style="color: ${colorTag}; font-weight: bold; font-size: 0.95rem;">${name}</div>
-                            <div class="node-meta" style="font-size: 0.8rem; color: #aaa; margin-top: 2px;">Dist: ${distancia} km${ele} | Lat/Lon: ${node.lat.toFixed(4)}, ${node.lon.toFixed(4)}</div>
+                            <div class="node-meta" style="font-size: 0.8rem; color: #aaa; margin-top: 2px;">
+                                OSM [<strong>${node.osm_type || node.type || 'node'}</strong>: ${node.id}] | Dist: ${distancia} km${ele}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <!-- Botonera simétrica de 3 acciones en la tarjeta -->
+                ${accordionHtml}
+                <!-- Botonera simétrica de acciones en la tarjeta -->
                 <div style="display: flex; gap: 6px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+                    ${infoBtnHtml}
                     <button class="action-btn btn-go-map" data-id="${node.id}" title="Ver en el mapa" style="background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--primary-cyan); font-size: 0.8rem; font-weight: 600;">
                         <img src="./ui-icons/fi-rr-map.svg" width="14" height="14" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Mapa">
                         <span>Mapa</span>
@@ -762,18 +848,33 @@ function renderizarNodosCategoria(nodosList) {
         });
     });
 
-    // Vincular eventos de los checkboxes individuales actualizando el historial
     nodesContainer.querySelectorAll('.poi-select-checkbox').forEach(chk => {
         chk.addEventListener('change', () => {
             const id = parseInt(chk.getAttribute("data-id"));
             userInteractionHistory = userInteractionHistory.filter(item => item !== id);
             userInteractionHistory.push(id);
-            
             actualizarBarraAccionesMasivas();
         });
     });
 
-    // Vincular eventos de los botones de cada tarjeta
+    nodesContainer.querySelectorAll('.btn-toggle-info').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.getAttribute('data-id'));
+            const accordion = document.getElementById(`info-accordion-${id}`);
+            if (accordion) {
+                const estaOculto = accordion.style.display === "none" || accordion.classList.contains("hidden");
+                if (estaOculto) {
+                    accordion.style.display = "flex";
+                    accordion.classList.remove("hidden");
+                } else {
+                    accordion.style.display = "none";
+                    accordion.classList.add("hidden");
+                }
+            }
+        });
+    });
+
     nodesContainer.querySelectorAll('.btn-go-map').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -945,6 +1046,71 @@ function seleccionarPoiEnMapa(poi) {
     document.getElementById("detail-poi-title").textContent = name;
     document.getElementById("detail-poi-meta").textContent = `Distancia: ${distancia} km | Coordenadas: ${poi.lat.toFixed(4)}, ${poi.lon.toFixed(4)}`;
 
+    // --- GESTIÓN DEL BOTÓN INFO Y ACORDEÓN EN LA BOTONERA DEL PANEL DEL MAPA ---
+    const btnInfoMap = document.getElementById("detail-btn-info");
+    let mapAccordion = document.getElementById("map-info-accordion");
+
+    // Si no existe el acordeón en el panel del mapa todavía, lo creamos dinámicamente
+    if (!mapAccordion) {
+        mapAccordion = document.createElement("div");
+        mapAccordion.id = "map-info-accordion";
+        mapAccordion.className = "poi-accordion hidden";
+        mapAccordion.style.cssText = "display: none; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px; max-height: 150px; overflow-y: auto; font-size: 0.8rem; flex-direction: column; gap: 4px; font-family: monospace; margin-top: 10px; width: 100%;";
+        
+        // Lo insertamos justo encima de la botonera del panel
+        const metaEl = document.getElementById("detail-poi-meta");
+        if (metaEl && metaEl.parentNode) {
+            metaEl.parentNode.insertBefore(mapAccordion, metaEl.nextSibling);
+        }
+    }
+
+    if (poi.enriquecido && poi.tagsEnriquecidas) {
+        const tags = poi.tagsEnriquecidas;
+        let details = [];
+        const keysIgnorar = ["display_full", "normalized_name"];
+
+        Object.keys(tags).forEach(key => {
+            if (keysIgnorar.includes(key)) return;
+            const val = tags[key];
+            if (!val) return;
+
+            if (key === "phone" || key.includes("contact:phone")) {
+                details.push(`📞 <b>${key}:</b> <a href="tel:${val}" style="color:var(--primary-cyan);">${val}</a>`);
+            } else if (key === "website" || val.toString().startsWith("http")) {
+                details.push(`🌐 <b>${key}:</b> <a href="${val}" target="_blank" style="color:var(--primary-cyan);">${val}</a>`);
+            } else {
+                details.push(`<code>${key}</code>: <b>${val}</b>`);
+            }
+        });
+
+        if (details.length === 0) {
+            details.push("ℹ️ Sin etiquetas adicionales en OSM.");
+        }
+
+        mapAccordion.innerHTML = details.map(d => `<div style="word-break: break-all;">${d}</div>`).join('');
+        
+        if (btnInfoMap) {
+            btnInfoMap.style.display = "flex";
+            btnInfoMap.onclick = (e) => {
+                e.stopPropagation();
+                const estaOculto = mapAccordion.style.display === "none" || mapAccordion.classList.contains("hidden");
+                if (estaOculto) {
+                    mapAccordion.style.display = "flex";
+                    mapAccordion.classList.remove("hidden");
+                } else {
+                    mapAccordion.style.display = "none";
+                    mapAccordion.classList.add("hidden");
+                }
+            };
+        }
+    } else {
+        if (btnInfoMap) btnInfoMap.style.display = "none";
+        mapAccordion.style.display = "none";
+        mapAccordion.classList.add("hidden");
+        mapAccordion.innerHTML = "";
+    }
+    // --------------------------------------------------------------------------
+
     panel.style.display = "flex";
 
     const toolbar = document.getElementById("poi-map-toolbar");
@@ -961,6 +1127,13 @@ function ocultarPanelDetalleMapa() {
     const panel = document.getElementById("map-poi-detail-panel");
     if (panel) {
         panel.style.display = "none";
+    }
+
+    // Ocultar también el acordeón del mapa al cerrar el panel
+    const mapAccordion = document.getElementById("map-info-accordion");
+    if (mapAccordion) {
+        mapAccordion.style.display = "none";
+        mapAccordion.classList.add("hidden");
     }
 
     const toolbar = document.getElementById("poi-map-toolbar");
@@ -1111,13 +1284,6 @@ function eliminarPoi(id) {
     }
 }
 
-function mostrarOpcionesAvanzadas(id) {
-    const poi = currentNominatimElements.find(el => el.id === id);
-    if (!poi) return;
-    const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto";
-    alert(`Opciones avanzadas para: ${name}\nCoordenadas: ${poi.lat.toFixed(5)}, ${poi.lon.toFixed(5)}`);
-}
-
 function initMapViewButton() {
     const btnShowMapView = document.getElementById("btn-show-map-view");
     if (btnShowMapView) {
@@ -1132,4 +1298,147 @@ function initMapViewButton() {
             mostrarResultadosEnMapa();
         });
     }
+}
+
+// --- GESTIÓN DEL PANEL DE OPCIONES AVANZADAS Y ACCIONES DIRECTAS ---
+let currentAdvancedPoiId = null;
+
+function mostrarOpcionesAvanzadas(id) {
+    const poi = currentNominatimElements.find(el => el.id === id);
+    if (!poi) return;
+    currentAdvancedPoiId = id;
+
+    const titleEl = document.getElementById("advanced-poi-title");
+    if (titleEl) {
+        const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto sin nombre";
+        titleEl.textContent = name;
+    }
+
+    const panel = document.getElementById("advanced-options-panel");
+    if (panel) panel.classList.remove("hidden");
+}
+
+function initAdvancedOptionsEvents() {
+    const btnClose = document.getElementById("btn-close-advanced");
+    if (btnClose) {
+        btnClose.addEventListener("click", () => {
+            const panel = document.getElementById("advanced-options-panel");
+            if (panel) panel.classList.add("hidden");
+            currentAdvancedPoiId = null;
+        });
+    }
+
+    const btnShare = document.getElementById("adv-btn-share");
+    if (btnShare) {
+        btnShare.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto de Interés";
+            const gmaps = `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lon}`;
+            const amaps = `http://maps.apple.com/?q=${poi.lat},${poi.lon}`;
+            const text = `📍 ${name}\nCoordenadas: ${poi.lat.toFixed(5)}, ${poi.lon.toFixed(5)}\n\nGoogle Maps: ${gmaps}\nApple Maps: ${amaps}`;
+            
+            if (navigator.share) {
+                navigator.share({ title: name, text: text }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(text);
+                showToast("📋 Información copiada al portapapeles");
+            }
+        });
+    }
+
+    const btnNativeShare = document.getElementById("adv-btn-native-share");
+    if (btnNativeShare) {
+        btnNativeShare.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            window.location.href = `geo:${poi.lat},${poi.lon}?q=${poi.lat},${poi.lon}`;
+        });
+    }
+
+    const btnStreetView = document.getElementById("adv-btn-streetview");
+    if (btnStreetView) {
+        btnStreetView.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${poi.lat},${poi.lon}`;
+            window.open(url, '_blank');
+        });
+    }
+
+    const btnEnrich = document.getElementById("adv-btn-enrich");
+    if (btnEnrich) {
+        btnEnrich.addEventListener("click", async () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            
+            const tagsEnriquecidas = await enriquecerPoiDesdeOSM(poi);
+            if (tagsEnriquecidas) {
+                const panel = document.getElementById("advanced-options-panel");
+                if (panel) panel.classList.add("hidden");
+                
+                poblarPanelResultados();
+                
+                setTimeout(() => {
+                    const card = document.getElementById(`poi-card-${poi.id}`);
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.style.background = 'rgba(0,229,255,0.2)';
+                        setTimeout(() => { card.style.background = 'rgba(18,18,20,0.8)'; }, 1500);
+                    }
+                }, 200);
+            }
+        });
+    }
+
+    const btnViewOsm = document.getElementById("adv-btn-view-osm");
+    if (btnViewOsm) {
+        btnViewOsm.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            const elementType = poi.osm_type || poi.type || "node";
+            const url = `https://www.openstreetmap.org/${elementType}/${poi.id}`;
+            window.open(url, '_blank');
+        });
+    }
+
+    const btnEdit = document.getElementById("adv-btn-edit");
+    if (btnEdit) {
+        btnEdit.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            const elementType = poi.osm_type || poi.type || "node";
+            const url = `https://www.openstreetmap.org/edit?${elementType}=${poi.id}`;
+            window.open(url, '_blank');
+        });
+    }
+
+    const btnDownloadKml = document.getElementById("adv-btn-download-kml");
+    if (btnDownloadKml) {
+        btnDownloadKml.addEventListener("click", () => {
+            const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
+            if (!poi) return;
+            exportarPoiIndividualAKml(poi);
+        });
+    }
+}
+
+function exportarPoiIndividualAKml(poi) {
+    const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto sin nombre";
+    let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
+    kml += `  <Placemark>\n    <name>${escapeXml(name)}</name>\n`;
+    kml += `    <Point><coordinates>${poi.lon},${poi.lat},0</coordinates></Point>\n`;
+    kml += `  </Placemark>\n</Document>\n</kml>`;
+
+    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.kml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("📥 KML individual descargado");
 }
