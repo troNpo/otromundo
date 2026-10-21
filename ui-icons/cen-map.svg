@@ -1,19 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 128 128">
+  <title>OtroMundo — cursor de centro de mapa</title>
+  <desc>Mira minimalista cian con punto central, anillo y cuatro segmentos cardinales, sobre fondo transparente.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Segmentos cardinales: borde cian y núcleo oscuro -->
+    <g stroke="#00CFE8" stroke-width="8">
+      <path d="M64 15 V38"/>
+      <path d="M64 90 V113"/>
+      <path d="M15 64 H38"/>
+      <path d="M90 64 H113"/>
+    </g>
+    <g stroke="#064B60" stroke-width="3.8">
+      <path d="M64 15 V38"/>
+      <path d="M64 90 V113"/>
+      <path d="M15 64 H38"/>
+      <path d="M90 64 H113"/>
+    </g>
 
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 128 128">
-  <g fill="none"
-     stroke="#00CFE8"
-     stroke-width="2.5"
-     stroke-linecap="round">
-    <circle cx="64" cy="64" r="20"/>
-    <path d="M64 8V35 M64 93V120
-             M8 64H35 M93 64H120"/>
+    <!-- Arco exterior segmentado -->
+    <g stroke="#00CFE8" stroke-width="5.2">
+      <path d="M23 55 A42 42 0 0 1 55 23"/>
+      <path d="M73 23 A42 42 0 0 1 105 55"/>
+      <path d="M105 73 A42 42 0 0 1 73 105"/>
+      <path d="M55 105 A42 42 0 0 1 23 73"/>
+    </g>
+    <g stroke="#064B60" stroke-width="2.1">
+      <path d="M23 55 A42 42 0 0 1 55 23"/>
+      <path d="M73 23 A42 42 0 0 1 105 55"/>
+      <path d="M105 73 A42 42 0 0 1 73 105"/>
+      <path d="M55 105 A42 42 0 0 1 23 73"/>
+    </g>
+
+    <!-- Anillo central -->
+    <circle cx="64" cy="64" r="19.5" stroke="#00CFE8" stroke-width="3.2"/>
+    <circle cx="64" cy="64" r="9" fill="#00CFE8" stroke="#064B60" stroke-width="1.8"/>
   </g>
-
-  
-
-  <circle cx="64" cy="64" r="4.5"
-          fill="#00D9F5"
-          stroke="#003C4A"
-          stroke-width="1.5"/>
 </svg>
