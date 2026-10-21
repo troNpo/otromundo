@@ -5,6 +5,7 @@ let selectedNodesMap = new Map();
 let activeCategoryName = "";
 let activeMapMarkers = [];
 let selectedPoiId = null; // Para llevar el control del PDI seleccionado actualmente
+let userInteractionHistory = []; // Registro de los últimos clics en checkboxes para rangos consecutivos
 
 function showToast(message, duration = 3000) {
     let existingToast = document.getElementById("debug-toast");
@@ -40,12 +41,14 @@ document.addEventListener("DOMContentLoaded", () => {
     initNominatimModule();
     initDetailPanelEvents();
     initMapViewButton();
+    initHeaderActionButtons();
 });
 
 if (document.readyState === "interactive" || document.readyState === "complete") {
     initNominatimModule();
     initDetailPanelEvents();
     initMapViewButton();
+    initHeaderActionButtons();
 }
 
 function initNominatimModule() {
@@ -67,7 +70,261 @@ function initNominatimModule() {
     }
 }
 
-// --- 1. FUNCIÓN PRINCIPAL DE CONSULTA A NOMINATIM (Actualizada con opción de acumular) ---
+// --- GESTIÓN DE LOS BOTONES Y BARRA DE ACCIONES MASIVAS ---
+function initHeaderActionButtons() {
+    // 1. LUPA: Alternar input de búsqueda rápida por nombre
+    const btnToggleSearch = document.getElementById("btn-toggle-search");
+    const quickSearchContainer = document.getElementById("quick-search-container");
+    const quickSearchInput = document.getElementById("quick-search-input");
+
+    if (btnToggleSearch && quickSearchContainer) {
+        btnToggleSearch.onclick = (e) => {
+            e.preventDefault();
+            const isHidden = quickSearchContainer.style.display === "none" || !quickSearchContainer.style.display;
+            quickSearchContainer.style.display = isHidden ? "block" : "none";
+            if (isHidden && quickSearchInput) {
+                quickSearchInput.focus();
+            }
+        };
+    }
+
+    if (quickSearchInput) {
+        quickSearchInput.oninput = (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            filtrarTarjetasPorNombre(query);
+        };
+    }
+
+    // 2. CHECKLIST: Marcar / Desmarcar todo
+    const btnSelectAll = document.getElementById("btn-select-all");
+    if (btnSelectAll) {
+        btnSelectAll.onclick = (e) => {
+            e.preventDefault();
+            const checkboxes = document.querySelectorAll(".poi-select-checkbox");
+            if (checkboxes.length === 0) return;
+
+            const allChecked = Array.from(checkboxes).every(chk => chk.checked);
+            checkboxes.forEach(chk => {
+                chk.checked = !allChecked;
+            });
+
+            // Limpiamos historial al marcar/desmarcar todo de golpe
+            userInteractionHistory = [];
+
+            actualizarBarraAccionesMasivas();
+            showToast(allChecked ? "☑️ Todos desmarcados" : "✅ Todos marcados");
+        };
+    }
+
+    // 3. BOTÓN BORRAR EN LA BARRA MASIVA
+    const btnBulkDelete = document.getElementById("btn-bulk-delete");
+    if (btnBulkDelete) {
+        btnBulkDelete.onclick = (e) => {
+            e.preventDefault();
+            ejecutarBorradoMasivo();
+        };
+    }
+
+    // 4. BOTÓN DESMARCAR/MARCAR POR RANGO (fi-rr-arrows-from-dotted-line.svg)
+    const btnBulkRangeUncheck = document.getElementById("btn-bulk-range-uncheck");
+    if (btnBulkRangeUncheck) {
+        btnBulkRangeUncheck.onclick = (e) => {
+            e.preventDefault();
+            ejecutarDesmarcadoPorRango();
+        };
+    }
+
+    // 5. DESCARGA KML
+    const btnDownload = document.getElementById("btn-download-preset");
+    if (btnDownload) {
+        btnDownload.onclick = (e) => {
+            e.preventDefault();
+            exportarPdiAKml();
+        };
+    }
+}
+
+// --- FILTRAR TARJETAS POR NOMBRE ---
+function filtrarTarjetasPorNombre(query) {
+    const cards = document.querySelectorAll(".node-card");
+    cards.forEach(card => {
+        const nameElement = card.querySelector(".node-name");
+        if (nameElement) {
+            const nameText = nameElement.textContent.toLowerCase();
+            if (nameText.includes(query)) {
+                card.style.display = "flex";
+            } else {
+                card.style.display = "none";
+            }
+        }
+    });
+}
+
+// --- ACTUALIZAR BARRA DE ACCIONES MASIVAS ---
+function actualizarBarraAccionesMasivas() {
+    const bulkBar = document.getElementById("bulk-action-bar");
+    const counterText = document.getElementById("bulk-counter-text");
+    const checkboxesSeleccionados = document.querySelectorAll(".poi-select-checkbox:checked");
+
+    if (!bulkBar || !counterText) return;
+
+    if (checkboxesSeleccionados.length > 0) {
+        bulkBar.style.display = "flex";
+        counterText.textContent = `${checkboxesSeleccionados.length} seleccionados`;
+    } else {
+        bulkBar.style.display = "none";
+    }
+}
+
+// --- RANGO BIDIRECCIONAL BASADO EN HISTORIAL DE CLICS ---
+function ejecutarDesmarcadoPorRango() {
+    const checkboxes = Array.from(document.querySelectorAll(".poi-select-checkbox"));
+    if (checkboxes.length === 0) return;
+
+    // Filtramos el historial para asegurarnos de que los IDs siguen vigentes en pantalla
+    const validHistory = userInteractionHistory.filter(id => {
+        return checkboxes.some(chk => parseInt(chk.getAttribute("data-id")) === id);
+    });
+
+    if (validHistory.length < 2) {
+        showToast("⚠️ Marca o desmarca al menos dos extremos recientes para definir el rango");
+        return;
+    }
+
+    // Tomamos estrictamente los DOS ÚLTIMOS elementos con los que el usuario ha interactuado
+    const id1 = validHistory[validHistory.length - 2];
+    const id2 = validHistory[validHistory.length - 1];
+
+    const chk1 = checkboxes.find(c => parseInt(c.getAttribute("data-id")) === id1);
+    const chk2 = checkboxes.find(c => parseInt(c.getAttribute("data-id")) === id2);
+
+    if (!chk1 || !chk2) {
+        showToast("⚠️ No se pudieron identificar los extremos del rango");
+        return;
+    }
+
+    const index1 = checkboxes.indexOf(chk1);
+    const index2 = checkboxes.indexOf(chk2);
+
+    const minIdx = Math.min(index1, index2);
+    const maxIdx = Math.max(index1, index2);
+
+    // Determinamos la acción según el estado actual de esos dos extremos
+    const actionMark = chk1.checked && chk2.checked;     // Si ambos están marcados -> rellenamos/marcamos el medio
+    const actionUnmark = !chk1.checked && !chk2.checked; // Si ambos están desmarcados -> vaciamos/desmarcamos el medio
+
+    if (!actionMark && !actionUnmark) {
+        showToast("⚠️ Los dos extremos seleccionados deben tener el mismo estado (ambos marcados o ambos desmarcados)");
+        return;
+    }
+
+    let contador = 0;
+    for (let i = minIdx + 1; i < maxIdx; i++) {
+        if (checkboxes[i].checked !== actionMark) {
+            checkboxes[i].checked = actionMark;
+            contador++;
+        }
+    }
+
+    actualizarBarraAccionesMasivas();
+    if (actionMark) {
+        showToast(`✨ Rango procesado: ${contador} tarjetas marcadas en el bloque`);
+    } else {
+        showToast(`✨ Rango procesado: ${contador} tarjetas desmarcadas en el bloque`);
+    }
+}
+
+// --- EJECUTAR BORRADO MASIVO ---
+function ejecutarBorradoMasivo() {
+    const checkboxesSeleccionados = document.querySelectorAll(".poi-select-checkbox:checked");
+    if (checkboxesSeleccionados.length === 0) return;
+
+    if (!confirm(`¿Estás seguro de eliminar los ${checkboxesSeleccionados.length} PDI seleccionados?`)) {
+        return;
+    }
+
+    checkboxesSeleccionados.forEach(chk => {
+        const id = parseInt(chk.getAttribute("data-id"));
+        eliminarPoiSilencioso(id);
+    });
+
+    userInteractionHistory = [];
+    actualizarBarraAccionesMasivas();
+    showToast("🗑️ PDI seleccionados eliminados correctamente");
+
+    poblarPanelResultados();
+
+    if (currentNominatimElements.length === 0) {
+        ocultarPanelDetalleMapa();
+        const existingToolbar = document.getElementById("poi-map-toolbar");
+        if (existingToolbar) existingToolbar.remove();
+        volverAPanelBusqueda();
+    }
+}
+
+function eliminarPoiSilencioso(id) {
+    currentNominatimElements = currentNominatimElements.filter(el => el.id !== id);
+    selectedNodesMap.delete(id);
+    userInteractionHistory = userInteractionHistory.filter(item => item !== id);
+
+    const markerObj = activeMapMarkers.find(m => m.id === id);
+    if (markerObj) {
+        markerObj.marker.remove();
+        activeMapMarkers = activeMapMarkers.filter(m => m.id !== id);
+    }
+}
+
+// --- EXPORTAR A KML ---
+function exportarPdiAKml() {
+    if (!currentNominatimElements || currentNominatimElements.length === 0) {
+        showToast("⚠️ No hay PDI para descargar");
+        return;
+    }
+
+    let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    kmlContent += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
+    kmlContent += `<Document>\n`;
+    kmlContent += `  <name>Otromundo PDI Export</name>\n`;
+
+    currentNominatimElements.forEach(el => {
+        const name = el.tags && el.tags.name ? el.tags.name : "Punto sin nombre";
+        kmlContent += `  <Placemark>\n`;
+        kmlContent += `    <name>${escapeXml(name)}</name>\n`;
+        kmlContent += `    <Point>\n`;
+        kmlContent += `      <coordinates>${el.lon},${el.lat},0</coordinates>\n`;
+        kmlContent += `    </Point>\n`;
+        kmlContent += `  </Placemark>\n`;
+    });
+
+    kmlContent += `</Document>\n`;
+    kmlContent += `</kml>`;
+
+    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `otromundo_pdi_${new Date().toISOString().slice(0, 10)}.kml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast("📥 Archivo KML descargado con éxito");
+}
+
+function escapeXml(unsafe) {
+    return unsafe.replace(/[<>&'"]/g, function (c) {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case '\'': return '&apos;';
+            case '"': return '&quot;';
+        }
+    });
+}
+
+// --- 1. FUNCIÓN PRINCIPAL DE CONSULTA A NOMINATIM ---
 async function ejecutarConsultaNominatim(lat, lon) {
     const checkboxes = document.querySelectorAll(".subcat-checkbox:checked");
     
@@ -77,7 +334,6 @@ async function ejecutarConsultaNominatim(lat, lon) {
         return;
     }
 
-    // Comprobamos si ya existen resultados previos para preguntar al usuario
     let acumularResultados = false;
     if (currentNominatimElements && currentNominatimElements.length > 0) {
         acumularResultados = confirm(
@@ -87,7 +343,6 @@ async function ejecutarConsultaNominatim(lat, lon) {
         );
     }
 
-    // Si el usuario decide NO acumular, limpiamos los datos y marcadores viejos del mapa
     if (!acumularResultados) {
         if (activeMapMarkers && activeMapMarkers.length > 0) {
             activeMapMarkers.forEach(markerObj => markerObj.marker.remove());
@@ -156,15 +411,12 @@ async function ejecutarConsultaNominatim(lat, lon) {
 
         const resultsArrays = await Promise.all(promises);
         
-        // Mapa para fusionar o almacenar resultados evitando duplicados (place_id)
         const uniqueElementsMap = new Map();
         
-        // Si decidió acumular, reinsertamos los elementos que ya teníamos en memoria
         if (acumularResultados && currentNominatimElements) {
             currentNominatimElements.forEach(el => uniqueElementsMap.set(el.id, el));
         }
 
-        // Añadimos los nuevos resultados obtenidos de la API
         resultsArrays.forEach(arr => {
             arr.forEach(item => {
                 if (!uniqueElementsMap.has(item.place_id)) {
@@ -227,15 +479,12 @@ function mostrarPanelResultados() {
     if (badge) badge.textContent = currentNominatimElements.length;
 
     poblarPanelResultados();
-    initMapViewButton(); // Aseguramos que el botón superior responda siempre
+    initMapViewButton();
 }
 
-// --- 2. FUNCIÓN DE RETORNO (Actualizada con limpieza automática de checkboxes) ---
+// --- 2. FUNCIÓN DE RETORNO ---
 function volverAPanelBusqueda() {
-    // Desmarcamos automáticamente todos los checkboxes para dejar limpia la interfaz
     document.querySelectorAll(".subcat-checkbox").forEach(chk => chk.checked = false);
-    
-    // Informamos al usuario de forma visual
     showToast("🔄 Criterios limpios. Tus resultados anteriores siguen guardados.", 4000);
 
     const resultsPanel = document.getElementById("results-panel");
@@ -255,6 +504,9 @@ function volverAPanelBusqueda() {
     
     const existingToolbar = document.getElementById("poi-map-toolbar");
     if (existingToolbar) existingToolbar.remove();
+
+    const bulkBar = document.getElementById("bulk-action-bar");
+    if (bulkBar) bulkBar.style.display = "none";
 }
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
@@ -424,7 +676,7 @@ function poblarPanelResultados() {
     }
 }
 
-// --- RENDERIZADO DE TARJETAS CON LOS 3 BOTONES DE ACCIÓN ---
+// --- RENDERIZADO DE TARJETAS CON CHECKBOX Y BOTONES DE ACCIÓN ---
 function renderizarNodosCategoria(nodosList) {
     const nodesContainer = document.getElementById("nodes-container");
     if (!nodesContainer) return;
@@ -482,9 +734,14 @@ function renderizarNodosCategoria(nodosList) {
             `;
 
             card.innerHTML = `
-                <div class="node-info">
-                    <div class="node-name" style="color: ${colorTag}; font-weight: bold; font-size: 0.95rem;">${name}</div>
-                    <div class="node-meta" style="font-size: 0.8rem; color: #aaa; margin-top: 2px;">Dist: ${distancia} km${ele} | Lat/Lon: ${node.lat.toFixed(4)}, ${node.lon.toFixed(4)}</div>
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        <input type="checkbox" class="poi-select-checkbox" data-id="${node.id}" style="width: 18px; height: 18px; accent-color: var(--primary-cyan); cursor: pointer;" title="Seleccionar para borrado masivo">
+                        <div class="node-info" style="flex: 1;">
+                            <div class="node-name" style="color: ${colorTag}; font-weight: bold; font-size: 0.95rem;">${name}</div>
+                            <div class="node-meta" style="font-size: 0.8rem; color: #aaa; margin-top: 2px;">Dist: ${distancia} km${ele} | Lat/Lon: ${node.lat.toFixed(4)}, ${node.lon.toFixed(4)}</div>
+                        </div>
+                    </div>
                 </div>
                 <!-- Botonera simétrica de 3 acciones en la tarjeta -->
                 <div style="display: flex; gap: 6px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
@@ -502,6 +759,17 @@ function renderizarNodosCategoria(nodosList) {
             `;
 
             nodesContainer.appendChild(card);
+        });
+    });
+
+    // Vincular eventos de los checkboxes individuales actualizando el historial
+    nodesContainer.querySelectorAll('.poi-select-checkbox').forEach(chk => {
+        chk.addEventListener('change', () => {
+            const id = parseInt(chk.getAttribute("data-id"));
+            userInteractionHistory = userInteractionHistory.filter(item => item !== id);
+            userInteractionHistory.push(id);
+            
+            actualizarBarraAccionesMasivas();
         });
     });
 
@@ -624,7 +892,6 @@ function crearBotonFlotanteVolverResultados() {
 
     document.body.appendChild(toolbar);
 
-    // --- ACCIONES DE LOS BOTONES DE LA BARRA ---
     document.getElementById("toolbar-btn-list").addEventListener("click", () => {
         toolbar.remove();
         ocultarPanelDetalleMapa();
@@ -638,7 +905,6 @@ function crearBotonFlotanteVolverResultados() {
         const mapCursor = document.getElementById("map-center-cursor");
         if (mapCursor) mapCursor.style.display = "block";
 
-        // Re-vinculamos el botón general para que nunca pierda interactividad al volver
         initMapViewButton();
     });
 
@@ -713,7 +979,6 @@ function ocultarPanelDetalleMapa() {
     selectedPoiId = null;
 }
 
-// Inicializar eventos de los botones del panel inferior de detalle en el mapa
 function initDetailPanelEvents() {
     const btnClose = document.getElementById("detail-btn-close");
     if (btnClose) {
@@ -741,7 +1006,6 @@ function initDetailPanelEvents() {
             const mapCursor = document.getElementById("map-center-cursor");
             if (mapCursor) mapCursor.style.display = "block";
 
-            // Re-vinculamos el botón general también al volver desde el detalle
             initMapViewButton();
 
             setTimeout(() => {
@@ -775,7 +1039,6 @@ function initDetailPanelEvents() {
     }
 }
 
-// --- CONEXIÓN BIDIRECCIONAL: CENTRAR DESDE LA LISTA ---
 function centrarEnPoiYMostrarMapa(id) {
     const poi = currentNominatimElements.find(el => el.id === id);
     if (!poi) return;
@@ -820,10 +1083,10 @@ function centrarEnPoiYMostrarMapa(id) {
     if (toolbar) toolbar.style.display = "none";
 }
 
-// --- ELIMINAR PDI ---
 function eliminarPoi(id) {
     currentNominatimElements = currentNominatimElements.filter(el => el.id !== id);
     selectedNodesMap.delete(id);
+    userInteractionHistory = userInteractionHistory.filter(item => item !== id);
 
     const markerObj = activeMapMarkers.find(m => m.id === id);
     if (markerObj) {
@@ -837,6 +1100,7 @@ function eliminarPoi(id) {
     const badge = document.getElementById("results-badge");
     if (badge) badge.textContent = currentNominatimElements.length;
 
+    actualizarBarraAccionesMasivas();
     showToast("🗑️ PDI eliminado correctamente");
 
     if (currentNominatimElements.length === 0) {
@@ -847,7 +1111,6 @@ function eliminarPoi(id) {
     }
 }
 
-// --- MENÚ DE MÁS OPCIONES ---
 function mostrarOpcionesAvanzadas(id) {
     const poi = currentNominatimElements.find(el => el.id === id);
     if (!poi) return;
@@ -855,7 +1118,6 @@ function mostrarOpcionesAvanzadas(id) {
     alert(`Opciones avanzadas para: ${name}\nCoordenadas: ${poi.lat.toFixed(5)}, ${poi.lon.toFixed(5)}`);
 }
 
-// --- VINCULACIÓN ROBUSTA DEL BOTÓN DE MAPA EN EL PANEL DE RESULTADOS ---
 function initMapViewButton() {
     const btnShowMapView = document.getElementById("btn-show-map-view");
     if (btnShowMapView) {

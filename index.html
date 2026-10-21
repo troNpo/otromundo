@@ -221,49 +221,65 @@
         <main id="category-container">
             <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
         </main>
-
-        <!-- PANEL GESTOR DE PDI -->
-        <div id="results-panel" class="app-panel" style="display: none;">
-            <header class="app-header red-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="btn-back-results" class="icon-btn" title="Volver">
-            <img src="./ui-icons/fi-rr-left.svg" alt="Back">
-        </button>
-        <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-cyan); display: flex; align-items: center; gap: 8px;">
-            <span>Gestor de PDI</span>
-            <span id="results-badge" class="badge" style="background: rgba(0,229,255,0.15); color: var(--primary-cyan); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0</span>
-        </h3>
     </div>
-    
-    <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
-        <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
-            <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
-        </button>
-        <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
-            <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
-        </button>
-        <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
-            <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
-        </button>
-        <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
-            <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
-        </a>
-    </div>
-</header>
 
-
-            <div id="quick-search-container" class="quick-search-bar" style="display: none;">
-                <input type="text" id="quick-search-input" placeholder="Filtrar por nombre...">
+    <!-- ================= PANEL GESTOR DE PDI (ACTUALIZADO CON BARRA MASIVA INTEGRADA) ================= -->
+    <div id="results-panel" class="fullscreen-panel" style="display: none;">
+        <!-- Cabecera Principal del Gestor de PDI -->
+        <header class="app-header red-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="btn-back-results" class="icon-btn" title="Volver">
+                    <img src="./ui-icons/fi-rr-left.svg" alt="Back">
+                </button>
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-cyan); display: flex; align-items: center; gap: 8px;">
+                    <span>Gestor de PDI</span>
+                    <span id="results-badge" class="badge" style="background: rgba(0,229,255,0.15); color: var(--primary-cyan); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0</span>
+                </h3>
             </div>
-
-            <div class="categories-nav-wrapper">
-                <div class="scroll-indicator left"></div>
-                <div id="categories-chips-container" class="categories-chips-scroll"></div>
-                <div class="scroll-indicator right"></div>
+            
+            <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
+                <button id="btn-toggle-search" class="icon-btn" title="Buscar en lista">
+                    <img src="./ui-icons/fi-rr-search.svg" alt="Buscar">
+                </button>
+                <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
+                    <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
+                </button>
+                <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
+                    <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
+                </button>
+                <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </a>
             </div>
+        </header>
 
-            <div id="nodes-container" class="nodes-vertical-scroll"></div>
+        <!-- Barra de Búsqueda Rápida por Nombre (Oculta por defecto, usa inputs del CSS general) -->
+        <div id="quick-search-container" style="display: none; padding: 10px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
+            <input type="text" id="quick-search-input" placeholder="Filtrar PDI por nombre..." style="width: 100%; background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 12px; font-size: 14px; outline: none;">
         </div>
+
+        <!-- Barra de Acciones Masivas (Integrada a la misma altura, se muestra si hay selección) -->
+        <div id="bulk-action-bar" style="display: none; align-items: center; justify-content: space-between; padding: 8px 16px; background: rgba(0, 229, 255, 0.1); border-bottom: 1px solid var(--primary-cyan); font-size: 13px;">
+            <span id="bulk-counter-text" style="color: var(--primary-cyan); font-weight: 600;">0 seleccionados</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="btn-bulk-range-uncheck" title="Desmarcar por rango" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--text-main);">
+                    <img src="./ui-icons/fi-rr-arrows-from-dotted-line.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Rango">
+                    <span>Rango</span>
+                </button>
+                <button id="btn-bulk-delete" title="Borrar seleccionados" style="background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #e74c3c; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">
+                    <span>Borrar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenedor de Chips de Categorías -->
+        <div class="categories-nav-wrapper">
+            <div id="categories-chips-container" class="categories-chips-scroll"></div>
+        </div>
+
+        <!-- Contenedor vertical de Tarjetas de PDI -->
+        <div id="nodes-container" class="nodes-vertical-scroll"></div>
     </div>
 
     <!-- Barra de herramientas inferior -->
