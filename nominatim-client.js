@@ -1438,13 +1438,43 @@ function initAdvancedOptionsEvents() {
     }
 }
 
+// --- EXPORTAR PDI INDIVIDUAL A KML (ESTILO ORUXMAPS) ---
 function exportarPoiIndividualAKml(poi) {
     const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto sin nombre";
+    
+    // Construir el bloque de descripción línea a línea con <br/>
+    let descHtml = "";
+    if (poi.enriquecido && poi.tagsEnriquecidas) {
+        const keysIgnorar = ["display_full", "normalized_name"];
+        const entries = [];
+        Object.keys(poi.tagsEnriquecidas).forEach(key => {
+            if (keysIgnorar.includes(key)) return;
+            const val = poi.tagsEnriquecidas[key];
+            if (!val) return;
+            entries.push(`${key}: ${val}`);
+        });
+        descHtml = entries.join("<br/>\n");
+    } else {
+        // Si no está enriquecido previamente, añadimos los datos básicos que tenemos
+        descHtml = `osm_id: ${poi.id}<br/>\nname: ${name}`;
+    }
+
     let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
-    kml += `  <Placemark>\n    <name>${escapeXml(name)}</name>\n`;
-    kml += `    <Point><coordinates>${poi.lon},${poi.lat},0</coordinates></Point>\n`;
-    kml += `  </Placemark>\n</Document>\n</kml>`;
+    kml += `<kml xmlns="http://earth.google.com/kml/2.2" xmlns:om="http://www.oruxmaps.com/oruxmapsextensions/1/0" xmlns:gx="http://www.google.com/kml/ext/2.2">\n`;
+    kml += `<Document>\n`;
+    kml += `  <name><![CDATA[${name}]]></name>\n`;
+    kml += `  <Folder>\n`;
+    kml += `    <name>Waypoints</name>\n`;
+    kml += `    <Placemark>\n`;
+    kml += `      <name><![CDATA[${name}]]></name>\n`;
+    kml += `      <description><![CDATA[${descHtml}\n]]></description>\n`;
+    kml += `      <Point>\n`;
+    kml += `        <coordinates>${poi.lon},${poi.lat},0</coordinates>\n`;
+    kml += `      </Point>\n`;
+    kml += `    </Placemark>\n`;
+    kml += `  </Folder>\n`;
+    kml += `</Document>\n`;
+    kml += `</kml>`;
 
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const url = URL.createObjectURL(blob);
@@ -1457,6 +1487,7 @@ function exportarPoiIndividualAKml(poi) {
     URL.revokeObjectURL(url);
     showToast("📥 KML individual descargado");
 }
+
 
 
 // --- ALGORITMO NATIVO PARA GENERAR PLUS CODES (OPEN LOCATION CODE) ---
