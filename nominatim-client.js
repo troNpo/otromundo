@@ -1337,15 +1337,44 @@ function initAdvancedOptionsEvents() {
         });
     }
 
-    const btnShare = document.getElementById("adv-btn-share");
+        const btnShare = document.getElementById("adv-btn-share");
     if (btnShare) {
         btnShare.addEventListener("click", () => {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
             if (!poi) return;
+            
             const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto de Interés";
+            
+            // Construir la descripción con los datos enriquecidos si los hay
+            let descText = "";
+            if (poi.enriquecido && poi.tagsEnriquecidas) {
+                const keysIgnorar = ["display_full", "normalized_name"];
+                const entries = [];
+                Object.keys(poi.tagsEnriquecidas).forEach(key => {
+                    if (keysIgnorar.includes(key)) return;
+                    const val = poi.tagsEnriquecidas[key];
+                    if (!val) return;
+                    entries.push(`${key}: ${val}`);
+                });
+                if (entries.length > 0) {
+                    descText = `Descripción del waypoint:\n${entries.join("\n")}\n\n`;
+                }
+            }
+
+            // Enlaces de mapas
             const gmaps = `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lon}`;
             const amaps = `http://maps.apple.com/?q=${poi.lat},${poi.lon}`;
-            const text = `📍 ${name}\nCoordenadas: ${poi.lat.toFixed(5)}, ${poi.lon.toFixed(5)}\n\nGoogle Maps: ${gmaps}\nApple Maps: ${amaps}`;
+            const oruxmaps = `https://oruxmaps.com/position?q=${poi.lat},${poi.lon}`;
+            const geoUri = `geo:${poi.lat},${poi.lon}?q=${poi.lat},${poi.lon}`;
+
+            // Texto final estructurado
+            const text = `Otro Mundo 🌎 posición compartida\n\n` +
+                         `Nombre del waypoint: ${name}\n\n` +
+                         descText +
+                         `${geoUri}\n` +
+                         `Google Maps: ${gmaps}\n` +
+                         `Apple Maps: ${amaps}\n` +
+                         `OruxMaps: ${oruxmaps}`;
             
             if (navigator.share) {
                 navigator.share({ title: name, text: text }).catch(() => {});
@@ -1355,6 +1384,7 @@ function initAdvancedOptionsEvents() {
             }
         });
     }
+
 
     const btnNativeShare = document.getElementById("adv-btn-native-share");
     if (btnNativeShare) {
