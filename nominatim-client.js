@@ -489,6 +489,13 @@ async function enriquecerPoiDesdeOSM(poi) {
         if (elementoOsm.lat && elementoOsm.lon) {
             poi.lat = parseFloat(elementoOsm.lat);
             poi.lon = parseFloat(elementoOsm.lon);
+
+            // --- CÁLCULO NATIVO DE PLUS CODE (GLOBAL CODE) ---
+            try {
+                poi.tagsEnriquecidas["plus_code"] = generarPlusCodeNativo(poi.lat, poi.lon);
+            } catch (e) {
+                console.error("Error generando Plus Code:", e);
+            }
         }
 
         showToast("✅ Datos obtenidos directamente de OSM");
@@ -500,6 +507,8 @@ async function enriquecerPoiDesdeOSM(poi) {
         return null;
     }
 }
+
+
 
 // --- GESTIÓN DE VISTAS Y PANELES ---
 function mostrarPanelResultados() {
@@ -1366,7 +1375,7 @@ function initAdvancedOptionsEvents() {
         });
     }
 
-    const btnEnrich = document.getElementById("adv-btn-enrich");
+        const btnEnrich = document.getElementById("adv-btn-enrich");
     if (btnEnrich) {
         btnEnrich.addEventListener("click", async () => {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
@@ -1379,6 +1388,11 @@ function initAdvancedOptionsEvents() {
                 
                 poblarPanelResultados();
                 
+                // Refrescar el panel inferior del mapa al instante si este PDI está seleccionado
+                if (selectedPoiId === poi.id) {
+                    seleccionarPoiEnMapa(poi);
+                }
+                
                 setTimeout(() => {
                     const card = document.getElementById(`poi-card-${poi.id}`);
                     if (card) {
@@ -1390,6 +1404,7 @@ function initAdvancedOptionsEvents() {
             }
         });
     }
+
 
     const btnViewOsm = document.getElementById("adv-btn-view-osm");
     if (btnViewOsm) {
@@ -1442,3 +1457,52 @@ function exportarPoiIndividualAKml(poi) {
     URL.revokeObjectURL(url);
     showToast("📥 KML individual descargado");
 }
+
+
+// --- ALGORITMO NATIVO PARA GENERAR PLUS CODES (OPEN LOCATION CODE) ---
+function generarPlusCodeNativo(lat, lon) {
+    const CODE_ALPHABET = "23456789CFGHJMPQRVWX";
+    let adjustedLat = Math.max(-90, Math.min(90, lat));
+    let adjustedLon = ((lon + 180) % 360 + 360) % 360 - 180;
+
+    adjustedLat += 90;
+    adjustedLon += 180;
+
+    let code = "";
+    
+    // Pares de alta resolución (dígitos globales)
+    const latResolutions = [20, 1, 0.05, 0.0025, 0.000125];
+    const lonResolutions = [20, 1, 0.05, 0.0025, 0.000125];
+
+    let latVal = adjustedLat;
+    let lonVal = adjustedLon;
+
+    for (let i = 0; i < 5; i++) {
+        let latDigit = Math.floor(latVal / latResolutions[i]);
+        let lonDigit = Math.floor(lonVal / lonResolutions[i]);
+        
+        latVal -= latDigit * latResolutions[i];
+        lonVal -= lonDigit * lonResolutions[i];
+
+        code += CODE_ALPHABET[Math.min(latDigit, 19)] + CODE_ALPHABET[Math.min(lonDigit, 19)];
+        
+        if (i === 3) {
+            code += "+";
+        }
+    }
+
+    // Refinamiento por grilla (4x5)
+    const gridRows = 4;
+    const gridCols = 5;
+    let latGridRes = 0.000125;
+    let lonGridRes = 0.000125;
+
+    let latDigitGrid = Math.floor(latVal / (latGridRes / gridRows));
+    let lonDigitGrid = Math.floor(lonVal / (lonGridRes / gridCols));
+    
+    let gridIndex = latDigitGrid * gridCols + lonDigitGrid;
+    code += CODE_ALPHABET[Math.min(gridIndex, 19)];
+
+    return code;
+}
+
