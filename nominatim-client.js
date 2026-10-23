@@ -496,6 +496,20 @@ async function enriquecerPoiDesdeOSM(poi) {
             } catch (e) {
                 console.error("Error generando Plus Code:", e);
             }
+
+            // --- INYECCIÓN DINÁMICA DE URL DE VISTA (PEAKFINDER O STREET VIEW) ---
+            const usePeakFinder = esPuntoDeMontanaOPanoramico(poi);
+            if (usePeakFinder) {
+                let ele = 0;
+                if (poi.tags && poi.tags.ele) {
+                    ele = parseFloat(poi.tags.ele) || 0;
+                } else if (poi.tagsEnriquecidas && poi.tagsEnriquecidas.ele) {
+                    ele = parseFloat(poi.tagsEnriquecidas.ele) || 0;
+                }
+                poi.tagsEnriquecidas["peakfinder_url"] = `https://www.peakfinder.org/es?lat=${poi.lat}&lng=${poi.lon}&ele=${ele}`;
+            } else {
+                poi.tagsEnriquecidas["street_view_url"] = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${poi.lat},${poi.lon}`;
+            }
         }
 
         showToast("✅ Datos obtenidos directamente de OSM");
@@ -507,6 +521,7 @@ async function enriquecerPoiDesdeOSM(poi) {
         return null;
     }
 }
+
 
 
 
