@@ -1311,7 +1311,6 @@ function initMapViewButton() {
 
 // --- GESTIÓN DEL PANEL DE OPCIONES AVANZADAS Y ACCIONES DIRECTAS ---
 let currentAdvancedPoiId = null;
-
 function mostrarOpcionesAvanzadas(id) {
     const poi = currentNominatimElements.find(el => el.id === id);
     if (!poi) return;
@@ -1321,6 +1320,25 @@ function mostrarOpcionesAvanzadas(id) {
     if (titleEl) {
         const name = poi.tags && poi.tags.name ? poi.tags.name : "Punto sin nombre";
         titleEl.textContent = name;
+    }
+
+    // --- DETECCIÓN DINÁMICA: PICO / MONTAÑA vs URBANO ---
+    const isPeak = poi.tags && (poi.tags.natural === 'peak' || poi.tags.mountain_pass || poi.tags.geological);
+
+    const btnStreetView = document.getElementById("adv-btn-streetview");
+    if (btnStreetView) {
+        const iconEl = btnStreetView.querySelector(".control-icon");
+        const titleCardEl = btnStreetView.querySelector(".control-card-title");
+
+        if (isPeak) {
+            btnStreetView.title = "Ver en PeakFinder";
+            if (iconEl) iconEl.src = "./ui-icons/fi-rr-mountains.svg";
+            if (titleCardEl) titleCardEl.textContent = "Abrir en PeakFinder";
+        } else {
+            btnStreetView.title = "Ver en Street View";
+            if (iconEl) iconEl.src = "./ui-icons/fi-rr-street-view.svg";
+            if (titleCardEl) titleCardEl.textContent = "Abrir en Street View (Google Maps)";
+        }
     }
 
     const panel = document.getElementById("advanced-options-panel");
@@ -1337,7 +1355,7 @@ function initAdvancedOptionsEvents() {
         });
     }
 
-        const btnShare = document.getElementById("adv-btn-share");
+    const btnShare = document.getElementById("adv-btn-share");
     if (btnShare) {
         btnShare.addEventListener("click", () => {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
@@ -1385,7 +1403,6 @@ function initAdvancedOptionsEvents() {
         });
     }
 
-
     const btnNativeShare = document.getElementById("adv-btn-native-share");
     if (btnNativeShare) {
         btnNativeShare.addEventListener("click", () => {
@@ -1400,12 +1417,27 @@ function initAdvancedOptionsEvents() {
         btnStreetView.addEventListener("click", () => {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
             if (!poi) return;
-            const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${poi.lat},${poi.lon}`;
-            window.open(url, '_blank');
+            
+            const isPeak = poi.tags && (poi.tags.natural === 'peak' || poi.tags.mountain_pass || poi.tags.geological);
+            
+            if (isPeak) {
+                let ele = 0;
+                if (poi.tags && poi.tags.ele) {
+                    ele = parseFloat(poi.tags.ele) || 0;
+                } else if (poi.tagsEnriquecidas && poi.tagsEnriquecidas.ele) {
+                    ele = parseFloat(poi.tagsEnriquecidas.ele) || 0;
+                }
+                
+                const url = `https://www.peakfinder.org/es?lat=${poi.lat}&lng=${poi.lon}&ele=${ele}`;
+                window.open(url, '_blank');
+            } else {
+                const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${poi.lat},${poi.lon}`;
+                window.open(url, '_blank');
+            }
         });
     }
 
-        const btnEnrich = document.getElementById("adv-btn-enrich");
+    const btnEnrich = document.getElementById("adv-btn-enrich");
     if (btnEnrich) {
         btnEnrich.addEventListener("click", async () => {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
@@ -1434,7 +1466,6 @@ function initAdvancedOptionsEvents() {
             }
         });
     }
-
 
     const btnViewOsm = document.getElementById("adv-btn-view-osm");
     if (btnViewOsm) {
@@ -1467,6 +1498,8 @@ function initAdvancedOptionsEvents() {
         });
     }
 }
+
+
 
 // --- EXPORTAR PDI INDIVIDUAL A KML (ESTILO ORUXMAPS) ---
 function exportarPoiIndividualAKml(poi) {
