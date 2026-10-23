@@ -130,11 +130,11 @@ function initHeaderActionButtons() {
         };
     }
 
-    const btnDownload = document.getElementById("btn-download-preset");
+       const btnDownload = document.getElementById("btn-download-preset");
     if (btnDownload) {
         btnDownload.onclick = (e) => {
             e.preventDefault();
-            exportarPdiAKml();
+            abrirGestorKmlManager(); // Abre el gestor a pantalla completa con el árbol de carpetas
         };
     }
 }

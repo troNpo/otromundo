@@ -417,18 +417,64 @@
             </div>
         </div>
     </div>
+<!-- PANEL: Gestor de Descarga de Capa KML Jerárquica -->
+<div id="kml-export-manager-panel" class="hidden" style="position: fixed; inset: 0; background: rgba(10, 10, 12, 0.95); z-index: 10000; display: none; flex-direction: column; padding: 20px; font-family: inherit; color: #fff;">
+    
+    <!-- Cabecera del Panel -->
+    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="./ui-icons/fi-rr-folder.svg" width="24" height="24" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Gestor">
+            <h2 style="font-size: 1.2rem; font-weight: bold; color: var(--primary-cyan, #00e5ff); margin: 0;">Gestor de Descarga de Capa KML</h2>
+        </div>
+        <button id="kml-manager-btn-close" onclick="cerrarGestorKmlManager()" style="background: transparent; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 4px;">✕</button>
+    </div>
 
+    <!-- Cuerpo de Configuración -->
+    <div style="display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; max-width: 800px; width: 100%; margin: 0 auto;">
+        
+        <!-- Nombre del archivo -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label for="kml-filename-input" style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Nombre del archivo KML:</label>
+            <input type="text" id="kml-filename-input" style="background: rgba(18,18,20,0.8); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.95rem; outline: none;" placeholder="otromundo_capa.kml">
+        </div>
+
+        <!-- Vista previa del árbol de carpetas -->
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Estructura Jerárquica de Carpetas (Haz clic para renombrar):</label>
+            </div>
+            
+            <!-- Contenedor donde se dibuja el árbol dinámico -->
+            <div id="kml-tree-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; min-height: 200px; max-height: 40vh; overflow-y: auto;">
+                <!-- Se rellena dinámicamente desde kml-manager.js -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Pie de Página / Acciones -->
+    <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; max-width: 800px; width: 100%; margin: 0 auto;">
+        <button onclick="cerrarGestorKmlManager()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
+        <button onclick="ejecutarExportacionKmlJerarquico()" style="background: var(--primary-cyan, #00e5ff); border: none; color: #000; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+            <img src="./ui-icons/fi-rr-download.svg" width="16" height="16" style="filter: brightness(0);" alt="Descargar">
+            Descargar KML Jerárquico
+        </button>
+    </div>
+
+</div>
 
     <!-- Scripts -->
 	<script src="app.js"></script>
-<script src="https://unpkg.com/open-location-code@1.0.4/openlocationcode.js"></script>
+    <script src="https://unpkg.com/open-location-code@1.0.4/openlocationcode.js"></script>
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="script.js"></script>
     <script src="geocoder.js"></script>
     <script src="profile-loader.js"></script>
     <script src="overpass-client.js"></script>
     <script src="nominatim-client.js"></script>
-    
-
+    <script src="kml-manager.js"></script> <!-- <--- Asegúrate de añadir esta línea -->
 </body>
 </html>
+
+    
+
