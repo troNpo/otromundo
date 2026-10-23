@@ -1311,6 +1311,40 @@ function initMapViewButton() {
 
 // --- GESTIÓN DEL PANEL DE OPCIONES AVANZADAS Y ACCIONES DIRECTAS ---
 let currentAdvancedPoiId = null;
+
+// --- FUNCIÓN AUXILIAR INTELIGENTE PARA DETECTAR MONTAÑA / PANORÁMICA ---
+function esPuntoDeMontanaOPanoramico(poi) {
+    if (!poi || !poi.tags) return false;
+    
+    // 1. Relieve, picos, volcanes, cuevas, etc. (basado en 'Nature and Orography')
+    const naturalTag = poi.tags.natural;
+    const isNaturalPeakOrRelief = (
+        naturalTag === 'peak' || 
+        naturalTag === 'volcano' || 
+        naturalTag === 'geyser' || 
+        naturalTag === 'cave_entrance' || 
+        naturalTag === 'cliff' ||
+        naturalTag === 'rock' ||
+        naturalTag === 'sinkhole' ||
+        poi.tags.mountain_pass === 'yes' ||
+        poi.tags['mountain_pass'] === true
+    );
+
+    // 2. Refugios de altura y miradores (basado en 'Tourism and Culture')
+    const tourismTag = poi.tags.tourism;
+    const isMountainTourism = (
+        tourismTag === 'alpine_hut' || 
+        tourismTag === 'wilderness_hut' || 
+        tourismTag === 'viewpoint'
+    );
+
+    // 3. Vértices geodésicos (basado en 'Infrastructure and Man-Made')
+    const manMadeTag = poi.tags.man_made;
+    const isSurveyPoint = (manMadeTag === 'survey_point');
+
+    return isNaturalPeakOrRelief || isMountainTourism || isSurveyPoint;
+}
+
 function mostrarOpcionesAvanzadas(id) {
     const poi = currentNominatimElements.find(el => el.id === id);
     if (!poi) return;
@@ -1322,15 +1356,15 @@ function mostrarOpcionesAvanzadas(id) {
         titleEl.textContent = name;
     }
 
-    // --- DETECCIÓN DINÁMICA: PICO / MONTAÑA vs URBANO ---
-    const isPeak = poi.tags && (poi.tags.natural === 'peak' || poi.tags.mountain_pass || poi.tags.geological);
+    // --- DETECCIÓN INTELIGENTE ---
+    const usePeakFinder = esPuntoDeMontanaOPanoramico(poi);
 
     const btnStreetView = document.getElementById("adv-btn-streetview");
     if (btnStreetView) {
         const iconEl = btnStreetView.querySelector(".control-icon");
         const titleCardEl = btnStreetView.querySelector(".control-card-title");
 
-        if (isPeak) {
+        if (usePeakFinder) {
             btnStreetView.title = "Ver en PeakFinder";
             if (iconEl) iconEl.src = "./ui-icons/fi-rr-mountains.svg";
             if (titleCardEl) titleCardEl.textContent = "Abrir en PeakFinder";
@@ -1418,9 +1452,9 @@ function initAdvancedOptionsEvents() {
             const poi = currentNominatimElements.find(el => el.id === currentAdvancedPoiId);
             if (!poi) return;
             
-            const isPeak = poi.tags && (poi.tags.natural === 'peak' || poi.tags.mountain_pass || poi.tags.geological);
+            const usePeakFinder = esPuntoDeMontanaOPanoramico(poi);
             
-            if (isPeak) {
+            if (usePeakFinder) {
                 let ele = 0;
                 if (poi.tags && poi.tags.ele) {
                     ele = parseFloat(poi.tags.ele) || 0;
@@ -1599,4 +1633,3 @@ function generarPlusCodeNativo(lat, lon) {
 
     return code;
 }
-
