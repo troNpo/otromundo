@@ -15,6 +15,13 @@ function abrirGestorKmlManager() {
         return;
     }
 
+    // Ocultar paneles de fondo para que el gestor KML se muestre limpio en primer plano
+    const resultsPanel = document.getElementById("results-panel");
+    if (resultsPanel) resultsPanel.style.display = "none";
+
+    const poiPanel = document.getElementById("poi-fullscreen-panel");
+    if (poiPanel) poiPanel.classList.add("hidden");
+
     // Nombre por defecto sugerido para el archivo
     const inputNombreArchivo = document.getElementById("kml-filename-input");
     if (inputNombreArchivo && !inputNombreArchivo.value) {
@@ -35,6 +42,12 @@ function cerrarGestorKmlManager() {
     if (managerPanel) {
         managerPanel.classList.add("hidden");
         managerPanel.style.display = "none";
+    }
+
+    // Restaurar el panel de resultados al cerrar el gestor si hay elementos
+    const resultsPanel = document.getElementById("results-panel");
+    if (resultsPanel && currentNominatimElements && currentNominatimElements.length > 0) {
+        resultsPanel.style.display = "flex";
     }
 }
 
