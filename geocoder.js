@@ -9,66 +9,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const compassIcon = document.getElementById('compass-icon');
     
     let searchTimeout = null;
-    let searchMarker = null; // Referencia para el marcador en el mapa
-    let searchPopup = null;  // Referencia para el popup personalizado
-    let activePlaceCoords = null; // Coordenadas del lugar seleccionado para control de proximidad
+    let searchMarker = null; 
+    let searchPopup = null;  
+    let activePlaceCoords = null; 
 
-    if (!btnBannerSearch || !inputBannerSearch || !searchResultsDropdown) {
-        console.error("Elementos del banner de búsqueda no encontrados en el DOM.");
-        return;
-    }
-
-    // 1. Alternar expansión del input de búsqueda al pulsar la lupa
-    btnBannerSearch.addEventListener('click', (e) => {
-        e.stopPropagation();
-        inputBannerSearch.classList.toggle('hidden');
-        if (!inputBannerSearch.classList.contains('hidden')) {
-            inputBannerSearch.focus();
-        } else {
-            searchResultsDropdown.classList.add('hidden');
-            inputBannerSearch.value = '';
-        }
-    });
-
-    // 2. Escuchar la entrada de texto en tiempo real con retardo (debounce)
-    inputBannerSearch.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        clearTimeout(searchTimeout);
-
-        if (query.length < 3) {
-            searchResultsDropdown.classList.add('hidden');
-            searchResultsDropdown.innerHTML = '';
-            return;
-        }
-
-        searchTimeout = setTimeout(() => {
-            executeNominatimSearch(query);
-        }, 300);
-    });
-
-    // 3. Capturar Enter o la acción de búsqueda en el teclado táctil móvil
-    inputBannerSearch.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter' || e.keyCode === 13) {
-            const query = inputBannerSearch.value.trim();
-            if (query.length >= 3) {
-                clearTimeout(searchTimeout);
-                executeNominatimSearch(query);
-                inputBannerSearch.blur(); 
+    // Si los elementos de búsqueda están listos, inicializamos
+    if (btnBannerSearch && inputBannerSearch && searchResultsDropdown) {
+        // 1. Alternar expansión del input de búsqueda al pulsar la lupa
+        btnBannerSearch.addEventListener('click', (e) => {
+            e.stopPropagation();
+            inputBannerSearch.classList.toggle('hidden');
+            if (!inputBannerSearch.classList.contains('hidden')) {
+                inputBannerSearch.focus();
+            } else {
+                searchResultsDropdown.classList.add('hidden');
+                inputBannerSearch.value = '';
             }
-        }
-    });
+        });
+
+        // 2. Escuchar la entrada de texto en tiempo real con retardo (debounce)
+        inputBannerSearch.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimeout);
+
+            if (query.length < 3) {
+                searchResultsDropdown.classList.add('hidden');
+                searchResultsDropdown.innerHTML = '';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                executeNominatimSearch(query);
+            }, 300);
+        });
+
+        // 3. Capturar Enter o la acción de búsqueda en el teclado táctil móvil
+        inputBannerSearch.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                const query = inputBannerSearch.value.trim();
+                if (query.length >= 3) {
+                    clearTimeout(searchTimeout);
+                    executeNominatimSearch(query);
+                    inputBannerSearch.blur(); 
+                }
+            }
+        });
+    }
 
     // Función adaptada a Nominatim (OSM)
     async function executeNominatimSearch(query) {
+        if (!searchResultsDropdown) return;
         searchResultsDropdown.innerHTML = `<div class="search-result-item" style="color: #eab308; padding: 12px; background: #121212;">Buscando en Nominatim...</div>`;
         searchResultsDropdown.classList.remove('hidden');
 
         try {
             const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=8&countrycodes=es`;
             const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Xpain-Maps-App'
-                }
+                headers: { 'User-Agent': 'Xpain-Maps-App' }
             });
             const data = await response.json();
             
@@ -77,13 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const classType = item.class;
                 const type = item.type;
 
-                // Ajuste de zoom optimizado para entorno 3D
                 if (classType === 'boundary' || type === 'administrative' || type === 'city' || type === 'town') {
                     targetZoom = 13;
                 } else if (type === 'peak' || classType === 'natural' || type === 'volcano') {
-                    targetZoom = 12.5; // Evita que la cámara se hunda bajo tierra en cumbres 3D
+                    targetZoom = 12.5; 
                 } else if (targetZoom > 14) {
-                    targetZoom = 14; // Límite general seguro para calles
+                    targetZoom = 14; 
                 }
 
                 return {
@@ -98,13 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Error en Nominatim:", error);
-            searchResultsDropdown.innerHTML = `<div class="search-result-item" style="color: #dc2626; padding: 12px; background: #121212;">Error de conexión con Nominatim</div>`;
-            searchResultsDropdown.classList.remove('hidden');
+            if (searchResultsDropdown) {
+                searchResultsDropdown.innerHTML = `<div class="search-result-item" style="color: #dc2626; padding: 12px; background: #121212;">Error de conexión con Nominatim</div>`;
+                searchResultsDropdown.classList.remove('hidden');
+            }
         }
     }
 
-    // Renderizar los resultados con zoom limitado y marcador con popup inteligente estilo píldora
+    // Renderizar los resultados con zoom limitado y marcador con popup inteligente
     function renderSearchResults(results) {
+        if (!searchResultsDropdown) return;
         searchResultsDropdown.innerHTML = '';
         searchResultsDropdown.classList.remove('hidden');
 
@@ -128,11 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         duration: 2000
                     });
 
-                    // Eliminar marcador y popup anteriores si ya existían
                     if (searchMarker) searchMarker.remove();
                     if (searchPopup) searchPopup.remove();
 
-                    // Crear elemento visual para el marcador (punto rojo)
                     const el = document.createElement('div');
                     el.className = 'search-marker-pin';
                     el.style.width = '20px';
@@ -143,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
                     el.style.cursor = 'pointer';
 
-                    // Contenido HTML personalizado estilo píldora
                     const popupContent = document.createElement('div');
                     popupContent.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(8px); color: #ffffff; padding: 6px 12px 6px 14px; border-radius: 9999px; font-family: sans-serif; font-size: 13px; max-width: 280px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.4);";
                     
@@ -157,40 +153,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     trashBtn.innerHTML = `<img src="ui-icons/fi-rr-trash.svg" style="width: 16px; height: 16px; display: block;" alt="Borrar">`;
                     trashBtn.title = "Borrar marcador";
 
-                    // Acción del botón de papelera
                     trashBtn.addEventListener('click', (ev) => {
                         ev.stopPropagation();
-                        if (searchMarker) {
-                            searchMarker.remove();
-                            searchMarker = null;
-                        }
-                        if (searchPopup) {
-                            searchPopup.remove();
-                            searchPopup = null;
-                        }
+                        if (searchMarker) { searchMarker.remove(); searchMarker = null; }
+                        if (searchPopup) { searchPopup.remove(); searchPopup = null; }
                         activePlaceCoords = null;
                     });
 
                     popupContent.appendChild(textSpan);
                     popupContent.appendChild(trashBtn);
 
-                    // Crear el Popup de MapLibre limpio
                     searchPopup = new maplibregl.Popup({
                         closeButton: false,
                         closeOnClick: false,
                         offset: 25
                     }).setDOMContent(popupContent);
 
-                    // Crear y añadir el marcador al mapa
                     searchMarker = new maplibregl.Marker(el)
                         .setLngLat(activePlaceCoords)
                         .setPopup(searchPopup)
                         .addTo(map);
 
-                    // Mostrar el popup automáticamente al seleccionar
                     searchMarker.togglePopup();
 
-                    // Permitir mostrar/ocultar al hacer clic en el pin rojo
                     el.addEventListener('click', (ev) => {
                         ev.stopPropagation();
                         searchMarker.togglePopup();
@@ -198,8 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 searchResultsDropdown.classList.add('hidden');
-                inputBannerSearch.classList.add('hidden');
-                inputBannerSearch.value = place.name;
+                if (inputBannerSearch) {
+                    inputBannerSearch.classList.add('hidden');
+                    inputBannerSearch.value = place.name;
+                }
             });
             
             searchResultsDropdown.appendChild(div);
@@ -208,14 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cerrar el desplegable al hacer clic fuera
     document.addEventListener('click', (e) => {
-        const searchContainer = document.getElementById('banner-search-container') || btnBannerSearch.parentElement;
-        if (searchContainer && !searchContainer.contains(e.target) && !searchResultsDropdown.contains(e.target)) {
+        const searchContainer = document.getElementById('banner-search-container') || (btnBannerSearch ? btnBannerSearch.parentElement : null);
+        if (searchContainer && !searchContainer.contains(e.target) && searchResultsDropdown && !searchResultsDropdown.contains(e.target)) {
             searchResultsDropdown.classList.add('hidden');
         }
     });
 
     // ==========================================
-    // INTEGRACIÓN BRÚJULA, ESCALA Y CONTROL DE POPUP POR CENTRO DE MAPA
+    // INTEGRACIÓN BRÚJULA, ESCALA Y CONTROL DE POPUP
     // ==========================================
     if (typeof map !== 'undefined') {
         map.on('load', updateMapMetrics);
@@ -232,23 +219,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Ocultar/Mostrar el popup automáticamente según la posición del centro del mapa respecto al marcador
     function checkPopupVisibilityByCenter() {
         if (!searchMarker || !searchPopup || !activePlaceCoords) return;
 
         const mapCenter = map.getCenter();
-        // Calculamos la distancia aproximada en grados entre el centro del mapa y el marcador
         const distance = Math.hypot(mapCenter.lng - activePlaceCoords[0], mapCenter.lat - activePlaceCoords[1]);
-        
-        // Si el centro del mapa se desplaza demasiado lejos del marcador (umbral ajustable), ocultamos el popup
-        // Si vuelve a acercarse, lo mostramos de nuevo
-        const threshold = 0.015 / Math.pow(2, map.getZoom() - 10); // Escala adaptativa según el zoom
+        const threshold = 0.015 / Math.pow(2, map.getZoom() - 10); 
 
         const isVisible = searchPopup.isOpen();
         if (distance > threshold && isVisible) {
-            searchPopup.remove(); // Se oculta porque el centro del mapa se ha alejado
+            searchPopup.remove(); 
         } else if (distance <= threshold && !isVisible && searchMarker) {
-            searchPopup.addTo(map); // Vuelve a aparecer al pasar el centro del mapa por encima
+            searchPopup.addTo(map); 
         }
     }
 

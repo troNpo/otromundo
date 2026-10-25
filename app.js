@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         cargarPerfilJSON("hiking");
     }
 
-        // 3. Pestañas de perfiles
+    // 3. Pestañas de perfiles
     const tabs = document.querySelectorAll(".profile-tab");
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
@@ -33,7 +33,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     });
 
-
     // 4. Lógica de la ventana flotante inferior de ajuste espacial
     const btnOpenModal = document.getElementById("btn-open-spatial-modal");
     const spatialModal = document.getElementById("spatial-adjustment-modal");
@@ -48,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const mapCursor = document.getElementById("map-center-cursor");
     const topLeftBanner = document.getElementById("top-left-banner");
 
-    // Mantener sincronizado el valor del input oculto principal por si Overpass lo lee
+    // Mantener sincronizado el valor del input oculto principal por si Overpass u otro script lo lee
     let hiddenRadiusInput = document.getElementById("search-radius");
     if (!hiddenRadiusInput) {
         hiddenRadiusInput = document.createElement("input");
@@ -66,8 +65,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         hiddenRadiusInput.value = radioNum;
 
-        // Actualizar círculo y encuadre en el mapa principal
-        if (typeof map !== 'undefined') {
+        // Actualizar círculo y encuadre en el mapa principal de forma segura
+        if (typeof map !== 'undefined' && map && typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) {
             actualizarCirculoRadioEnMapaPrincipal(radioNum, ajustarZoom);
         }
     }
@@ -89,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (topLeftBanner) topLeftBanner.style.display = "none";
 
             // Capturar la posición actual real del mapa principal
-            if (typeof map !== 'undefined') {
+            if (typeof map !== 'undefined' && map && typeof map.getCenter === 'function') {
                 const center = map.getCenter();
                 currentLat = center.lat;
                 currentLon = center.lng;
@@ -110,9 +109,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (topLeftBanner) topLeftBanner.style.display = "flex";
 
         // Quitar el padding del mapa y ocultar la capa de radio al salir
-        if (typeof map !== 'undefined') {
-            map.easeTo({ padding: { bottom: 0, top: 0, left: 0, right: 0 }, duration: 300 });
-            if (map.getLayer('main-radius-fill')) {
+        if (typeof map !== 'undefined' && map) {
+            if (typeof map.easeTo === 'function') {
+                map.easeTo({ padding: { bottom: 0, top: 0, left: 0, right: 0 }, duration: 300 });
+            }
+            if (typeof map.getLayer === 'function' && map.getLayer('main-radius-fill')) {
                 map.setLayoutProperty('main-radius-fill', 'visibility', 'none');
                 map.setLayoutProperty('main-radius-stroke', 'visibility', 'none');
             }
@@ -165,24 +166,24 @@ function crearGeoJsonCirculo(centerLon, centerLat, radiusKm, points = 64) {
 }
 
 function actualizarCirculoRadioEnMapaPrincipal(radiusKm, ajustarZoom = false) {
-    if (typeof map === 'undefined') return;
+    if (typeof map === 'undefined' || !map) return;
     const geojsonData = crearGeoJsonCirculo(currentLon, currentLat, radiusKm);
 
-    if (map.getSource('main-search-radius-source')) {
+    if (typeof map.getSource === 'function' && map.getSource('main-search-radius-source')) {
         map.getSource('main-search-radius-source').setData(geojsonData);
-        if (map.getLayer('main-radius-fill')) {
+        if (typeof map.getLayer === 'function' && map.getLayer('main-radius-fill')) {
             map.setLayoutProperty('main-radius-fill', 'visibility', 'visible');
             map.setLayoutProperty('main-radius-stroke', 'visibility', 'visible');
         }
     } else {
-        if (!map.isStyleLoaded()) {
+        if (typeof map.isStyleLoaded === 'function' && !map.isStyleLoaded()) {
             map.on('load', () => { agregarCapaRadioAlMapa(geojsonData); });
         } else {
             agregarCapaRadioAlMapa(geojsonData);
         }
     }
 
-    if (ajustarZoom) {
+    if (ajustarZoom && typeof map.flyTo === 'function') {
         const zoomLevel = Math.max(7, Math.min(13.5, 12.8 - Math.log2(radiusKm)));
         
         map.flyTo({
@@ -195,15 +196,20 @@ function actualizarCirculoRadioEnMapaPrincipal(radiusKm, ajustarZoom = false) {
 }
 
 function agregarCapaRadioAlMapa(geojsonData) {
-    if (map.getSource('main-search-radius-source')) return;
+    if (typeof map === 'undefined' || !map) return;
+    if (typeof map.getSource === 'function' && map.getSource('main-search-radius-source')) return;
     
-    map.addSource('main-search-radius-source', { type: 'geojson', data: geojsonData });
-    map.addLayer({
-        id: 'main-radius-fill', type: 'fill', source: 'main-search-radius-source',
-        paint: { 'fill-color': '#00e5ff', 'fill-opacity': 0.15 }
-    });
-    map.addLayer({
-        id: 'main-radius-stroke', type: 'line', source: 'main-search-radius-source',
-        paint: { 'line-color': '#00e5ff', 'line-width': 2 }
-    });
+    if (typeof map.addSource === 'function') {
+        map.addSource('main-search-radius-source', { type: 'geojson', data: geojsonData });
+    }
+    if (typeof map.addLayer === 'function') {
+        map.addLayer({
+            id: 'main-radius-fill', type: 'fill', source: 'main-search-radius-source',
+            paint: { 'fill-color': '#00e5ff', 'fill-opacity': 0.15 }
+        });
+        map.addLayer({
+            id: 'main-radius-stroke', type: 'line', source: 'main-search-radius-source',
+            paint: { 'line-color': '#00e5ff', 'line-width': 2 }
+        });
+    }
 }

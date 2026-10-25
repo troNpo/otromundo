@@ -251,3 +251,56 @@ if (btnBackToControl && poiFullscreenPanel) {
         controlCenterPanel.classList.remove('hidden'); // Regresa al Centro de Control
     });
 }
+
+// --- LÓGICA PARA EL PANEL DE ATRIBUCIONES Y DONACIÓN (PAYPAL) ---
+const btnOpenAttributions = document.getElementById('btn-open-attributions');
+const btnCloseAttributions = document.getElementById('btn-close-attributions');
+const attributionsPanel = document.getElementById('attributions-panel');
+const attributionsContainerBody = document.getElementById('attributions-container-body');
+
+const btnOpenDonation = document.getElementById('btn-open-donation');
+
+// 1. Abrir panel de Atribuciones y cargar JSON dinámicamente
+btnOpenAttributions?.addEventListener('click', () => {
+    controlCenterPanel.classList.add('hidden');
+    attributionsPanel.classList.remove('hidden');
+
+    if (attributionsContainerBody && attributionsContainerBody.children.length === 0) {
+        attributionsContainerBody.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Cargando atribuciones...</p>';
+        
+        fetch('attributions.json')
+            .then(response => {
+                if (!response.ok) throw new Error('No se pudo cargar el archivo de atribuciones');
+                return response.json();
+            })
+            .then(data => {
+                attributionsContainerBody.innerHTML = '';
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 6px;';
+                    
+                    card.innerHTML = `
+                        <strong style="color: var(--primary-cyan); font-size: 0.95rem;">${item.title}</strong>
+                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">${item.description}</p>
+                        ${item.url ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); font-size: 0.8rem; text-decoration: underline; margin-top: 4px;">${item.url}</a>` : ''}
+                    `;
+                    attributionsContainerBody.appendChild(card);
+                });
+            })
+            .catch(error => {
+                attributionsContainerBody.innerHTML = `<p style="color: #e74c3c; text-align: center;">Error al cargar las atribuciones: ${error.message}</p>`;
+            });
+    }
+});
+
+// Cerrar panel de Atribuciones y volver al Centro de Control
+btnCloseAttributions?.addEventListener('click', () => {
+    attributionsPanel.classList.add('hidden');
+    controlCenterPanel.classList.remove('hidden');
+});
+
+// 2. Lógica para el botón de Donación (PayPal)
+btnOpenDonation?.addEventListener('click', () => {
+    const paypalUrl = 'https://www.paypal.com/donate/?hosted_button_id=JTAFUZ3JU7YSN'; 
+    window.open(paypalUrl, '_blank', 'noopener,noreferrer');
+});

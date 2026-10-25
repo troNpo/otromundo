@@ -154,6 +154,36 @@
             </div>
 
         </div>
+
+        <!-- PIE DE PÁGINA DEL CENTRO DE CONTROL (Atribuciones y PayPal) -->
+        <div class="panel-footer" style="padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 12px; justify-content: center; background: rgba(18,18,20,0.9); width: 100%; box-sizing: border-box; flex-shrink: 0;">
+            <button id="btn-open-attributions" style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #aaa; padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <img src="./ui-icons/fi-rr-info.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(70%);" alt="Atribuciones">
+                <span>Atribuciones</span>
+            </button>
+            
+            <!-- Botón Oficial de PayPal -->
+            <button id="btn-open-donation" style="flex: 1; background: #0070ba; border: 1px solid #005ea6; color: #fff; padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M20.067 8.794c.234-1.454-.512-2.348-2.022-2.348h-6.24c-.534 0-.994.38-1.08.908l-1.34 8.52c-.046.29.182.55.476.55h2.46c.534 0 .994-.38 1.08-.908l.38-2.418h1.83c3.084 0 5.176-1.488 5.486-3.404zm-4.32 1.628c-.368 2.34-2.42 2.34-4.35 2.34h-.88l.68-4.32h.88c2.1 0 3.19.46 3.57 1.98z"/></svg>
+                <span>Donar con PayPal</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= PANEL PANTALLA COMPLETA: ATRIBUCIONES (INYECCIÓN DINÁMICA) ================= -->
+    <div id="attributions-panel" class="fullscreen-panel hidden" style="z-index: 20010;">
+        <div class="panel-header">
+            <button id="btn-close-attributions" class="back-btn" title="Volver">
+                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
+            </button>
+            <h2>Atribuciones y Créditos</h2>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <!-- Contenedor que se rellenará automáticamente desde el archivo JSON -->
+        <div id="attributions-container-body" class="panel-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-width: 800px; margin: 0 auto; width: 100%;">
+            <!-- Se inyecta mediante JS -->
+        </div>
     </div>
 
     <!-- ================= PANEL COMPLETO DE BÚSQUEDA DE POIs ================= -->
@@ -387,7 +417,6 @@
                 <span class="control-card-title">Compartir posición y enlaces</span>
             </div>
 
-            <!-- TEXTO ACTUALIZADO -->
             <div class="control-card" id="adv-btn-native-share" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-share.svg" class="control-icon" alt="App externa"></div>
                 <span class="control-card-title">Abrir en otra app</span>
@@ -398,13 +427,10 @@
                 <span class="control-card-title">Abrir en Street View (Google Maps)</span>
             </div>
 
-            <!-- TEXTO ACTUALIZADO -->
             <div class="control-card" id="adv-btn-enrich" style="border-radius: 12px; cursor: pointer; border: 1px solid var(--primary-cyan); background: rgba(0,229,255,0.05);">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-file-circle-info.svg" class="control-icon" alt="Enriquecer"></div>
                 <span class="control-card-title" style="color: var(--primary-cyan); font-weight: 600;">Enriquecer datos desde OSM</span>
             </div>
-
-            <!-- BOTÓN "Ver objeto en OpenStreetMap.org" ELIMINADO POR REDUNDANCIA -->
 
             <div class="control-card" id="adv-btn-edit" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-tools.svg" class="control-icon" alt="Editar OSM"></div>
@@ -417,51 +443,68 @@
             </div>
         </div>
     </div>
-<!-- PANEL: Gestor de Descarga de Capa KML Jerárquica -->
-<div id="kml-export-manager-panel" class="hidden" style="position: fixed; inset: 0; background: rgba(10, 10, 12, 0.95); z-index: 10000; display: none; flex-direction: column; padding: 20px; font-family: inherit; color: #fff;">
-    
-    <!-- Cabecera del Panel -->
-    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <img src="./ui-icons/fi-rr-folder.svg" width="24" height="24" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Gestor">
-            <h2 style="font-size: 1.2rem; font-weight: bold; color: var(--primary-cyan, #00e5ff); margin: 0;">Gestor de Descarga de Capa KML</h2>
-        </div>
-        <button id="kml-manager-btn-close" onclick="cerrarGestorKmlManager()" style="background: transparent; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 4px;">✕</button>
-    </div>
 
-    <!-- Cuerpo de Configuración -->
-    <div style="display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; max-width: 800px; width: 100%; margin: 0 auto;">
+    <!-- PANEL: Gestor de Descarga de Capa KML Jerárquica -->
+    <div id="kml-export-manager-panel" class="hidden" style="position: fixed; inset: 0; background: rgba(10, 10, 12, 0.95); z-index: 10000; display: none; flex-direction: column; padding: 20px; font-family: inherit; color: #fff;">
         
-        <!-- Nombre del archivo -->
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="kml-filename-input" style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Nombre del archivo KML:</label>
-            <input type="text" id="kml-filename-input" style="background: rgba(18,18,20,0.8); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.95rem; outline: none;" placeholder="otromundo_capa.kml">
+        <!-- Cabecera del Panel -->
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="./ui-icons/fi-rr-folder.svg" width="24" height="24" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Gestor">
+                <h2 style="font-size: 1.2rem; font-weight: bold; color: var(--primary-cyan, #00e5ff); margin: 0;">Gestor de Descarga de Capa KML</h2>
+            </div>
+            <button id="kml-manager-btn-close" onclick="cerrarGestorKmlManager()" style="background: transparent; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 4px;">✕</button>
         </div>
 
-        <!-- Vista previa del árbol de carpetas -->
-        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Estructura Jerárquica de Carpetas (Haz clic para renombrar):</label>
-            </div>
+        <!-- Cuerpo de Configuración -->
+        <div style="display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; max-width: 800px; width: 100%; margin: 0 auto;">
             
-            <!-- Contenedor donde se dibuja el árbol dinámico -->
-            <div id="kml-tree-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; min-height: 200px; max-height: 40vh; overflow-y: auto;">
-                <!-- Se rellena dinámicamente desde kml-manager.js -->
+            <!-- Nombre del archivo -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="kml-filename-input" style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Nombre del archivo KML:</label>
+                <input type="text" id="kml-filename-input" style="background: rgba(18,18,20,0.8); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.95rem; outline: none;" placeholder="otromundo_capa.kml">
             </div>
+
+            <!-- Vista previa del árbol de carpetas -->
+            <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Estructura Jerárquica de Carpetas (Haz clic para renombrar):</label>
+                </div>
+                
+                <!-- Contenedor donde se dibuja el árbol dinámico -->
+                <div id="kml-tree-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; min-height: 200px; max-height: 40vh; overflow-y: auto;">
+                    <!-- Se rellena dinámicamente desde kml-manager.js -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Pie de Página / Acciones -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; max-width: 800px; width: 100%; margin: 0 auto;">
+            <button onclick="cerrarGestorKmlManager()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
+            <button onclick="ejecutarExportacionKmlJerarquico()" style="background: var(--primary-cyan, #00e5ff); border: none; color: #000; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                <img src="./ui-icons/fi-rr-download.svg" width="16" height="16" style="filter: brightness(0);" alt="Descargar">
+                Descargar KML Jerárquico
+            </button>
         </div>
 
     </div>
 
-    <!-- Pie de Página / Acciones -->
-    <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; max-width: 800px; width: 100%; margin: 0 auto;">
-        <button onclick="cerrarGestorKmlManager()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
-        <button onclick="ejecutarExportacionKmlJerarquico()" style="background: var(--primary-cyan, #00e5ff); border: none; color: #000; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-            <img src="./ui-icons/fi-rr-download.svg" width="16" height="16" style="filter: brightness(0);" alt="Descargar">
-            Descargar KML Jerárquico
-        </button>
-    </div>
+    <!-- ================= PANEL PANTALLA COMPLETA: ATRIBUCIONES (INYECCIÓN DINÁMICA) ================= -->
+    <div id="attributions-panel" class="fullscreen-panel hidden" style="z-index: 20010;">
+        <div class="panel-header">
+            <button id="btn-close-attributions" class="back-btn" title="Volver">
+                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
+            </button>
+            <h2>Atribuciones y Créditos</h2>
+            <div style="width: 40px;"></div>
+        </div>
 
-</div>
+        <!-- Contenedor que se rellenará automáticamente desde el archivo JSON -->
+        <div id="attributions-container-body" class="panel-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-width: 800px; margin: 0 auto; width: 100%;">
+            <!-- Se inyecta mediante JS -->
+        </div>
+    </div>
 
     <!-- Scripts -->
 	<script src="app.js"></script>
@@ -472,9 +515,6 @@
     <script src="profile-loader.js"></script>
     <script src="overpass-client.js"></script>
     <script src="nominatim-client.js"></script>
-    <script src="kml-manager.js"></script> <!-- <--- Asegúrate de añadir esta línea -->
+    <script src="kml-manager.js"></script>
 </body>
 </html>
-
-    
-
