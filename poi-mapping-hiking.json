@@ -2,58 +2,56 @@
   "Hiking": {
     "nombre_es": "Senderismo y Excursionismo",
     "subcategorias": {
-      "Refugios y Estancias": {
-        "nombre_es": "Refugios y Estancias",
+      "Turismo y Alojamiento": {
+        "nombre_es": "Turismo y Alojamiento",
         "elementos": [
-          { "categoria": "Alpine Huts", "nombre_es": "Refugio alpino", "tag": "tourism=alpine_hut" },
-          { "categoria": "Wilderness Huts", "nombre_es": "Refugio silvestre", "tag": "tourism=wilderness_hut" },
-          { "categoria": "Shelter", "nombre_es": "Refugio", "tag": "amenity=shelter" },
-          { "categoria": "Observation Towers", "nombre_es": "Torre", "tag": "man_made=tower" },
-          { "categoria": "Communication Towers", "nombre_es": "Antena", "tag": "man_made=mast" }
+          { "categoria": "Alpine Huts", "nombre_es": "Refugios de montaña", "tag": "tourism=alpine_hut" },
+          { "categoria": "Wilderness Huts", "nombre_es": "Refugios silvestres", "tag": "tourism=wilderness_hut" },
+          { "categoria": "Viewpoints", "nombre_es": "Miradores", "tag": "tourism=viewpoint" },
+          { "categoria": "Picnic sites", "nombre_es": "Áreas de picnic y merenderos", "tag": "tourism=picnic_site" },
+          { "categoria": "Information", "nombre_es": "Paneles informativos y cartelería", "tag": "tourism=information" }
         ]
       },
-      "Agua": {
-        "nombre_es": "Agua",
+      "Servicios y Equipamientos": {
+        "nombre_es": "Servicios y Equipamientos",
         "elementos": [
-          { "categoria": "Drinking water", "nombre_es": "Agua potable", "tag": "amenity=drinking_water" },
-          { "categoria": "Springs", "nombre_es": "Manantial", "tag": "natural=spring" },
-          { "categoria": "Water Wells", "nombre_es": "Pozo", "tag": "man_made=water_well" },
-          { "categoria": "WateringPlace", "nombre_es": "Abrevadero", "tag": "amenity=watering_place" }
+          { "categoria": "Shelter", "nombre_es": "Refugios y casetas", "tag": "amenity=shelter" },
+          { "categoria": "Drinking water", "nombre_es": "Fuentes de agua potable", "tag": "amenity=drinking_water" },
+          { "categoria": "Cafes", "nombre_es": "Cafeterías", "tag": "amenity=cafe" },
+          { "categoria": "Pubs / Bars", "nombre_es": "Bares y pubs", "tag": "amenity=pub / amenity=bar" },
+          { "categoria": "Fuel stations", "nombre_es": "Gasolineras", "tag": "amenity=fuel" },
+          { "categoria": "Toilets", "nombre_es": "Aseos públicos", "tag": "amenity=toilets" },
+          { "categoria": "Hunting Stand", "nombre_es": "Puestos de caza", "tag": "amenity=hunting_stand" }
         ]
       },
-      "Cumbres y Relieve": {
-        "nombre_es": "Cumbres y Relieve",
+      "Naturaleza y Relieve": {
+        "nombre_es": "Naturaleza y Relieve",
         "elementos": [
-          { "categoria": "Peaks", "nombre_es": "Pico", "tag": "natural=peak" },
-          { "categoria": "Viewpoints", "nombre_es": "Mirador", "tag": "tourism=viewpoint" },
-          { "categoria": "Volcanoes", "nombre_es": "Volcán", "tag": "natural=volcano" },
-          { "categoria": "Water features", "nombre_es": "Cascada", "tag": "waterway=waterfall" },
-          { "categoria": "Caves", "nombre_es": "Cueva", "tag": "natural=cave_entrance" },
-          { "categoria": "Sinkholes", "nombre_es": "Sima", "tag": "natural=sinkhole" },
-          { "categoria": "Rocks", "nombre_es": "Roca", "tag": "natural=rock" },
-          { "categoria": "Cliffs", "nombre_es": "Acantilado", "tag": "natural=cliff" },
-          { "categoria": "Mines", "nombre_es": "Mina", "tag": "man_made=adit" }
+          { "categoria": "Peaks", "nombre_es": "Cimas y picos", "tag": "natural=peak" },
+          { "categoria": "Springs", "nombre_es": "Manantiales y fuentes", "tag": "natural=spring" },
+          { "categoria": "Volcanoes", "nombre_es": "Volcanes", "tag": "natural=volcano" },
+          { "categoria": "Caves", "nombre_es": "Cuevas y simas", "tag": "natural=cave_entrance" }
         ]
       },
-      "Avituallamiento": {
-        "nombre_es": "Avituallamiento",
+      "Comercios y Tiendas": {
+        "nombre_es": "Comercios y Tiendas",
         "elementos": [
-          { "categoria": "Cafes", "nombre_es": "Cafetería", "tag": "amenity=cafe" },
-          { "categoria": "Pubs / Bars", "nombre_es": "Bar", "tag": "amenity=pub" },
-          { "categoria": "Bakeries", "nombre_es": "Panadería", "tag": "shop=bakery" },
-          { "categoria": "Supermarkets", "nombre_es": "Supermercado", "tag": "shop=supermarket" },
-          { "categoria": "Fuel stations", "nombre_es": "Gasolinera", "tag": "amenity=fuel" }
+          { "categoria": "Bakeries", "nombre_es": "Panaderías", "tag": "shop=bakery" },
+          { "categoria": "Supermarkets", "nombre_es": "Supermercados", "tag": "shop=supermarket" }
         ]
       },
-      "Descanso e Información": {
-        "nombre_es": "Descanso e Información",
+      "Estructuras Artificiales": {
+        "nombre_es": "Estructuras Artificiales",
         "elementos": [
-          { "categoria": "Benches", "nombre_es": "Banco", "tag": "amenity=bench" },
-          { "categoria": "Picnic sites", "nombre_es": "Merendero", "tag": "tourism=picnic_site" },
-          { "categoria": "Information", "nombre_es": "Información", "tag": "tourism=information" },
-          { "categoria": "Nature reserves", "nombre_es": "Reserva", "tag": "leisure=nature_reserve" },
-          { "categoria": "Hunting Stand", "nombre_es": "Caza", "tag": "amenity=hunting_stand" },
-          { "categoria": "Toilets", "nombre_es": "Aseos", "tag": "amenity=toilets" }
+          { "categoria": "Observation Towers", "nombre_es": "Torres de observación", "tag": "man_made=tower" },
+          { "categoria": "Communication Towers", "nombre_es": "Torres de comunicación", "tag": "man_made=mast" },
+          { "categoria": "Water Wells", "nombre_es": "Pozos de agua", "tag": "man_made=water_well" }
+        ]
+      },
+      "Ocio y Parques": {
+        "nombre_es": "Ocio y Parques",
+        "elementos": [
+          { "categoria": "Nature reserves", "nombre_es": "Reservas naturales", "tag": "leisure=nature_reserve" }
         ]
       }
     }
