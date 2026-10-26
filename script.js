@@ -252,15 +252,13 @@ if (btnBackToControl && poiFullscreenPanel) {
     });
 }
 
-// --- LÓGICA PARA EL PANEL DE ATRIBUCIONES Y DONACIÓN (PAYPAL) ---
+// --- LÓGICA PARA EL PANEL DE ATRIBUCIONES ---
 const btnOpenAttributions = document.getElementById('btn-open-attributions');
 const btnCloseAttributions = document.getElementById('btn-close-attributions');
 const attributionsPanel = document.getElementById('attributions-panel');
 const attributionsContainerBody = document.getElementById('attributions-container-body');
 
-const btnOpenDonation = document.getElementById('btn-open-donation');
-
-// 1. Abrir panel de Atribuciones y cargar JSON dinámicamente
+// Abrir panel de Atribuciones y cargar JSON dinámicamente
 btnOpenAttributions?.addEventListener('click', () => {
     controlCenterPanel.classList.add('hidden');
     attributionsPanel.classList.remove('hidden');
@@ -282,7 +280,7 @@ btnOpenAttributions?.addEventListener('click', () => {
                     card.innerHTML = `
                         <strong style="color: var(--primary-cyan); font-size: 0.95rem;">${item.title}</strong>
                         <p style="margin: 0; font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">${item.description}</p>
-                        ${item.url ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); font-size: 0.8rem; text-decoration: underline; margin-top: 4px;">${item.url}</a>` : ''}
+                        ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); font-size: 0.8rem; text-decoration: underline; margin-top: 4px;">${item.linkText || item.link}</a>` : ''}
                     `;
                     attributionsContainerBody.appendChild(card);
                 });
@@ -297,10 +295,4 @@ btnOpenAttributions?.addEventListener('click', () => {
 btnCloseAttributions?.addEventListener('click', () => {
     attributionsPanel.classList.add('hidden');
     controlCenterPanel.classList.remove('hidden');
-});
-
-// 2. Lógica para el botón de Donación (PayPal)
-btnOpenDonation?.addEventListener('click', () => {
-    const paypalUrl = 'https://www.paypal.com/donate/?hosted_button_id=JTAFUZ3JU7YSN'; 
-    window.open(paypalUrl, '_blank', 'noopener,noreferrer');
 });
