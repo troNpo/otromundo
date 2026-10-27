@@ -399,7 +399,6 @@ body, html {
     display: inline-block !important;
 }
 
-
 .control-card {
     display: flex;
     align-items: center;
@@ -493,7 +492,6 @@ body, html {
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
 }
 
-/* 1.  (Círculo destacado para la Brújula) */
 .banner-key-head {
     width: 50px;              
     height: 50px;
@@ -523,7 +521,6 @@ body, html {
     transition: transform 0.2s ease-out; 
 }
 
-/* 2.(Cápsula alargada conectada) */
 .banner-key-body {
     display: flex;
     align-items: center;
@@ -622,7 +619,6 @@ body, html {
     z-index: 1001;
     box-shadow: 0 4px 16px rgba(0,0,0,0.6) !important;
 }
-
 
 /* --- PANEL DE POIS --- */
 .top-bar {
@@ -1067,7 +1063,6 @@ body.is-editing .btn-toggle-visibility {
     color: var(--text-muted);
 }
 
-/* Cabecera específica del panel de resultados y botón de retroceso (#btn-back) */
 #results-panel .app-header {
     background-color: var(--bg-card);
     border-bottom: 1px solid var(--border-color);
@@ -1141,7 +1136,7 @@ body.is-editing .btn-toggle-visibility {
     display: none !important;
 }
 
-/* --- CORRECCIÓN DEFINITIVA PARA BOTONES DE RETROCESO (CENTRO DE CONTROL Y PANELES) --- */
+/* --- CORRECCIÓN DEFINITIVA PARA BOTONES DE RETROCESO Y PANELES --- */
 .back-btn, 
 #btn-close-panel, 
 #btn-back-to-control {
@@ -1181,7 +1176,6 @@ body.is-editing .btn-toggle-visibility {
     padding: 0 !important;
 }
 
-/* Ocultar la punta o flecha blanca por defecto del popup si interfiere con el diseño */
 .maplibregl-popup-anchor-top .maplibregl-popup-tip,
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
 .maplibregl-popup-anchor-left .maplibregl-popup-tip,

@@ -17,7 +17,6 @@
     <div id="map"></div>
 
     <!-- Banner Superior Izquierdo: Brújula, Escala y Buscador Integrados -->
-        
     <div id="top-left-banner" class="top-left-banner-container">
         
         <!-- Brújula Circular Destacada -->
@@ -46,7 +45,6 @@
         </div>
 
     </div>
-
 
     <!-- Elemento visual del Cursor Central en el mapa -->
     <div id="map-center-cursor" class="map-cursor-container">
@@ -100,7 +98,6 @@
                 </div>
                 
                 <div class="accordion-content">
-                    <!-- Selector de Estilo por Defecto -->
                     <div class="control-group">
                         <label for="select-style">Estilo por defecto del mapa:</label>
                         <select id="select-style">
@@ -113,7 +110,6 @@
 
                     <hr class="control-divider">
 
-                    <!-- Control de Interruptor Deslizante para el Cursor Central -->
                     <div class="control-group-row">
                         <label for="toggle-cursor">Mostrar Cursor Central (X):</label>
                         <label class="switch">
@@ -129,7 +125,6 @@
 
                     <hr class="control-divider">
 
-                    <!-- Control de Inclinación (Pitch) -->
                     <div class="control-group">
                         <label for="range-pitch">Inclinación Máxima / Pitch: <span id="pitch-val">0</span>°</label>
                         <input type="range" id="range-pitch" class="custom-range" min="0" max="85" value="0">
@@ -137,7 +132,6 @@
 
                     <hr class="control-divider">
 
-                    <!-- Botón de Validar / Guardar dentro de la tarjeta -->
                     <button id="btn-save-settings" class="action-btn-save">
                         <img src="ui-icons/fi-rr-autosave.svg" alt="Guardar">
                         <span>Guardar Ajustes</span>
@@ -145,7 +139,7 @@
                 </div>
             </div>
 
-            <!-- Tarjeta de Puntos de Interés (Abre el panel de búsqueda de POIs) -->
+            <!-- Tarjeta de Puntos de Interés -->
             <div id="btn-poi-card" class="control-card">
                 <div class="control-card-icon-wrapper">
                     <img src="./ui-icons/fi-rr-global-research.svg" alt="Icono POI" class="control-icon">
@@ -153,19 +147,34 @@
                 <span class="control-card-title">Puntos de Interés</span>
             </div>
 
+            <!-- Tarjeta de Gestor de Capas sobre el Mapa -->
+            <div id="btn-layer-manager-card" class="control-card">
+                <div class="control-card-icon-wrapper">
+                    <img src="./ui-icons/fi-rr-land-layer-location.svg" alt="Icono Capas" class="control-icon" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </div>
+                <span class="control-card-title">Capas sobre el Mapa</span>
+            </div>
+
+            <!-- Tarjeta de Planificador de Rutas (NUEVO) -->
+            <div id="btn-route-planner-card" class="control-card">
+                <div class="control-card-icon-wrapper">
+                    <img src="./ui-icons/fi-rr-route.svg" alt="Icono Rutas" class="control-icon" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </div>
+                <span class="control-card-title">Planificador de Rutas</span>
+            </div>
+
         </div>
 
         <!-- PIE DE PÁGINA DEL CENTRO DE CONTROL (Atribuciones) -->
-<div class="panel-footer" style="padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; background: rgba(18,18,20,0.9); width: 100%; box-sizing: border-box; flex-shrink: 0;">
-    <button id="btn-open-attributions" style="width: 100%; max-width: 300px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #aaa; padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <img src="./ui-icons/fi-rr-info.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(70%);" alt="Atribuciones">
-        <span>Atribuciones</span>
-    </button>
-</div>
-
+        <div class="panel-footer" style="padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; background: rgba(18,18,20,0.9); width: 100%; box-sizing: border-box; flex-shrink: 0;">
+            <button id="btn-open-attributions" style="width: 100%; max-width: 300px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #aaa; padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <img src="./ui-icons/fi-rr-info.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(70%);" alt="Atribuciones">
+                <span>Atribuciones</span>
+            </button>
+        </div>
     </div>
 
-    <!-- ================= PANEL PANTALLA COMPLETA: ATRIBUCIONES (INYECCIÓN DINÁMICA) ================= -->
+    <!-- ================= PANEL PANTALLA COMPLETA: ATRIBUCIONES ================= -->
     <div id="attributions-panel" class="fullscreen-panel hidden" style="z-index: 20010;">
         <div class="panel-header">
             <button id="btn-close-attributions" class="back-btn" title="Volver">
@@ -174,16 +183,11 @@
             <h2>Atribuciones y Créditos</h2>
             <div style="width: 40px;"></div>
         </div>
-
-        <!-- Contenedor que se rellenará automáticamente desde el archivo JSON -->
-        <div id="attributions-container-body" class="panel-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-width: 800px; margin: 0 auto; width: 100%;">
-            <!-- Se inyecta mediante JS -->
-        </div>
+        <div id="attributions-container-body" class="panel-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-width: 800px; margin: 0 auto; width: 100%;"></div>
     </div>
 
     <!-- ================= PANEL COMPLETO DE BÚSQUEDA DE POIs ================= -->
     <div id="poi-fullscreen-panel" class="fullscreen-panel hidden">
-        <!-- BARRA SUPERIOR DE ACCIONES -->
         <header class="top-bar">
             <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
                 <button id="btn-back-to-control" class="back-btn" title="Volver al Centro de Control">
@@ -201,19 +205,17 @@
             </div>
         </header>
 
-        <!-- BOTÓN ÚNICO DE AJUSTE DE ZONA DE BÚSQUEDA -->
         <div class="radius-control-panel" style="text-align: center; padding: 16px;">
             <button id="btn-open-spatial-modal" style="width: 100%; background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); color: var(--primary-cyan); padding: 12px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <img src="./ui-icons/fi-rr-map.svg" alt="Mapa" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 <span>Ajustar zona de búsqueda</span>
             </button>
         </div>
-        <!-- BARRA DE BÚSQUEDA RÁPIDA EN EL ÁRBOL DE CATEGORÍAS -->
+
         <div style="padding: 10px 16px; background: rgba(18,18,20,0.6); border-bottom: 1px solid var(--border-color);">
             <input type="text" id="tree-search-filter" placeholder="Buscar categoría o PDI actual..." style="width:100%; padding:10px 12px; background:#121212; border:1px solid var(--border-color); color:white; border-radius:10px; outline:none; font-size:0.9rem;">
         </div>
 
-        <!-- BARRA DE PERFILES -->
         <div class="profile-tabs-bar">
             <button class="profile-tab active" data-profile="hiking" title="Senderismo">
                 <img src="./ui-icons/fi-rr-hiking.svg" alt="Senderismo">
@@ -225,7 +227,6 @@
             </button>
         </div>
 
-        <!-- CABECERA DE CATEGORÍAS -->
         <div class="categories-header-bar">
             <div class="categories-title-group">
                 <span>Categorías</span>
@@ -247,15 +248,11 @@
             </div>
         </div>
 
-        <!-- CONTENEDOR PRINCIPAL DEL ÁRBOL DE CATEGORÍAS -->
-        <main id="category-container">
-            <!-- Las categorías se cargarán dinámicamente aquí según el perfil activo -->
-        </main>
+        <main id="category-container"></main>
     </div>
 
-    <!-- ================= PANEL GESTOR DE PDI (ACTUALIZADO CON BARRA MASIVA INTEGRADA) ================= -->
+    <!-- ================= PANEL GESTOR DE PDI ================= -->
     <div id="results-panel" class="fullscreen-panel" style="display: none;">
-        <!-- Cabecera Principal del Gestor de PDI -->
         <header class="app-header red-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <button id="btn-back-results" class="icon-btn" title="Volver">
@@ -274,21 +271,25 @@
                 <button id="btn-select-all" class="icon-btn" title="Marcar/Desmarcar todo">
                     <img src="./ui-icons/fi-rr-list-check.svg" id="icon-select-all" alt="Seleccionar todo">
                 </button>
+                <!-- Descargar KML -->
                 <button id="btn-download-preset" class="icon-btn" title="Descargar KML">
                     <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar">
                 </button>
+                <!-- Ver como capa en el mapa -->
+                <button id="btn-view-on-map" class="icon-btn" title="Cargar como capa en el mapa" style="background: rgba(0,229,255,0.12); border: 1px solid var(--primary-cyan); border-radius: 8px; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-land-layer-location.svg" alt="Cargar en mapa" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+                <!-- Manual / Ayuda -->
                 <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
                     <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </a>
             </div>
         </header>
 
-        <!-- Barra de Búsqueda Rápida por Nombre -->
         <div id="quick-search-container" style="display: none; padding: 10px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
             <input type="text" id="quick-search-input" placeholder="Filtrar PDI por nombre..." style="width: 100%; background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 12px; font-size: 14px; outline: none;">
         </div>
 
-        <!-- Barra de Acciones Masivas -->
         <div id="bulk-action-bar" style="display: none; align-items: center; justify-content: space-between; padding: 8px 16px; background: rgba(0, 229, 255, 0.1); border-bottom: 1px solid var(--primary-cyan); font-size: 13px;">
             <span id="bulk-counter-text" style="color: var(--primary-cyan); font-weight: 600;">0 seleccionados</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -303,13 +304,48 @@
             </div>
         </div>
 
-        <!-- Contenedor de Chips de Categorías -->
         <div class="categories-nav-wrapper">
             <div id="categories-chips-container" class="categories-chips-scroll"></div>
         </div>
 
-        <!-- Contenedor vertical de Tarjetas de PDI -->
         <div id="nodes-container" class="nodes-vertical-scroll"></div>
+    </div>
+
+    <!-- ================= NUEVO PANEL: GESTOR DE CAPAS ACTIVAS ================= -->
+    <div id="layer-manager-panel" class="fullscreen-panel hidden" style="z-index: 20005;">
+        <header class="app-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(18,18,20,0.95); border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="btn-back-layer-manager" class="icon-btn" title="Volver al mapa" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center;">
+                    <img src="./ui-icons/fi-rr-left.svg" alt="Volver" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-cyan); display: flex; align-items: center; gap: 8px;">
+                    <span>Capas sobre el Mapa</span>
+                    <span id="layer-manager-badge" class="badge" style="background: rgba(0,229,255,0.15); color: var(--primary-cyan); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0</span>
+                </h3>
+            </div>
+            
+            <div class="header-title-group" style="display: flex; align-items: center; gap: 8px;">
+                <!-- Botón para subir archivo GPX o KML externo -->
+                <button id="btn-upload-layer-file" class="icon-btn" title="Cargar archivo GPX o KML" style="background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-file-upload.svg" alt="Subir archivo" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+                <input type="file" id="layer-file-input" accept=".gpx,.kml" style="display: none;" />
+
+                <button id="btn-export-layer-kml" class="icon-btn" title="Exportar capa actual a KML" style="background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-file-download.svg" alt="Descargar KML" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+                <button id="btn-clear-layer" class="icon-btn" title="Borrar toda la capa" style="background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-trash.svg" alt="Borrar capa" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);">
+                </button>
+                <a href="https://tu-sitio-wordpress.com/manual" target="_blank" rel="noopener noreferrer" title="Manual de ayuda online" style="display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 4px;">
+                    <img src="./ui-icons/fi-rr-interrogation.svg" alt="Ayuda" style="width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </a>
+            </div>
+        </header>
+
+        <div id="layer-manager-nodes-container" class="nodes-vertical-scroll" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;">
+            <!-- Se rellenará dinámicamente desde layer-manager.js -->
+        </div>
     </div>
 
     <!-- Barra de herramientas inferior -->
@@ -338,30 +374,23 @@
     <!-- PANEL INFERIOR FLOTANTE PARA AJUSTAR LA ZONA DE BÚSQUEDA -->
     <div id="spatial-adjustment-modal" class="fullscreen-panel hidden" style="z-index: 10005; background: transparent; justify-content: flex-end;">
         <div style="background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; width: 100%; box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; gap: 14px;">
-            
             <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                 <div style="color: var(--primary-cyan); font-weight: 600; font-size: 1rem;">Ajustar zona de búsqueda</div>
                 <button id="btn-close-spatial-modal" style="background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
             </div>
-
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <span style="font-size: 0.9rem; color: var(--text-main);">Radio: <strong id="modal-radius-value" style="color: var(--primary-cyan);">5</strong> km</span>
                 <span id="modal-info-area" style="font-size: 0.8rem; color: var(--text-muted);">Superficie: 78.5 km²</span>
             </div>
-
-            <!-- Deslizador compacto en vivo -->
             <input type="range" id="modal-search-radius" min="1" max="15" value="5" style="width: 100%; accent-color: var(--primary-cyan); cursor: pointer; height: 6px;">
-
             <button id="btn-confirm-spatial" style="width: 100%; background: var(--primary-cyan); color: #121212; border: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 4px;">Aceptar y Guardar</button>
         </div>
     </div>
 
     <!-- ================= PANEL INFERIOR FLOTANTE DE DETALLE DE PDI EN EL MAPA ================= -->
     <div id="map-poi-detail-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: auto; max-height: 50vh; background: #121212; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 2000; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.7);">
-        
-        <!-- Cabecera unificada -->
         <div class="selector-header" style="border-top-left-radius: 24px; border-top-right-radius: 24px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background-color: rgba(0, 229, 255, 0.12); border-bottom: 1px solid var(--border-color);">
             <div style="display: flex; flex-direction: column;">
                 <span id="detail-poi-category" style="font-size: 0.7rem; color: var(--primary-cyan); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Categoría</span>
@@ -372,11 +401,9 @@
             </button>
         </div>
 
-        <!-- Cuerpo del panel con la información y la botonera simétrica -->
         <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
             <div id="detail-poi-meta" style="font-size: 0.9rem; color: var(--text-muted);">Distancia y coordenadas</div>
             
-            <!-- Botonera simétrica con el botón de información integrado al mismo nivel -->
             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 4px;">
                 <button id="detail-btn-info" class="action-btn" title="Ver etiquetas OSM" style="display: none; background: rgba(0,229,255,0.1); border: 1px solid var(--primary-cyan); padding: 10px 12px; border-radius: 12px; cursor: pointer; align-items: center; gap: 6px; color: var(--primary-cyan); font-size: 0.9rem;">
                     <img src="./ui-icons/fi-rr-info.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Info">
@@ -395,6 +422,83 @@
         </div>
     </div>
 
+    <!-- ================= PANEL INFERIOR FLOTANTE DE DETALLE DE TRACK EN EL MAPA ================= -->
+    <div id="map-track-detail-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: auto; max-height: 50vh; background: #121212; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 2000; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.7);">
+        <div class="selector-header" style="border-top-left-radius: 24px; border-top-right-radius: 24px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background-color: rgba(0, 229, 255, 0.12); border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; flex-direction: column;">
+                <span id="detail-track-category" style="font-size: 0.7rem; color: var(--primary-cyan); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Track / Ruta</span>
+                <h4 id="detail-track-title" style="margin: 2px 0 0 0; color: var(--text-main); font-size: 16px; font-weight: 600;">Nombre del Track</h4>
+            </div>
+            <button id="detail-track-btn-close" class="back-btn" title="Cerrar" style="background: transparent; border: none; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                <img src="./ui-icons/fi-rr-cross-small.svg" alt="Cerrar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+            </button>
+        </div>
+
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+            <div id="detail-track-meta" style="font-size: 0.9rem; color: var(--text-muted);">Número de puntos del track</div>
+            
+            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 4px;">
+                <button id="detail-track-btn-action" class="action-btn" title="Ver en el listado" style="background: rgba(0,229,255,0.15); border: 1px solid var(--primary-cyan); padding: 10px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--primary-cyan); font-size: 0.9rem; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-list.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Listado">
+                    <span>Listado</span>
+                </button>
+                <button id="detail-track-btn-delete" class="action-btn" title="Eliminar Track" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; padding: 10px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #e74c3c; font-size: 0.9rem; font-weight: 600;">
+                    <img src="./ui-icons/fi-rr-trash.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PANEL INFERIOR FLOTANTE: PLANIFICADOR DE RUTAS (NUEVO) ================= -->
+    <div id="route-planner-bottom-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 20005; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.8); color: #fff;">
+        
+        <!-- Cabecera / Estadísticas de la ruta -->
+        <div style="display: flex; align-items: center; justify-content: space-around; padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem;">DISTANCIA</span>
+                <strong id="planner-stat-dist" style="color: var(--primary-cyan); font-size: 0.95rem;">-- km</strong>
+            </div>
+            <div style="width: 1px; height: 24px; background: var(--border-color);"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem;">TIEMPO</span>
+                <strong id="planner-stat-time" style="color: var(--text-main); font-size: 0.95rem;">-- min</strong>
+            </div>
+            <div style="width: 1px; height: 24px; background: var(--border-color);"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem;">PUNTOS</span>
+                <strong id="planner-stat-points" style="color: var(--text-main); font-size: 0.95rem;">0</strong>
+            </div>
+        </div>
+
+        <!-- Barra de herramientas inferior del planificador -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <!-- Botón Cancelar (fi-rr-square-x.svg) -->
+                <button id="planner-btn-cancel" class="icon-btn" title="Cancelar / Salir" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <img src="./ui-icons/fi-rr-square-x.svg" alt="Cancelar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);">
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <!-- Botón Quitar Punto (fi-rr-square-minus.svg) -->
+                <button id="planner-btn-remove" class="icon-btn" title="Deshacer último punto" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <img src="./ui-icons/fi-rr-square-minus.svg" alt="Quitar punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+
+                <!-- Botón Añadir Punto (fi-rr-square-plus.svg) -->
+                <button id="planner-btn-add" class="icon-btn" title="Añadir punto en el mapa" style="background: rgba(0,229,255,0.2); border: 1px solid var(--primary-cyan); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <img src="./ui-icons/fi-rr-square-plus.svg" alt="Añadir punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+                </button>
+
+                <!-- Enviar a Capas -->
+                <button id="planner-btn-send" class="icon-btn" title="Enviar al Gestor de Capas" style="background: var(--primary-cyan); border: none; border-radius: 12px; padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: #121212; font-weight: bold; font-size: 0.85rem;">
+                    <img src="./ui-icons/fi-rr-land-layer-location.svg" alt="Enviar" style="width: 18px; height: 18px; filter: brightness(0);">
+                    <span>Guardar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= PANEL DE OPCIONES AVANZADAS DE PDI ================= -->
     <div id="advanced-options-panel" class="fullscreen-panel hidden" style="z-index: 20005;">
         <div class="panel-header">
@@ -406,32 +510,26 @@
         </div>
         <div class="panel-body" style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div id="advanced-poi-title" style="font-weight: bold; color: var(--primary-cyan); font-size: 1.05rem; padding: 4px 8px;">Nombre del PDI</div>
-            
             <div class="control-card" id="adv-btn-share" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-share.svg" class="control-icon" alt="Compartir"></div>
                 <span class="control-card-title">Compartir posición y enlaces</span>
             </div>
-
             <div class="control-card" id="adv-btn-native-share" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-share.svg" class="control-icon" alt="App externa"></div>
                 <span class="control-card-title">Abrir en otra app</span>
             </div>
-
             <div class="control-card" id="adv-btn-streetview" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-street-view.svg" class="control-icon" alt="Street View"></div>
                 <span class="control-card-title">Abrir en Street View (Google Maps)</span>
             </div>
-
             <div class="control-card" id="adv-btn-enrich" style="border-radius: 12px; cursor: pointer; border: 1px solid var(--primary-cyan); background: rgba(0,229,255,0.05);">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-file-circle-info.svg" class="control-icon" alt="Enriquecer"></div>
                 <span class="control-card-title" style="color: var(--primary-cyan); font-weight: 600;">Enriquecer datos desde OSM</span>
             </div>
-
             <div class="control-card" id="adv-btn-edit" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-tools.svg" class="control-icon" alt="Editar OSM"></div>
                 <span class="control-card-title">Contribuir / Editar en OpenStreetMap</span>
             </div>
-
             <div class="control-card" id="adv-btn-download-kml" style="border-radius: 12px; cursor: pointer;">
                 <div class="control-card-icon-wrapper"><img src="./ui-icons/fi-rr-file-download.svg" class="control-icon" alt="KML"></div>
                 <span class="control-card-title">Descargar PDI individual (KML)</span>
@@ -441,8 +539,6 @@
 
     <!-- PANEL: Gestor de Descarga de Capa KML Jerárquica -->
     <div id="kml-export-manager-panel" class="hidden" style="position: fixed; inset: 0; background: rgba(10, 10, 12, 0.95); z-index: 10000; display: none; flex-direction: column; padding: 20px; font-family: inherit; color: #fff;">
-        
-        <!-- Cabecera del Panel -->
         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <img src="./ui-icons/fi-rr-folder.svg" width="24" height="24" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Gestor">
@@ -450,31 +546,18 @@
             </div>
             <button id="kml-manager-btn-close" onclick="cerrarGestorKmlManager()" style="background: transparent; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 4px;">✕</button>
         </div>
-
-        <!-- Cuerpo de Configuración -->
         <div style="display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; max-width: 800px; width: 100%; margin: 0 auto;">
-            
-            <!-- Nombre del archivo -->
             <div style="display: flex; flex-direction: column; gap: 6px;">
                 <label for="kml-filename-input" style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Nombre del archivo KML:</label>
                 <input type="text" id="kml-filename-input" style="background: rgba(18,18,20,0.8); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.95rem; outline: none;" placeholder="otromundo_capa.kml">
             </div>
-
-            <!-- Vista previa del árbol de carpetas -->
             <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <label style="font-size: 0.85rem; color: #aaa; font-weight: 600;">Estructura Jerárquica de Carpetas (Haz clic para renombrar):</label>
                 </div>
-                
-                <!-- Contenedor donde se dibuja el árbol dinámico -->
-                <div id="kml-tree-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; min-height: 200px; max-height: 40vh; overflow-y: auto;">
-                    <!-- Se rellena dinámicamente desde kml-manager.js -->
-                </div>
+                <div id="kml-tree-container" style="display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; min-height: 200px; max-height: 40vh; overflow-y: auto;"></div>
             </div>
-
         </div>
-
-        <!-- Pie de Página / Acciones -->
         <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; max-width: 800px; width: 100%; margin: 0 auto;">
             <button onclick="cerrarGestorKmlManager()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancelar</button>
             <button onclick="ejecutarExportacionKmlJerarquico()" style="background: var(--primary-cyan, #00e5ff); border: none; color: #000; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
@@ -482,27 +565,10 @@
                 Descargar KML Jerárquico
             </button>
         </div>
-
-    </div>
-
-    <!-- ================= PANEL PANTALLA COMPLETA: ATRIBUCIONES (INYECCIÓN DINÁMICA) ================= -->
-    <div id="attributions-panel" class="fullscreen-panel hidden" style="z-index: 20010;">
-        <div class="panel-header">
-            <button id="btn-close-attributions" class="back-btn" title="Volver">
-                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
-            </button>
-            <h2>Atribuciones y Créditos</h2>
-            <div style="width: 40px;"></div>
-        </div>
-
-        <!-- Contenedor que se rellenará automáticamente desde el archivo JSON -->
-        <div id="attributions-container-body" class="panel-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-width: 800px; margin: 0 auto; width: 100%;">
-            <!-- Se inyecta mediante JS -->
-        </div>
     </div>
 
     <!-- Scripts -->
-	<script src="app.js"></script>
+    <script src="app.js"></script>
     <script src="https://unpkg.com/open-location-code@1.0.4/openlocationcode.js"></script>
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="script.js"></script>
@@ -510,6 +576,9 @@
     <script src="profile-loader.js"></script>
     <script src="overpass-client.js"></script>
     <script src="nominatim-client.js"></script>
+    <script src="layer-manager.js"></script>
     <script src="kml-manager.js"></script>
+    <script src="route-planner.js"></script>
+
 </body>
 </html>
