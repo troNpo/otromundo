@@ -19,7 +19,7 @@ const RoutePlanner = {
             btnCard.addEventListener("click", () => {
                 document.getElementById("control-center-panel").classList.add("hidden");
                 const bottomToolbar = document.getElementById("bottom-toolbar");
-                if (bottomToolbar) bottomToolbar.classList.add("hidden"); // Ocultar barra inferior general
+                if (bottomToolbar) bottomToolbar.classList.add("hidden");
                 
                 const plannerPanel = document.getElementById("route-planner-bottom-panel");
                 if (plannerPanel) {
@@ -27,7 +27,7 @@ const RoutePlanner = {
                 }
                 
                 this.activateMapSelectionMode(true);
-                if (typeof showToast === 'function') showToast("🗺️ Toca el mapa para añadir puntos de ruta");
+                if (typeof showToast === 'function') showToast("🗺️ Toca el mapa o usa el botón [+] para fijar puntos");
             });
         }
 
@@ -59,11 +59,34 @@ const RoutePlanner = {
             });
         }
 
-        // 4. Botón Añadir punto (fi-rr-square-plus.svg)
+        // 4. Botón Añadir punto desde el CENTRO DEL MAPA (fi-rr-square-plus.svg)
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
-                if (typeof showToast === 'function') showToast("📍 Toca en el mapa para añadir el siguiente punto");
+                if (typeof map === 'undefined' || !map) return;
+
+                // Obtener el centro exacto del mapa
+                const center = map.getCenter();
+                const lngLat = [center.lng, center.lat];
+                
+                this.points.push(lngLat);
+
+                // Añadir marcador visual en el mapa
+                const marker = new maplibregl.Marker({ color: "#00e5ff" })
+                    .setLngLat(lngLat)
+                    .addTo(map);
+                this.markers.push(marker);
+
+                document.getElementById("planner-stat-points").innerText = this.points.length;
+
+                if (typeof showToast === 'function') {
+                    showToast(`📍 Punto ${this.points.length} añadido desde el centro`);
+                }
+
+                // Si hay 2 o más puntos, calcular ruta automáticamente
+                if (this.points.length >= 2) {
+                    this.calcularRutaBRouter();
+                }
             });
         }
 
@@ -92,7 +115,7 @@ const RoutePlanner = {
         }
     },
 
-    // Activar clics en el mapa para ir sumando puntos a la ruta
+    // Activar clics directos en el mapa como método alternativo
     activateMapSelectionMode(activate) {
         if (typeof map === 'undefined' || !map) return;
 
@@ -105,7 +128,6 @@ const RoutePlanner = {
                     const lngLat = [e.lngLat.lng, e.lngLat.lat];
                     this.points.push(lngLat);
 
-                    // Añadir marcador visual
                     const marker = new maplibregl.Marker({ color: "#00e5ff" })
                         .setLngLat(lngLat)
                         .addTo(map);
@@ -113,7 +135,6 @@ const RoutePlanner = {
 
                     document.getElementById("planner-stat-points").innerText = this.points.length;
 
-                    // Si tenemos 2 o más puntos, recalculamos la ruta automáticamente con BRouter
                     if (this.points.length >= 2) {
                         this.calcularRutaBRouter();
                     }
@@ -196,14 +217,12 @@ const RoutePlanner = {
         const bottomToolbar = document.getElementById("bottom-toolbar");
         if (bottomToolbar) bottomToolbar.classList.remove("hidden");
 
-        // Limpiar puntos y marcadores del mapa
         this.points = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
         this.currentRouteData = null;
         this.clearRoutePolyline();
         
-        // Restablecer estadísticas en la UI
         this.updateStats("--", "--");
         document.getElementById("planner-stat-points").innerText = "0";
 
