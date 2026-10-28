@@ -3,7 +3,7 @@
 // ==========================================
 
 const RoutePlanner = {
-    profile: "trekking", 
+    profile: "hiking", // Perfil inicial por defecto para senderismo
     points: [],          
     markers: [],         
     currentRouteData: null,
@@ -25,7 +25,6 @@ const RoutePlanner = {
                 const plannerPanel = document.getElementById("route-planner-bottom-panel");
                 if (plannerPanel) plannerPanel.style.display = "flex";
 
-                // Mostrar únicamente al abrir el planificador
                 const zoomControls = document.getElementById("planner-zoom-controls");
                 if (zoomControls) {
                     zoomControls.classList.remove("hidden");
@@ -37,7 +36,7 @@ const RoutePlanner = {
             });
         }
 
-        // 2. Botón Cancelar (fi-rr-square-x.svg)
+        // 2. Botón Cancelar
         const btnCancel = document.getElementById("planner-btn-cancel");
         if (btnCancel) {
             btnCancel.addEventListener("click", () => {
@@ -45,7 +44,7 @@ const RoutePlanner = {
             });
         }
 
-        // 3. Botón Quitar punto (fi-rr-square-minus.svg)
+        // 3. Botón Quitar punto
         const btnRemove = document.getElementById("planner-btn-remove");
         if (btnRemove) {
             btnRemove.addEventListener("click", () => {
@@ -65,7 +64,7 @@ const RoutePlanner = {
             });
         }
 
-        // 4. Botón Añadir punto desde el centro del mapa (fi-rr-square-plus.svg)
+        // 4. Botón Añadir punto desde el centro del mapa
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
@@ -130,23 +129,25 @@ const RoutePlanner = {
             });
         }
 
-        // 8. Cambiar mapa
+        // 8. Selector de Mapas Operativo
         document.querySelectorAll('input[name="planner-basemap"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
+                const selectedStyle = e.target.value;
                 if (typeof map !== 'undefined' && map) {
-                    map.setStyle(e.target.value);
+                    map.setStyle(selectedStyle);
+                    if (typeof showToast === 'function') showToast("🗺️ Mapa cambiado correctamente");
                 }
             });
         });
 
-        // 9. Cambiar Perfil BRouter
+        // 9. Selector de Perfiles BRouter Operativo
         document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.profile = e.target.value;
                 if (this.points.length >= 2) {
                     this.calcularRutaBRouter();
                 }
-                if (typeof showToast === 'function') showToast(`Perfil cambiado a ${this.profile.toUpperCase()}`);
+                if (typeof showToast === 'function') showToast(`⚙️ Perfil BRouter: ${this.profile.toUpperCase()}`);
             });
         });
 
@@ -177,7 +178,7 @@ const RoutePlanner = {
                 if (this.currentRouteData && typeof LayerManager !== 'undefined') {
                     LayerManager.activeLayers.externalTracks.push({
                         id: `planned_route_${Date.now()}`,
-                        nombre: `Ruta Planificada (${this.profile.toUpperCase()})`,
+                        nombre: `Ruta (${this.profile.toUpperCase()})`,
                         categoria: `Ruta ${this.profile.toUpperCase()}`,
                         coordinates: this.currentRouteData.coordinates
                     });
@@ -236,7 +237,7 @@ const RoutePlanner = {
     async calcularRutaBRouter() {
         if (this.points.length < 2) return;
 
-        if (typeof showToast === 'function') showToast("Calculando ruta...");
+        if (typeof showToast === 'function') showToast(`Calculando ruta (${this.profile})...`);
 
         const lonLatsParam = this.points.map(p => `${p[0]},${p[1]}`).join("|");
         const url = `https://brouter.de/brouter?lonlats=${lonLatsParam}&profile=${this.profile}&alternativeidx=0&format=geojson`;
@@ -329,7 +330,6 @@ const RoutePlanner = {
         const panel = document.getElementById("route-planner-bottom-panel");
         if (panel) panel.style.display = "none";
         
-        // Ocultar estrictamente al cerrar el planificador
         const zoomControls = document.getElementById("planner-zoom-controls");
         if (zoomControls) {
             zoomControls.classList.add("hidden");

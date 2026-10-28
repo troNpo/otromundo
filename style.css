@@ -230,7 +230,7 @@ body, html {
     flex-direction: column;
 }
 
-/* ACORDEÓN DE TARJETAS */
+/* --- ACORDEÓN DE TARJETAS CORREGIDO Y UNIFICADO --- */
 .card-accordion {
     background-color: transparent;
     border: none;
@@ -265,64 +265,43 @@ body, html {
     font-size: 13px;
 }
 
-.card-accordion.open .accordion-arrow {
+/* Soporte unificado para las clases .open y .expanded que usa el script */
+.card-accordion.open .accordion-arrow,
+.card-accordion.expanded .accordion-arrow {
     transform: rotate(180deg);
 }
 
 .accordion-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease-out;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
     background-color: var(--bg-main);
     display: flex;
     flex-direction: column;
+    padding: 0 18px;
 }
 
-.card-accordion.open .accordion-content {
-    max-height: 800px;
-    padding: 4px 0;
+.card-accordion.open .accordion-content,
+.card-accordion.expanded .accordion-content {
+    max-height: 1000px; /* Altura máxima holgada para que quepa todo el contenido sin cortes */
+    padding: 12px 18px;
 }
 
-.control-group {
-    padding: 14px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+/* --- CORRECCIÓN PARA EL CONTENIDO DE LOS ACORDEONES EN EL PLANIFICADOR --- */
+#planner-options-modal .card-accordion.open .accordion-content,
+#planner-options-modal .card-accordion.expanded .accordion-content {
+    max-height: 1000px;
+    padding: 12px 18px;
+    background-color: rgba(24, 24, 28, 0.95); /* Fondo contrastado para que las opciones resalten */
+}
+
+/* Asegurar legibilidad y espaciado de las listas de radio en los acordeones del planificador */
+#planner-options-modal .map-options-list label {
+    padding: 12px 16px;
     color: var(--text-main);
     font-size: 14px;
 }
 
-.control-group select {
-    background-color: var(--bg-card);
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    padding: 12px;
-    border-radius: 12px;
-    font-size: 15px;
-    outline: none;
-}
-
-.control-group-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 18px 14px 45px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
-    font-size: 14px;
-}
-
-.control-divider {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 4px 18px;
-}
-
-.custom-range {
-    accent-color: var(--primary-cyan);
-    width: 100%;
-    cursor: pointer;
-}
 
 /* SWITCH GENERAL */
 .switch {

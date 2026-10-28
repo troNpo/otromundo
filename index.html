@@ -155,7 +155,7 @@
                 <span class="control-card-title">Capas sobre el Mapa</span>
             </div>
 
-            <!-- Tarjeta de Planificador de Rutas (NUEVO) -->
+            <!-- Tarjeta de Planificador de Rutas -->
             <div id="btn-route-planner-card" class="control-card">
                 <div class="control-card-icon-wrapper">
                     <img src="./ui-icons/fi-rr-route.svg" alt="Icono Rutas" class="control-icon" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
@@ -311,7 +311,7 @@
         <div id="nodes-container" class="nodes-vertical-scroll"></div>
     </div>
 
-    <!-- ================= NUEVO PANEL: GESTOR DE CAPAS ACTIVAS ================= -->
+    <!-- ================= GESTOR DE CAPAS ACTIVAS ================= -->
     <div id="layer-manager-panel" class="fullscreen-panel hidden" style="z-index: 20005;">
         <header class="app-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(18,18,20,0.95); border-bottom: 1px solid var(--border-color);">
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -449,7 +449,7 @@
         </div>
     </div>
 
-                <!-- BOTONES DE ZOOM VERTICALES FLOTANTES (Solo visibles en el Planificador) -->
+    <!-- BOTONES DE ZOOM VERTICALES FLOTANTES (Solo visibles en el Planificador) -->
     <div id="planner-zoom-controls" class="hidden" style="display: none !important; position: absolute; right: 16px; bottom: 135px; flex-direction: column; gap: 10px; z-index: 20006; transition: right 0.3s ease, left 0.3s ease;">
         <button id="btn-planner-zoomin" title="Acercar" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--primary-cyan); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
             <img src="ui-icons/fi-rr-zoom-in.svg" alt="+" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
@@ -458,7 +458,6 @@
             <img src="ui-icons/fi-rr-zoom-out.svg" alt="-" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
         </button>
     </div>
-
 
     <!-- ================= PANEL INFERIOR FLOTANTE: PLANIFICADOR DE RUTAS ================= -->
     <div id="route-planner-bottom-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 20005; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.8); color: #fff;">
@@ -484,24 +483,24 @@
         <!-- Barra de herramientas inferior del planificador -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px;">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <!-- Botón Cancelar (fi-rr-square-x.svg) -->
+                <!-- Botón Cancelar -->
                 <button id="planner-btn-cancel" class="icon-btn" title="Cancelar / Salir" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-square-x.svg" alt="Cancelar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);">
                 </button>
             </div>
 
             <div style="display: flex; align-items: center; gap: 10px;">
-                <!-- Botón Quitar Punto (fi-rr-square-minus.svg) -->
+                <!-- Botón Quitar Punto -->
                 <button id="planner-btn-remove" class="icon-btn" title="Deshacer último punto" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-square-minus.svg" alt="Quitar punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
 
-                <!-- Botón Añadir Punto Central (fi-rr-square-plus.svg) -->
+                <!-- Botón Añadir Punto Central -->
                 <button id="planner-btn-add" class="icon-btn" title="Añadir punto central" style="background: rgba(0,229,255,0.2); border: 1px solid var(--primary-cyan); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-square-plus.svg" alt="Añadir punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
 
-                <!-- BOTÓN MENÚ DE OPCIONES (Solo icono para ahorrar espacio) -->
+                <!-- BOTÓN MENÚ DE OPCIONES -->
                 <button id="planner-btn-menu" class="icon-btn" title="Opciones del Planificador" style="background: var(--primary-cyan); border: none; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-menu-burger.svg" alt="Menú" style="width: 20px; height: 20px; filter: brightness(0);">
                 </button>
@@ -509,7 +508,7 @@
         </div>
     </div>
 
-    <!-- ================= MENÚ DESPLEGABLE DE OPCIONES DEL PLANIFICADOR ================= -->
+    <!-- ================= MENÚ DESPLEGABLE / MODAL DE OPCIONES DEL PLANIFICADOR (ÚNICO Y CORREGIDO) ================= -->
     <div id="planner-options-modal" class="fullscreen-panel hidden" style="z-index: 20010; background: rgba(18, 18, 20, 0.98);">
         <div class="panel-header">
             <button id="btn-close-planner-options" class="back-btn" title="Volver">
@@ -519,7 +518,7 @@
             <div style="width: 40px;"></div>
         </div>
         
-        <div class="panel-body" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="panel-body" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
             
             <!-- Guardar Ruta en Capas -->
             <button id="opt-btn-save-route" style="width: 100%; background: var(--primary-cyan); color: #121212; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
@@ -558,7 +557,7 @@
                 </div>
             </div>
 
-            <!-- 2. Acordeón Perfiles BRouter -->
+            <!-- 2. Acordeón Perfiles BRouter (Con perfiles actualizados) -->
             <div class="card-accordion">
                 <div class="accordion-header" onclick="toggleAccordion(this)">
                     <div class="accordion-title">
@@ -569,10 +568,11 @@
                 </div>
                 <div class="accordion-content">
                     <div class="map-options-list" style="padding: 0;">
-                        <label><input type="radio" name="brouter-profile" value="trekking" checked> 🥾 Senderismo / Trekking</label>
-                        <label><input type="radio" name="brouter-profile" value="mtb"> 🚴 BTT / MTB (Montaña)</label>
-                        <label><input type="radio" name="brouter-profile" value="fastbike"> 🚲 Ciclismo Carretera</label>
-                        <label><input type="radio" name="brouter-profile" value="shortest"> 🏃 Ruta Corta / Trail</label>
+                        <label><input type="radio" name="brouter-profile" value="hiking" checked> 🥾 Senderismo (Hiking)</label>
+                        <label><input type="radio" name="brouter-profile" value="trekking"> 🚲 Trekking / Cicloturismo</label>
+                        <label><input type="radio" name="brouter-profile" value="mtb"> 🚵 BTT / MTB (Montaña)</label>
+                        <label><input type="radio" name="brouter-profile" value="gravel"> 🛤️ Gravel</label>
+                        <label><input type="radio" name="brouter-profile" value="fastbike"> ⚡ Carretera (Fastbike)</label>
                     </div>
                 </div>
             </div>
@@ -595,82 +595,6 @@
 
         </div>
     </div>
-
-    <!-- ================= MENÚ DESPLEGABLE / MODAL DE OPCIONES DEL PLANIFICADOR ================= -->
-    <div id="planner-options-modal" class="fullscreen-panel hidden" style="z-index: 20010; background: rgba(18, 18, 20, 0.98);">
-        <div class="panel-header">
-            <button id="btn-close-planner-options" class="back-btn" title="Volver">
-                <img src="ui-icons/fi-rr-left.svg" alt="Volver">
-            </button>
-            <h2>Opciones de Ruta</h2>
-            <div style="width: 40px;"></div>
-        </div>
-        
-        <div class="panel-body" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-            
-            <!-- Guardar Ruta en Capas (Opción Principal) -->
-            <button id="opt-btn-save-route" style="width: 100%; background: var(--primary-cyan); color: #121212; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <img src="./ui-icons/fi-rr-land-layer-location.svg" width="20" height="20" style="filter: brightness(0);" alt="Guardar">
-                <span>Guardar Ruta en Capas</span>
-            </button>
-
-            <!-- 1. Acordeón Selector de Mapa -->
-            <div class="card-accordion">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <div class="accordion-title">
-                        <img src="ui-icons/fi-rr-map.svg" width="20" height="20" alt="Mapa">
-                        <span>Mapa de Fondo</span>
-                    </div>
-                    <span class="accordion-arrow">▼</span>
-                </div>
-                <div class="accordion-content">
-                    <div class="map-options-list" style="padding: 0;">
-                        <label><input type="radio" name="planner-basemap" value="styles/osm.json" checked> OpenStreetMap</label>
-                        <label><input type="radio" name="planner-basemap" value="styles/ignraster.json"> IGN Raster</label>
-                        <label><input type="radio" name="planner-basemap" value="styles/opentopomaps.json"> OpenTopoMap</label>
-                        <label><input type="radio" name="planner-basemap" value="styles/esri.json"> Esri Satélite</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. Acordeón Perfiles BRouter -->
-            <div class="card-accordion">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <div class="accordion-title">
-                        <img src="ui-icons/fi-rr-hiking.svg" width="20" height="20" alt="Perfil">
-                        <span>Perfil de Enrutamiento (BRouter)</span>
-                    </div>
-                    <span class="accordion-arrow">▼</span>
-                </div>
-                <div class="accordion-content">
-                    <div class="map-options-list" style="padding: 0;">
-                        <label><input type="radio" name="brouter-profile" value="trekking" checked>  Senderismo / Trekking</label>
-                        <label><input type="radio" name="brouter-profile" value="mtb">  BTT / MTB (Montaña)</label>
-                        <label><input type="radio" name="brouter-profile" value="fastbike">  Ciclismo Carretera</label>
-                        <label><input type="radio" name="brouter-profile" value="shortest">  Ruta Corta / Trail</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Opción Activar GPS / Mi ubicación -->
-            <div class="control-card" id="opt-btn-gps" style="border-radius: 12px; cursor: pointer;">
-                <div class="control-card-icon-wrapper">
-                    <img src="./ui-icons/fi-rr-location-crosshairs.svg" class="control-icon" alt="GPS">
-                </div>
-                <span class="control-card-title">Centrar en mi ubicación (GPS)</span>
-            </div>
-
-            <!-- 4. Opción Limpiar Ruta -->
-            <div class="control-card" id="opt-btn-clear" style="border-radius: 12px; cursor: pointer; border: 1px solid #e74c3c; background: rgba(231,76,60,0.1);">
-                <div class="control-card-icon-wrapper">
-                    <img src="./ui-icons/fi-rr-trash.svg" class="control-icon" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">
-                </div>
-                <span class="control-card-title" style="color: #e74c3c; font-weight: 600;">Borrar todos los puntos</span>
-            </div>
-
-        </div>
-    </div>
-
 
     <!-- ================= PANEL DE OPCIONES AVANZADAS DE PDI ================= -->
     <div id="advanced-options-panel" class="fullscreen-panel hidden" style="z-index: 20005;">
