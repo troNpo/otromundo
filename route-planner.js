@@ -3,11 +3,12 @@
 // ==========================================
 
 const RoutePlanner = {
-    profile: "hiking-mountain", // Perfil corregido para senderismo y montaña
+    profile: "hiking-mountain", 
     points: [],          
     markers: [],         
     currentRouteData: null,
     isLeftHanded: false,
+    isGraphOpen: false,
 
     init() {
         this.setupEventListeners();
@@ -18,7 +19,7 @@ const RoutePlanner = {
         const btnCard = document.getElementById("btn-route-planner-card");
         if (btnCard) {
             btnCard.addEventListener("click", () => {
-                window._isPlannerOpen = true; // <-- ACTIVAMOS LA BANDERA GLOBAL
+                window._isPlannerOpen = true; 
                 document.getElementById("control-center-panel").classList.add("hidden");
                 const bottomToolbar = document.getElementById("bottom-toolbar");
                 if (bottomToolbar) bottomToolbar.classList.add("hidden");
@@ -45,7 +46,35 @@ const RoutePlanner = {
             });
         }
 
-        // 3. Botón Mapas (Abre el selector general de mapas y oculta la barra del planificador)
+        // 3. Botón Gráfica de Altitud (Toggle)
+        const btnGraph = document.getElementById("btn-planner-graph");
+        const graphContainer = document.getElementById("planner-graph-container");
+        const zoomControls = document.getElementById("planner-zoom-controls");
+
+        if (btnGraph && graphContainer) {
+            btnGraph.addEventListener("click", () => {
+                this.isGraphOpen = !this.isGraphOpen;
+                graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
+                
+                // Elevar los controles flotantes si la gráfica está abierta para que no choquen
+                if (zoomControls) {
+                    zoomControls.style.bottom = this.isGraphOpen ? "275px" : "135px";
+                }
+
+                // Cambiar color del botón si está activo
+                btnGraph.style.background = this.isGraphOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.85)";
+                const img = btnGraph.querySelector("img");
+                if (img) {
+                    img.style.filter = this.isGraphOpen ? "brightness(0)" : "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
+                }
+
+                if (this.isGraphOpen && this.currentRouteData && this.currentRouteData.coordinates) {
+                    this.renderElevationGraph(this.currentRouteData.coordinates);
+                }
+            });
+        }
+
+        // 4. Botón Mapas
         const btnPlannerMap = document.getElementById("planner-btn-map");
         if (btnPlannerMap) {
             btnPlannerMap.addEventListener("click", () => {
@@ -53,11 +82,9 @@ const RoutePlanner = {
                 if (modalSelector) {
                     modalSelector.classList.add('active');
                     
-                    // Ocultar barra inferior y controles de zoom del planificador temporalmente
                     const plannerPanel = document.getElementById("route-planner-bottom-panel");
                     if (plannerPanel) plannerPanel.style.display = "none";
 
-                    const zoomControls = document.getElementById("planner-zoom-controls");
                     if (zoomControls) {
                         zoomControls.classList.add("hidden");
                         zoomControls.style.setProperty("display", "none", "important");
@@ -66,7 +93,7 @@ const RoutePlanner = {
             });
         }
 
-        // 4. Botón Activar GPS
+        // 5. Botón Activar GPS
         const btnPlannerGps = document.getElementById("planner-btn-gps");
         if (btnPlannerGps) {
             btnPlannerGps.addEventListener("click", () => {
@@ -76,7 +103,7 @@ const RoutePlanner = {
             });
         }
 
-        // 5. Botón Añadir punto desde el centro del mapa
+        // 6. Botón Añadir punto
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
@@ -92,8 +119,6 @@ const RoutePlanner = {
                     .addTo(map);
                 this.markers.push(marker);
 
-                document.getElementById("planner-stat-points").innerText = this.points.length;
-
                 if (typeof showToast === 'function') {
                     showToast(`📍 Punto ${this.points.length} añadido`);
                 }
@@ -104,7 +129,7 @@ const RoutePlanner = {
             });
         }
 
-        // 6. Botón Quitar punto
+        // 7. Botón Quitar punto
         const btnRemove = document.getElementById("planner-btn-remove");
         if (btnRemove) {
             btnRemove.addEventListener("click", () => {
@@ -117,47 +142,37 @@ const RoutePlanner = {
                         this.calcularRutaBRouter();
                     } else {
                         this.clearRoutePolyline();
-                        this.updateStats(0, 0);
+                        this.updateStats("0", "0m", 0, 0);
+                        this.hideGraph();
                     }
                     if (typeof showToast === 'function') showToast("Punto eliminado");
                 }
             });
         }
 
-        // 7. Botón Abrir Modal de Perfiles
+        // 8. Perfiles y Menú opciones
         const btnProfiles = document.getElementById("planner-btn-profiles");
         const profileModal = document.getElementById("planner-profile-modal");
         const btnCloseProfile = document.getElementById("btn-close-planner-profile");
 
         if (btnProfiles && profileModal) {
-            btnProfiles.addEventListener("click", () => {
-                profileModal.classList.remove("hidden");
-            });
+            btnProfiles.addEventListener("click", () => profileModal.classList.remove("hidden"));
         }
-
         if (btnCloseProfile && profileModal) {
-            btnCloseProfile.addEventListener("click", () => {
-                profileModal.classList.add("hidden");
-            });
+            btnCloseProfile.addEventListener("click", () => profileModal.classList.add("hidden"));
         }
 
-        // 8. Botón Abrir Menú de Opciones Avanzadas
         const btnMenu = document.getElementById("planner-btn-menu");
         if (btnMenu) {
-            btnMenu.addEventListener("click", () => {
-                document.getElementById("planner-options-modal").classList.remove("hidden");
-            });
+            btnMenu.addEventListener("click", () => document.getElementById("planner-options-modal").classList.remove("hidden"));
         }
 
-        // 9. Cerrar Menú de Opciones Avanzadas
         const btnCloseOptions = document.getElementById("btn-close-planner-options");
         if (btnCloseOptions) {
-            btnCloseOptions.addEventListener("click", () => {
-                document.getElementById("planner-options-modal").classList.add("hidden");
-            });
+            btnCloseOptions.addEventListener("click", () => document.getElementById("planner-options-modal").classList.add("hidden"));
         }
 
-        // 10. Control Modo Zurdos
+        // Modo Zurdos
         const optLefty = document.getElementById("opt-btn-lefty");
         const toggleLefty = document.getElementById("toggle-lefty-mode");
         if (optLefty && toggleLefty) {
@@ -165,7 +180,6 @@ const RoutePlanner = {
                 this.isLeftHanded = !this.isLeftHanded;
                 toggleLefty.checked = this.isLeftHanded;
                 
-                const zoomControls = document.getElementById("planner-zoom-controls");
                 if (zoomControls) {
                     if (this.isLeftHanded) {
                         zoomControls.style.right = "auto";
@@ -178,7 +192,7 @@ const RoutePlanner = {
             });
         }
 
-        // 11. Selector de Perfiles BRouter Operativo
+        // Selector de Perfiles BRouter
         document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.profile = e.target.value;
@@ -191,18 +205,7 @@ const RoutePlanner = {
             });
         });
 
-        // 12. Centrar GPS (desde opciones avanzadas)
-        const optGps = document.getElementById("opt-btn-gps");
-        if (optGps) {
-            optGps.addEventListener("click", () => {
-                if (typeof geolocateControl !== 'undefined' && geolocateControl) {
-                    geolocateControl.trigger();
-                    document.getElementById("planner-options-modal").classList.add("hidden");
-                }
-            });
-        }
-
-        // 13. Borrar ruta
+        // Borrar & Guardar Ruta
         const optClear = document.getElementById("opt-btn-clear");
         if (optClear) {
             optClear.addEventListener("click", () => {
@@ -211,7 +214,6 @@ const RoutePlanner = {
             });
         }
 
-        // 14. Guardar en capas
         const optSave = document.getElementById("opt-btn-save-route");
         if (optSave) {
             optSave.addEventListener("click", () => {
@@ -236,7 +238,6 @@ const RoutePlanner = {
             });
         }
 
-        // 15. Botones de Zoom
         document.getElementById("btn-planner-zoomin")?.addEventListener("click", () => {
             if (typeof map !== 'undefined' && map) map.zoomIn({ duration: 300 });
         });
@@ -263,8 +264,6 @@ const RoutePlanner = {
                         .addTo(map);
                     this.markers.push(marker);
 
-                    document.getElementById("planner-stat-points").innerText = this.points.length;
-
                     if (this.points.length >= 2) {
                         this.calcularRutaBRouter();
                     }
@@ -288,26 +287,43 @@ const RoutePlanner = {
 
             if (data.features && data.features.length > 0) {
                 const feature = data.features[0];
-                const coords = feature.geometry.coordinates;
+                const coords = feature.geometry.coordinates; // [lon, lat, ele]
                 const props = feature.properties || {};
 
                 const distanceKm = props.track_length ? (props.track_length / 1000).toFixed(2) : "0";
-                const timeMin = props.total_time ? Math.round(props.total_time / 60) : 0;
+                const totalSeconds = props.total_time || 0;
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.round((totalSeconds % 3600) / 60);
+                const timeFormatted = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
-                this.currentRouteData = { coordinates: coords, distance: distanceKm, time: timeMin };
+                const ascent = props.ascent ? Math.round(props.ascent) : 0;
+                const descent = props.descent ? Math.round(props.descent) : 0;
 
-                this.updateStats(distanceKm, timeMin);
+                this.currentRouteData = { 
+                    coordinates: coords, 
+                    distance: distanceKm, 
+                    time: timeFormatted,
+                    ascent: ascent,
+                    descent: descent
+                };
+
+                this.updateStats(distanceKm, timeFormatted, ascent, descent);
                 this.paintPlannedRouteOnMap(coords);
+
+                if (this.isGraphOpen) {
+                    this.renderElevationGraph(coords);
+                }
             }
         } catch (error) {
             console.error("Error al calcular ruta con BRouter:", error);
         }
     },
 
-    updateStats(dist, time) {
+    updateStats(dist, time, ascent, descent) {
         document.getElementById("planner-stat-dist").innerText = `${dist} km`;
-        document.getElementById("planner-stat-time").innerText = `${time} min`;
-        document.getElementById("planner-stat-points").innerText = this.points.length;
+        document.getElementById("planner-stat-time").innerText = time;
+        document.getElementById("planner-stat-ascent").innerText = `+${ascent} m`;
+        document.getElementById("planner-stat-descent").innerText = `-${descent} m`;
     },
 
     paintPlannedRouteOnMap(coordinates) {
@@ -324,6 +340,7 @@ const RoutePlanner = {
 
         map.addSource('planned-route-source', { type: 'geojson', data: geojson });
 
+        // Línea de fondo blanca para contraste
         map.addLayer({
             id: 'planned-route-casing',
             type: 'line',
@@ -335,6 +352,7 @@ const RoutePlanner = {
             }
         });
 
+        // Línea discontinua principal
         map.addLayer({
             id: 'planned-route-dashed',
             type: 'line',
@@ -345,6 +363,82 @@ const RoutePlanner = {
                 'line-dasharray': [2, 1.5]
             }
         });
+    },
+
+    renderElevationGraph(coordinates) {
+        const wrapper = document.getElementById("elevation-svg-wrapper");
+        const rangeLabel = document.getElementById("graph-elevation-range");
+        if (!wrapper) return;
+
+        const elevations = coordinates.map(c => c[2] !== undefined ? c[2] : 0);
+        if (elevations.length === 0) return;
+
+        const minEle = Math.min(...elevations);
+        const maxEle = Math.max(...elevations);
+        if (rangeLabel) rangeLabel.innerText = `${Math.round(minEle)} m / ${Math.round(maxEle)} m`;
+
+        const width = wrapper.clientWidth || 300;
+        const height = 120;
+        const padding = 10;
+
+        const effectiveHeight = height - padding * 2;
+        const effectiveWidth = width - padding * 2;
+
+        const minX = padding;
+        const maxX = width - padding;
+        const minY = padding;
+        const maxY = height - padding;
+
+        const rangeEle = maxEle - minEle || 1;
+
+        let points = `${minX},${maxY} `;
+        coordinates.forEach((c, i) => {
+            const x = minX + (i / (coordinates.length - 1)) * effectiveWidth;
+            const ele = c[2] !== undefined ? c[2] : minEle;
+            const y = maxY - ((ele - minEle) / rangeEle) * effectiveHeight;
+            points += `${x},${y} `;
+        });
+        points += `${maxX},${maxY}`;
+
+        let linePoints = "";
+        coordinates.forEach((c, i) => {
+            const x = minX + (i / (coordinates.length - 1)) * effectiveWidth;
+            const ele = c[2] !== undefined ? c[2] : minEle;
+            const y = maxY - ((ele - minEle) / rangeEle) * effectiveHeight;
+            linePoints += `${x},${y} `;
+        });
+
+        wrapper.innerHTML = `
+            <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="overflow: visible;">
+                <defs>
+                    <linearGradient id="elevation-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.4"/>
+                        <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <line x1="${minX}" y1="${minY}" x2="${maxX}" y2="${minY}" stroke="rgba(255,255,255,0.1)" stroke-dasharray="3,3" />
+                <line x1="${minX}" y1="${(minY + maxY) / 2}" x2="${maxX}" y2="${(minY + maxY) / 2}" stroke="rgba(255,255,255,0.1)" stroke-dasharray="3,3" />
+                <line x1="${minX}" y1="${maxY}" x2="${maxX}" y2="${maxY}" stroke="rgba(255,255,255,0.2)" />
+                <polygon points="${points}" fill="url(#elevation-gradient)" />
+                <polyline points="${linePoints}" fill="none" stroke="#00e5ff" stroke-width="2" />
+            </svg>
+        `;
+    },
+
+    hideGraph() {
+        this.isGraphOpen = false;
+        const graphContainer = document.getElementById("planner-graph-container");
+        if (graphContainer) graphContainer.style.display = "none";
+        
+        const zoomControls = document.getElementById("planner-zoom-controls");
+        if (zoomControls) zoomControls.style.bottom = "135px"; // Restaurar posición normal de los botones
+
+        const btnGraph = document.getElementById("btn-planner-graph");
+        if (btnGraph) {
+            btnGraph.style.background = "rgba(18, 18, 20, 0.85)";
+            const img = btnGraph.querySelector("img");
+            if (img) img.style.filter = "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
+        }
     },
 
     clearRoutePolyline() {
@@ -361,13 +455,13 @@ const RoutePlanner = {
         this.markers = [];
         this.currentRouteData = null;
         this.clearRoutePolyline();
-        this.updateStats("--", "--");
-        document.getElementById("planner-stat-points").innerText = "0";
+        this.updateStats("--", "--", "--", "--");
+        this.hideGraph();
         if (typeof showToast === 'function') showToast("🧹 Puntos limpios");
     },
 
     closePlanner() {
-        window._isPlannerOpen = false; // <-- DESACTIVAMOS LA BANDERA GLOBAL AL CERRAR
+        window._isPlannerOpen = false; 
         
         const panel = document.getElementById("route-planner-bottom-panel");
         if (panel) panel.style.display = "none";
