@@ -56,9 +56,9 @@ const RoutePlanner = {
                 this.isGraphOpen = !this.isGraphOpen;
                 graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
                 
-                // Elevar los controles flotantes si la gráfica está abierta para que no choquen
+                // Elevar un poco más los controles flotantes si la gráfica está abierta (320px)
                 if (zoomControls) {
-                    zoomControls.style.bottom = this.isGraphOpen ? "275px" : "135px";
+                    zoomControls.style.bottom = this.isGraphOpen ? "320px" : "135px";
                 }
 
                 // Cambiar color del botón si está activo
@@ -431,7 +431,7 @@ const RoutePlanner = {
         if (graphContainer) graphContainer.style.display = "none";
         
         const zoomControls = document.getElementById("planner-zoom-controls");
-        if (zoomControls) zoomControls.style.bottom = "135px"; // Restaurar posición normal de los botones
+        if (zoomControls) zoomControls.style.bottom = "135px"; // Restaurar posición normal
 
         const btnGraph = document.getElementById("btn-planner-graph");
         if (btnGraph) {
