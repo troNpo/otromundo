@@ -3,7 +3,7 @@
 // ==========================================
 
 const RoutePlanner = {
-    profile: "hiking", // Perfil inicial por defecto para senderismo
+    profile: "hiking-mountain", // Perfil corregido para senderismo y montaña
     points: [],          
     markers: [],         
     currentRouteData: null,
@@ -18,6 +18,7 @@ const RoutePlanner = {
         const btnCard = document.getElementById("btn-route-planner-card");
         if (btnCard) {
             btnCard.addEventListener("click", () => {
+                window._isPlannerOpen = true; // <-- ACTIVAMOS LA BANDERA GLOBAL
                 document.getElementById("control-center-panel").classList.add("hidden");
                 const bottomToolbar = document.getElementById("bottom-toolbar");
                 if (bottomToolbar) bottomToolbar.classList.add("hidden");
@@ -36,7 +37,7 @@ const RoutePlanner = {
             });
         }
 
-        // 2. Botón Cancelar
+        // 2. Botón Cancelar / Cerrar
         const btnCancel = document.getElementById("planner-btn-cancel");
         if (btnCancel) {
             btnCancel.addEventListener("click", () => {
@@ -44,27 +45,38 @@ const RoutePlanner = {
             });
         }
 
-        // 3. Botón Quitar punto
-        const btnRemove = document.getElementById("planner-btn-remove");
-        if (btnRemove) {
-            btnRemove.addEventListener("click", () => {
-                if (this.points.length > 0) {
-                    this.points.pop();
-                    const lastMarker = this.markers.pop();
-                    if (lastMarker) lastMarker.remove();
+        // 3. Botón Mapas (Abre el selector general de mapas y oculta la barra del planificador)
+        const btnPlannerMap = document.getElementById("planner-btn-map");
+        if (btnPlannerMap) {
+            btnPlannerMap.addEventListener("click", () => {
+                const modalSelector = document.getElementById('layer-selector-modal');
+                if (modalSelector) {
+                    modalSelector.classList.add('active');
+                    
+                    // Ocultar barra inferior y controles de zoom del planificador temporalmente
+                    const plannerPanel = document.getElementById("route-planner-bottom-panel");
+                    if (plannerPanel) plannerPanel.style.display = "none";
 
-                    if (this.points.length >= 2) {
-                        this.calcularRutaBRouter();
-                    } else {
-                        this.clearRoutePolyline();
-                        this.updateStats(0, 0);
+                    const zoomControls = document.getElementById("planner-zoom-controls");
+                    if (zoomControls) {
+                        zoomControls.classList.add("hidden");
+                        zoomControls.style.setProperty("display", "none", "important");
                     }
-                    if (typeof showToast === 'function') showToast("Punto eliminado");
                 }
             });
         }
 
-        // 4. Botón Añadir punto desde el centro del mapa
+        // 4. Botón Activar GPS
+        const btnPlannerGps = document.getElementById("planner-btn-gps");
+        if (btnPlannerGps) {
+            btnPlannerGps.addEventListener("click", () => {
+                if (typeof geolocateControl !== 'undefined' && geolocateControl) {
+                    geolocateControl.trigger();
+                }
+            });
+        }
+
+        // 5. Botón Añadir punto desde el centro del mapa
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
@@ -92,7 +104,44 @@ const RoutePlanner = {
             });
         }
 
-        // 5. Botón Abrir Menú de Opciones
+        // 6. Botón Quitar punto
+        const btnRemove = document.getElementById("planner-btn-remove");
+        if (btnRemove) {
+            btnRemove.addEventListener("click", () => {
+                if (this.points.length > 0) {
+                    this.points.pop();
+                    const lastMarker = this.markers.pop();
+                    if (lastMarker) lastMarker.remove();
+
+                    if (this.points.length >= 2) {
+                        this.calcularRutaBRouter();
+                    } else {
+                        this.clearRoutePolyline();
+                        this.updateStats(0, 0);
+                    }
+                    if (typeof showToast === 'function') showToast("Punto eliminado");
+                }
+            });
+        }
+
+        // 7. Botón Abrir Modal de Perfiles
+        const btnProfiles = document.getElementById("planner-btn-profiles");
+        const profileModal = document.getElementById("planner-profile-modal");
+        const btnCloseProfile = document.getElementById("btn-close-planner-profile");
+
+        if (btnProfiles && profileModal) {
+            btnProfiles.addEventListener("click", () => {
+                profileModal.classList.remove("hidden");
+            });
+        }
+
+        if (btnCloseProfile && profileModal) {
+            btnCloseProfile.addEventListener("click", () => {
+                profileModal.classList.add("hidden");
+            });
+        }
+
+        // 8. Botón Abrir Menú de Opciones Avanzadas
         const btnMenu = document.getElementById("planner-btn-menu");
         if (btnMenu) {
             btnMenu.addEventListener("click", () => {
@@ -100,7 +149,7 @@ const RoutePlanner = {
             });
         }
 
-        // 6. Cerrar Menú de Opciones
+        // 9. Cerrar Menú de Opciones Avanzadas
         const btnCloseOptions = document.getElementById("btn-close-planner-options");
         if (btnCloseOptions) {
             btnCloseOptions.addEventListener("click", () => {
@@ -108,7 +157,7 @@ const RoutePlanner = {
             });
         }
 
-        // 7. Control Modo Zurdos
+        // 10. Control Modo Zurdos
         const optLefty = document.getElementById("opt-btn-lefty");
         const toggleLefty = document.getElementById("toggle-lefty-mode");
         if (optLefty && toggleLefty) {
@@ -129,21 +178,12 @@ const RoutePlanner = {
             });
         }
 
-        // 8. Selector de Mapas Operativo
-        document.querySelectorAll('input[name="planner-basemap"]').forEach(radio => {
-            radio.addEventListener("change", (e) => {
-                const selectedStyle = e.target.value;
-                if (typeof map !== 'undefined' && map) {
-                    map.setStyle(selectedStyle);
-                    if (typeof showToast === 'function') showToast("🗺️ Mapa cambiado correctamente");
-                }
-            });
-        });
-
-        // 9. Selector de Perfiles BRouter Operativo
+        // 11. Selector de Perfiles BRouter Operativo
         document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.profile = e.target.value;
+                if (profileModal) profileModal.classList.add("hidden");
+
                 if (this.points.length >= 2) {
                     this.calcularRutaBRouter();
                 }
@@ -151,7 +191,7 @@ const RoutePlanner = {
             });
         });
 
-        // 10. Centrar GPS
+        // 12. Centrar GPS (desde opciones avanzadas)
         const optGps = document.getElementById("opt-btn-gps");
         if (optGps) {
             optGps.addEventListener("click", () => {
@@ -162,7 +202,7 @@ const RoutePlanner = {
             });
         }
 
-        // 11. Borrar ruta
+        // 13. Borrar ruta
         const optClear = document.getElementById("opt-btn-clear");
         if (optClear) {
             optClear.addEventListener("click", () => {
@@ -171,7 +211,7 @@ const RoutePlanner = {
             });
         }
 
-        // 12. Guardar en capas
+        // 14. Guardar en capas
         const optSave = document.getElementById("opt-btn-save-route");
         if (optSave) {
             optSave.addEventListener("click", () => {
@@ -196,7 +236,7 @@ const RoutePlanner = {
             });
         }
 
-        // 13. Botones de Zoom
+        // 15. Botones de Zoom
         document.getElementById("btn-planner-zoomin")?.addEventListener("click", () => {
             if (typeof map !== 'undefined' && map) map.zoomIn({ duration: 300 });
         });
@@ -327,6 +367,8 @@ const RoutePlanner = {
     },
 
     closePlanner() {
+        window._isPlannerOpen = false; // <-- DESACTIVAMOS LA BANDERA GLOBAL AL CERRAR
+        
         const panel = document.getElementById("route-planner-bottom-panel");
         if (panel) panel.style.display = "none";
         

@@ -45,18 +45,41 @@ btnMap?.addEventListener('click', () => {
     
     // Si la barra flotante de PDI está activa, mantenemos la barra general oculta
     const poiToolbar = document.getElementById('poi-map-toolbar');
-    if (!poiToolbar) {
+    if (!poiToolbar && !window._isPlannerOpen) {
         bottomToolbar.classList.add('hidden');
+    }
+
+    // Ocultar también la barra inferior y zoom del planificador de rutas si está activo
+    const routePlannerPanel = document.getElementById('route-planner-bottom-panel');
+    if (routePlannerPanel && routePlannerPanel.style.display === 'flex') {
+        routePlannerPanel.style.display = 'none';
+        const zoomControls = document.getElementById('planner-zoom-controls');
+        if (zoomControls) {
+            zoomControls.classList.add('hidden');
+            zoomControls.style.setProperty('display', 'none', 'important');
+        }
     }
 });
 
 function closeLayerSelector() {
     modalSelector.classList.remove('active');
     
-    // Solo restauramos la barra general si NO estamos en la vista de mapa con PDI activos
-    const poiToolbar = document.getElementById('poi-map-toolbar');
-    if (!poiToolbar) {
-        bottomToolbar.classList.remove('hidden');
+    const routePlannerPanel = document.getElementById('route-planner-bottom-panel');
+    const zoomControls = document.getElementById('planner-zoom-controls');
+    
+    // Si el usuario abrió el selector de mapas desde el Planificador de Rutas, restauramos el planificador
+    if (window._isPlannerOpen) {
+        if (routePlannerPanel) routePlannerPanel.style.display = 'flex';
+        if (zoomControls) {
+            zoomControls.classList.remove('hidden');
+            zoomControls.style.setProperty('display', 'flex', 'important');
+        }
+    } else {
+        // Comportamiento normal en el mapa principal o vistas de PDI
+        const poiToolbar = document.getElementById('poi-map-toolbar');
+        if (!poiToolbar && bottomToolbar) {
+            bottomToolbar.classList.remove('hidden');
+        }
     }
 }
 
@@ -127,15 +150,6 @@ window.toggleAccordion = function(headerElement) {
     
     card.classList.toggle('open');
     card.classList.toggle('expanded');
-
-    const content = card.querySelector('.accordion-content');
-    if (content) {
-        if (card.classList.contains('open') || card.classList.contains('expanded')) {
-            content.style.maxHeight = content.scrollHeight + "px";
-        } else {
-            content.style.maxHeight = null;
-        }
-    }
 };
 
 // Controles de Ajustes
@@ -192,8 +206,6 @@ selectStyle?.addEventListener('change', (e) => {
     const newStyle = e.target.value;
     map.setStyle(newStyle);
 });
-
-
 
 if (btnSaveSettings) {
     btnSaveSettings.addEventListener('click', () => {
@@ -258,7 +270,6 @@ const btnCloseAttributions = document.getElementById('btn-close-attributions');
 const attributionsPanel = document.getElementById('attributions-panel');
 const attributionsContainerBody = document.getElementById('attributions-container-body');
 
-// Abrir panel de Atribuciones y cargar JSON dinámicamente
 btnOpenAttributions?.addEventListener('click', () => {
     controlCenterPanel.classList.add('hidden');
     attributionsPanel.classList.remove('hidden');
@@ -280,7 +291,7 @@ btnOpenAttributions?.addEventListener('click', () => {
                     card.innerHTML = `
                         <strong style="color: var(--primary-cyan); font-size: 0.95rem;">${item.title}</strong>
                         <p style="margin: 0; font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">${item.description}</p>
-                        ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); font-size: 0.8rem; text-decoration: underline; margin-top: 4px;">${item.linkText || item.link}</a>` : ''}
+                        ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-cyan); font-size: 0.80rem; text-decoration: underline; margin-top: 4px;">${item.linkText || item.link}</a>` : ''}
                     `;
                     attributionsContainerBody.appendChild(card);
                 });
@@ -291,7 +302,6 @@ btnOpenAttributions?.addEventListener('click', () => {
     }
 });
 
-// Cerrar panel de Atribuciones y volver al Centro de Control
 btnCloseAttributions?.addEventListener('click', () => {
     attributionsPanel.classList.add('hidden');
     controlCenterPanel.classList.remove('hidden');
