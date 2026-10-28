@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 300);
         });
 
-        // 3. Capturar Enter o la acción de búsqueda en el teclado táctil móvil
+        // 3. Capturar Enter en el teclado táctil móvil
         inputBannerSearch.addEventListener('keyup', (e) => {
-            if (e.key === 'Enter' || e.keyCode === 13) {
+            if (e.key === 'Enter') {
                 const query = inputBannerSearch.value.trim();
                 if (query.length >= 3) {
                     clearTimeout(searchTimeout);
