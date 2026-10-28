@@ -449,8 +449,11 @@
         </div>
     </div>
 
-    <!-- BOTONES DE ZOOM Y GRÁFICA VERTICALES FLOTANTES -->
+    <!-- BOTONES FLOTANTES VERTICALES (LISTA, GRÁFICA Y ZOOM) -->
     <div id="planner-zoom-controls" class="hidden" style="display: none !important; position: absolute; right: 16px; bottom: 135px; flex-direction: column; gap: 10px; z-index: 20006; transition: right 0.3s ease, left 0.3s ease, bottom 0.3s ease;">
+        <button id="btn-planner-list" title="Listado de Puntos" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--primary-cyan); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <img src="ui-icons/fi-rr-list-check.svg" alt="Lista" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
+        </button>
         <button id="btn-planner-graph" title="Perfil de Altitud" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--primary-cyan); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
             <img src="ui-icons/fi-rr-grow-graphs-box.svg" alt="Gráfica" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
         </button>
@@ -462,23 +465,38 @@
         </button>
     </div>
 
-    <!-- ================= PANEL INFERIOR FLOTANTE: PLANIFICADOR DE RUTAS (OPTIMIZADO) ================= -->
+    <!-- ================= PANEL INFERIOR FLOTANTE: PLANIFICADOR DE RUTAS ================= -->
     <div id="route-planner-bottom-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 20005; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.8); color: #fff;">
         
-        <!-- Contenedor Desplegable de la Gráfica de Altitud (Oculto por defecto) -->
-        <div id="planner-graph-container" style="display: none; flex-direction: column; padding: 16px 20px 8px 20px; border-bottom: 1px solid var(--border-color); background: rgba(15, 15, 18, 0.98);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">PERFIL DE ELEVACIÓN</span>
-                <span id="graph-elevation-range" style="font-size: 0.75rem; color: var(--primary-cyan);">-- m / -- m</span>
+        <!-- Contenedor Desplegable Compartido (Gráfica de Altitud / Listado de Puntos) -->
+        <div id="planner-graph-container" style="display: none; flex-direction: column; padding: 16px 20px 8px 20px; border-bottom: 1px solid var(--border-color); background: rgba(15, 15, 18, 0.98); max-height: 220px; overflow-y: auto;">
+            
+            <!-- Sub-vista A: Gráfica de elevación -->
+            <div id="planner-elevation-view" style="display: none; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">PERFIL DE ELEVACIÓN</span>
+                    <span id="graph-elevation-range" style="font-size: 0.75rem; color: var(--primary-cyan);">-- m / -- m</span>
+                </div>
+                <div id="elevation-svg-wrapper" style="width: 100%; height: 130px; position: relative;">
+                    <!-- SVG dinámico -->
+                </div>
             </div>
-            <div id="elevation-svg-wrapper" style="width: 100%; height: 130px; position: relative;">
-                <!-- Aquí se inyecta dinámicamente el gráfico SVG -->
+
+            <!-- Sub-vista B: Listado interactivo de puntos -->
+            <div id="planner-points-list-view" style="display: none; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">PUNTOS DE RUTA</span>
+                    <span id="planner-points-count" style="font-size: 0.75rem; color: var(--primary-cyan);">0 Puntos</span>
+                </div>
+                <div id="planner-points-items-container" style="display: flex; flex-direction: column; gap: 6px;">
+                    <!-- Lista inyectada dinámicamente -->
+                </div>
             </div>
+
         </div>
 
         <!-- Cabecera / 4 Estadísticas de la Ruta -->
         <div style="display: flex; align-items: center; justify-content: space-around; padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem;">
-            
             <!-- Distancia -->
             <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
                 <img src="./ui-icons/fi-rr-map-location-track.svg" width="14" height="14" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Distancia">
@@ -505,10 +523,9 @@
                 <img src="./ui-icons/fi-rr-sort-amount-down.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Bajada">
                 <strong id="planner-stat-descent" style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">-- m</strong>
             </div>
-
         </div>
 
-        <!-- Barra de herramientas inferior del planificador (Acciones directas) -->
+        <!-- Barra de herramientas inferior del planificador -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
             <button id="planner-btn-cancel" class="icon-btn" title="Cancelar / Salir" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                 <img src="./ui-icons/fi-rr-square-x.svg" alt="Cancelar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);">
@@ -536,6 +553,7 @@
             </div>
         </div>
     </div>
+
 
 
 

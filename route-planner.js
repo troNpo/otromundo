@@ -4,18 +4,19 @@
 
 const RoutePlanner = {
     profile: "hiking-mountain", 
-    points: [],          
+    points: [],          // Array de objetos: [{ coords: [lon, lat], name: "Punto 1" }]
     markers: [],         
     currentRouteData: null,
     isLeftHanded: false,
     isGraphOpen: false,
+    isListOpen: false,
 
     init() {
         this.setupEventListeners();
     },
 
     setupEventListeners() {
-        // 1. Abrir planificador desde la tarjeta del Centro de Control
+        // 1. Abrir planificador desde el Centro de Control
         const btnCard = document.getElementById("btn-route-planner-card");
         if (btnCard) {
             btnCard.addEventListener("click", () => {
@@ -48,31 +49,21 @@ const RoutePlanner = {
 
         // 3. Botón Gráfica de Altitud (Toggle)
         const btnGraph = document.getElementById("btn-planner-graph");
-        const graphContainer = document.getElementById("planner-graph-container");
-        const zoomControls = document.getElementById("planner-zoom-controls");
-
-        if (btnGraph && graphContainer) {
+        if (btnGraph) {
             btnGraph.addEventListener("click", () => {
-                this.isGraphOpen = !this.isGraphOpen;
-                graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
-                
-                if (zoomControls) {
-                    zoomControls.style.bottom = this.isGraphOpen ? "340px" : "135px";
-                }
-
-                btnGraph.style.background = this.isGraphOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.85)";
-                const img = btnGraph.querySelector("img");
-                if (img) {
-                    img.style.filter = this.isGraphOpen ? "brightness(0)" : "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
-                }
-
-                if (this.isGraphOpen && this.currentRouteData && this.currentRouteData.coordinates) {
-                    this.renderElevationGraph(this.currentRouteData.coordinates);
-                }
+                this.toggleGraph();
             });
         }
 
-        // 4. Botón Mapas
+        // 4. Botón Listado de Puntos (Toggle)
+        const btnList = document.getElementById("btn-planner-list");
+        if (btnList) {
+            btnList.addEventListener("click", () => {
+                this.toggleList();
+            });
+        }
+
+        // 5. Botón Mapas
         const btnPlannerMap = document.getElementById("planner-btn-map");
         if (btnPlannerMap) {
             btnPlannerMap.addEventListener("click", () => {
@@ -83,6 +74,7 @@ const RoutePlanner = {
                     const plannerPanel = document.getElementById("route-planner-bottom-panel");
                     if (plannerPanel) plannerPanel.style.display = "none";
 
+                    const zoomControls = document.getElementById("planner-zoom-controls");
                     if (zoomControls) {
                         zoomControls.classList.add("hidden");
                         zoomControls.style.setProperty("display", "none", "important");
@@ -91,7 +83,7 @@ const RoutePlanner = {
             });
         }
 
-        // 5. Botón Activar GPS
+        // 6. Botón Activar GPS
         const btnPlannerGps = document.getElementById("planner-btn-gps");
         if (btnPlannerGps) {
             btnPlannerGps.addEventListener("click", () => {
@@ -101,7 +93,7 @@ const RoutePlanner = {
             });
         }
 
-        // 6. Botón Añadir punto
+        // 7. Botón Añadir punto
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
@@ -110,45 +102,21 @@ const RoutePlanner = {
                 const center = map.getCenter();
                 const lngLat = [center.lng, center.lat];
                 
-                this.points.push(lngLat);
-
-                const marker = new maplibregl.Marker({ color: "#00e5ff" })
-                    .setLngLat(lngLat)
-                    .addTo(map);
-                this.markers.push(marker);
-
-                if (typeof showToast === 'function') {
-                    showToast(`📍 Punto ${this.points.length} añadido`);
-                }
-
-                if (this.points.length >= 2) {
-                    this.calcularRutaBRouter();
-                }
+                this.addPoint(lngLat);
             });
         }
 
-        // 7. Botón Quitar punto
+        // 8. Botón Quitar punto
         const btnRemove = document.getElementById("planner-btn-remove");
         if (btnRemove) {
             btnRemove.addEventListener("click", () => {
                 if (this.points.length > 0) {
-                    this.points.pop();
-                    const lastMarker = this.markers.pop();
-                    if (lastMarker) lastMarker.remove();
-
-                    if (this.points.length >= 2) {
-                        this.calcularRutaBRouter();
-                    } else {
-                        this.clearRoutePolyline();
-                        this.updateStats("--", "--", "--", "--");
-                        this.hideGraph();
-                    }
-                    if (typeof showToast === 'function') showToast("Punto eliminado");
+                    this.removePoint(this.points.length - 1);
                 }
             });
         }
 
-        // 8. Perfiles y Menú opciones
+        // 9. Perfiles y Menú opciones
         const btnProfiles = document.getElementById("planner-btn-profiles");
         const profileModal = document.getElementById("planner-profile-modal");
         const btnCloseProfile = document.getElementById("btn-close-planner-profile");
@@ -178,6 +146,7 @@ const RoutePlanner = {
                 this.isLeftHanded = !this.isLeftHanded;
                 toggleLefty.checked = this.isLeftHanded;
                 
+                const zoomControls = document.getElementById("planner-zoom-controls");
                 if (zoomControls) {
                     if (this.isLeftHanded) {
                         zoomControls.style.right = "auto";
@@ -255,20 +224,244 @@ const RoutePlanner = {
                     if (!panel || panel.style.display === "none") return;
 
                     const lngLat = [e.lngLat.lng, e.lngLat.lat];
-                    this.points.push(lngLat);
-
-                    const marker = new maplibregl.Marker({ color: "#00e5ff" })
-                        .setLngLat(lngLat)
-                        .addTo(map);
-                    this.markers.push(marker);
-
-                    if (this.points.length >= 2) {
-                        this.calcularRutaBRouter();
-                    }
+                    this.addPoint(lngLat);
                 });
                 map.hasRouteClickListener = true;
             }
         }
+    },
+
+    addPoint(lngLat) {
+        const pointNumber = this.points.length + 1;
+        this.points.push({
+            coords: lngLat,
+            name: `Punto ${pointNumber}`
+        });
+
+        this.renderMarkers();
+        this.renderPointsList();
+
+        if (typeof showToast === 'function') {
+            showToast(`📍 Punto ${pointNumber} añadido`);
+        }
+
+        if (this.points.length >= 2) {
+            this.calcularRutaBRouter();
+        }
+    },
+
+    removePoint(index) {
+        if (index >= 0 && index < this.points.length) {
+            this.points.splice(index, 1);
+            this.renderMarkers();
+            this.renderPointsList();
+
+            if (this.points.length >= 2) {
+                this.calcularRutaBRouter();
+            } else {
+                this.clearRoutePolyline();
+                this.updateStats("--", "--", "--", "--");
+                this.hideContainer();
+            }
+            if (typeof showToast === 'function') showToast("Punto eliminado");
+        }
+    },
+
+    toggleGraph() {
+        this.isGraphOpen = !this.isGraphOpen;
+        if (this.isGraphOpen) this.isListOpen = false;
+        this.updateContainerVisibility();
+
+        if (this.isGraphOpen && this.currentRouteData && this.currentRouteData.coordinates) {
+            this.renderElevationGraph(this.currentRouteData.coordinates);
+        }
+    },
+
+    toggleList() {
+        this.isListOpen = !this.isListOpen;
+        if (this.isListOpen) this.isGraphOpen = false;
+        this.updateContainerVisibility();
+
+        if (this.isListOpen) {
+            this.renderPointsList();
+        }
+    },
+
+    updateContainerVisibility() {
+        const graphContainer = document.getElementById("planner-graph-container");
+        const elevationView = document.getElementById("planner-elevation-view");
+        const listView = document.getElementById("planner-points-list-view");
+        const zoomControls = document.getElementById("planner-zoom-controls");
+
+        const btnGraph = document.getElementById("btn-planner-graph");
+        const btnList = document.getElementById("btn-planner-list");
+
+        const isAnyOpen = this.isGraphOpen || this.isListOpen;
+
+        if (graphContainer) {
+            graphContainer.style.display = isAnyOpen ? "flex" : "none";
+        }
+        if (elevationView) {
+            elevationView.style.display = this.isGraphOpen ? "flex" : "none";
+        }
+        if (listView) {
+            listView.style.display = this.isListOpen ? "flex" : "none";
+        }
+
+        if (zoomControls) {
+            zoomControls.style.bottom = isAnyOpen ? "340px" : "135px";
+        }
+
+        // Estilos para botón Gráfica
+        if (btnGraph) {
+            btnGraph.style.background = this.isGraphOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.85)";
+            const img = btnGraph.querySelector("img");
+            if (img) {
+                img.style.filter = this.isGraphOpen ? "brightness(0)" : "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
+            }
+        }
+
+        // Estilos para botón Listado
+        if (btnList) {
+            btnList.style.background = this.isListOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.85)";
+            const img = btnList.querySelector("img");
+            if (img) {
+                img.style.filter = this.isListOpen ? "brightness(0)" : "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
+            }
+        }
+    },
+
+    hideContainer() {
+        this.isGraphOpen = false;
+        this.isListOpen = false;
+        this.updateContainerVisibility();
+    },
+
+    renderPointsList() {
+        const listContainer = document.getElementById("planner-points-items-container");
+        const pointsCount = document.getElementById("planner-points-count");
+        if (!listContainer) return;
+
+        if (pointsCount) pointsCount.innerText = `${this.points.length} Punto${this.points.length !== 1 ? 's' : ''}`;
+
+        listContainer.innerHTML = "";
+
+        if (this.points.length === 0) {
+            listContainer.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 12px;">No hay puntos añadidos</div>`;
+            return;
+        }
+
+        this.points.forEach((point, index) => {
+            const itemRow = document.createElement("div");
+            itemRow.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: rgba(255,255,255,0.04);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 10px;
+                padding: 6px 10px;
+                gap: 8px;
+            `;
+
+            // Badge numérico
+            const badge = document.createElement("div");
+            badge.style.cssText = `
+                background: #121212;
+                color: #00e5ff;
+                border: 1.5px solid #00e5ff;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 0.75rem;
+                flex-shrink: 0;
+            `;
+            badge.innerText = index + 1;
+
+            // Input editable para el nombre del punto
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.value = point.name;
+            nameInput.style.cssText = `
+                background: transparent;
+                border: none;
+                border-bottom: 1px dashed rgba(255,255,255,0.2);
+                color: #fff;
+                font-size: 0.85rem;
+                flex: 1;
+                padding: 2px 4px;
+                outline: none;
+            `;
+            nameInput.addEventListener("change", (e) => {
+                this.points[index].name = e.target.value.trim() || `Punto ${index + 1}`;
+            });
+
+            // Botón ir al punto
+            const btnFocus = document.createElement("button");
+            btnFocus.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px;";
+            btnFocus.innerHTML = `<img src="./ui-icons/fi-rr-location-crosshairs.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Ir">`;
+            btnFocus.title = "Centrar punto en el mapa";
+            btnFocus.addEventListener("click", () => {
+                if (typeof map !== 'undefined' && map) {
+                    map.flyTo({ center: point.coords, zoom: 15 });
+                }
+            });
+
+            // Botón eliminar punto
+            const btnDelete = document.createElement("button");
+            btnDelete.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px;";
+            btnDelete.innerHTML = `<img src="./ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">`;
+            btnDelete.title = "Eliminar este punto";
+            btnDelete.addEventListener("click", () => {
+                this.removePoint(index);
+            });
+
+            itemRow.appendChild(badge);
+            itemRow.appendChild(nameInput);
+            itemRow.appendChild(btnFocus);
+            itemRow.appendChild(btnDelete);
+
+            listContainer.appendChild(itemRow);
+        });
+    },
+
+    renderMarkers() {
+        if (typeof map === 'undefined' || !map) return;
+
+        this.markers.forEach(m => m.remove());
+        this.markers = [];
+
+        this.points.forEach((point, index) => {
+            const el = document.createElement('div');
+            el.className = 'planner-numbered-marker';
+            el.style.cssText = `
+                background-color: #121212;
+                color: #00e5ff;
+                border: 2px solid #00e5ff;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 13px;
+                font-family: sans-serif;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+                cursor: pointer;
+            `;
+            el.innerText = index + 1;
+
+            const marker = new maplibregl.Marker({ element: el })
+                .setLngLat(point.coords)
+                .addTo(map);
+
+            this.markers.push(marker);
+        });
     },
 
     async calcularRutaBRouter() {
@@ -276,7 +469,7 @@ const RoutePlanner = {
 
         if (typeof showToast === 'function') showToast(`Calculando ruta (${this.profile})...`);
 
-        const lonLatsParam = this.points.map(p => `${p[0]},${p[1]}`).join("|");
+        const lonLatsParam = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
         const url = `https://brouter.de/brouter?lonlats=${lonLatsParam}&profile=${this.profile}&alternativeidx=0&format=geojson`;
 
         try {
@@ -285,9 +478,8 @@ const RoutePlanner = {
 
             if (data.features && data.features.length > 0) {
                 const feature = data.features[0];
-                const coords = feature.geometry.coordinates; // [lon, lat, ele]
+                const coords = feature.geometry.coordinates;
 
-                // Análisis directo punto a punto de las coordenadas reales devueltas por BRouter
                 let totalDistanceMeters = 0;
                 let ascent = 0;
                 let descent = 0;
@@ -296,10 +488,8 @@ const RoutePlanner = {
                     const p1 = coords[i];
                     const p2 = coords[i + 1];
                     
-                    // Distancia Haversine entre cada par de nodos consecutivos
                     totalDistanceMeters += this.calculateHaversineDistance(p1[1], p1[0], p2[1], p2[0]);
 
-                    // Desniveles basados en la altitud (tercer valor del array [2])
                     const ele1 = p1[2] !== undefined ? p1[2] : 0;
                     const ele2 = p2[2] !== undefined ? p2[2] : 0;
                     const diff = ele2 - ele1;
@@ -311,8 +501,6 @@ const RoutePlanner = {
                 }
 
                 const distanceKm = (totalDistanceMeters / 1000).toFixed(2);
-
-                // Estimación de tiempo basada en la distancia (a ~4.2 km/h para senderismo de montaña)
                 const totalSeconds = totalDistanceMeters / 1.16; 
                 const hours = Math.floor(totalSeconds / 3600);
                 const minutes = Math.round((totalSeconds % 3600) / 60);
@@ -329,7 +517,6 @@ const RoutePlanner = {
                     descent: finalDescent
                 };
 
-                // Actualizar interfaz explícitamente
                 this.updateStats(distanceKm, timeFormatted, finalAscent, finalDescent);
                 this.paintPlannedRouteOnMap(coords);
 
@@ -344,7 +531,7 @@ const RoutePlanner = {
     },
 
     calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // Radio de la tierra en metros
+        const R = 6371e3; 
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -385,9 +572,9 @@ const RoutePlanner = {
             type: 'line',
             source: 'planned-route-source',
             paint: {
-                'line-color': '#ffffff',
-                'line-width': 7,
-                'line-opacity': 0.8
+                'line-color': '#121212',
+                'line-width': 7.5,
+                'line-opacity': 0.85
             }
         });
 
@@ -396,8 +583,8 @@ const RoutePlanner = {
             type: 'line',
             source: 'planned-route-source',
             paint: {
-                'line-color': '#1040b0',
-                'line-width': 5,
+                'line-color': '#00e5ff',
+                'line-width': 4.5,
                 'line-dasharray': [2, 1.5]
             }
         });
@@ -463,22 +650,6 @@ const RoutePlanner = {
         `;
     },
 
-    hideGraph() {
-        this.isGraphOpen = false;
-        const graphContainer = document.getElementById("planner-graph-container");
-        if (graphContainer) graphContainer.style.display = "none";
-        
-        const zoomControls = document.getElementById("planner-zoom-controls");
-        if (zoomControls) zoomControls.style.bottom = "135px";
-
-        const btnGraph = document.getElementById("btn-planner-graph");
-        if (btnGraph) {
-            btnGraph.style.background = "rgba(18, 18, 20, 0.85)";
-            const img = btnGraph.querySelector("img");
-            if (img) img.style.filter = "brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%)";
-        }
-    },
-
     clearRoutePolyline() {
         if (typeof map !== 'undefined' && map) {
             if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
@@ -494,7 +665,7 @@ const RoutePlanner = {
         this.currentRouteData = null;
         this.clearRoutePolyline();
         this.updateStats("--", "--", "--", "--");
-        this.hideGraph();
+        this.hideContainer();
         if (typeof showToast === 'function') showToast("🧹 Puntos limpios");
     },
 
