@@ -56,12 +56,11 @@ const RoutePlanner = {
                 this.isGraphOpen = !this.isGraphOpen;
                 graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
                 
-                // Elevar un poco más los controles flotantes si la gráfica está abierta (320px)
+                // Elevar holgadamente los controles flotantes por encima de la gráfica (340px)
                 if (zoomControls) {
-                    zoomControls.style.bottom = this.isGraphOpen ? "320px" : "135px";
+                    zoomControls.style.bottom = this.isGraphOpen ? "340px" : "135px";
                 }
 
-                // Cambiar color del botón si está activo
                 btnGraph.style.background = this.isGraphOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.85)";
                 const img = btnGraph.querySelector("img");
                 if (img) {
@@ -142,7 +141,7 @@ const RoutePlanner = {
                         this.calcularRutaBRouter();
                     } else {
                         this.clearRoutePolyline();
-                        this.updateStats("0", "0m", 0, 0);
+                        this.updateStats("--", "--", "--", "--");
                         this.hideGraph();
                     }
                     if (typeof showToast === 'function') showToast("Punto eliminado");
@@ -172,7 +171,7 @@ const RoutePlanner = {
             btnCloseOptions.addEventListener("click", () => document.getElementById("planner-options-modal").classList.add("hidden"));
         }
 
-        // Modo Zurdos
+        // Modo Zurdos (Mueve la botonera flotante a la izquierda y gestiona la posición horizontal)
         const optLefty = document.getElementById("opt-btn-lefty");
         const toggleLefty = document.getElementById("toggle-lefty-mode");
         if (optLefty && toggleLefty) {
@@ -296,8 +295,8 @@ const RoutePlanner = {
                 const minutes = Math.round((totalSeconds % 3600) / 60);
                 const timeFormatted = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
-                const ascent = props.ascent ? Math.round(props.ascent) : 0;
-                const descent = props.descent ? Math.round(props.descent) : 0;
+                const ascent = props.ascent !== undefined ? Math.round(props.ascent) : 0;
+                const descent = props.descent !== undefined ? Math.round(props.descent) : 0;
 
                 this.currentRouteData = { 
                     coordinates: coords, 
@@ -316,14 +315,20 @@ const RoutePlanner = {
             }
         } catch (error) {
             console.error("Error al calcular ruta con BRouter:", error);
+            if (typeof showToast === 'function') showToast("❌ Error al calcular la ruta");
         }
     },
 
     updateStats(dist, time, ascent, descent) {
-        document.getElementById("planner-stat-dist").innerText = `${dist} km`;
-        document.getElementById("planner-stat-time").innerText = time;
-        document.getElementById("planner-stat-ascent").innerText = `+${ascent} m`;
-        document.getElementById("planner-stat-descent").innerText = `-${descent} m`;
+        const elDist = document.getElementById("planner-stat-dist");
+        const elTime = document.getElementById("planner-stat-time");
+        const elAscent = document.getElementById("planner-stat-ascent");
+        const elDescent = document.getElementById("planner-stat-descent");
+
+        if (elDist) elDist.innerText = dist !== "--" ? `${dist} km` : "-- km";
+        if (elTime) elTime.innerText = time;
+        if (elAscent) elAscent.innerText = ascent !== "--" ? `+${ascent} m` : "-- m";
+        if (elDescent) elDescent.innerText = descent !== "--" ? `-${descent} m` : "-- m";
     },
 
     paintPlannedRouteOnMap(coordinates) {
@@ -431,7 +436,7 @@ const RoutePlanner = {
         if (graphContainer) graphContainer.style.display = "none";
         
         const zoomControls = document.getElementById("planner-zoom-controls");
-        if (zoomControls) zoomControls.style.bottom = "135px"; // Restaurar posición normal
+        if (zoomControls) zoomControls.style.bottom = "135px";
 
         const btnGraph = document.getElementById("btn-planner-graph");
         if (btnGraph) {

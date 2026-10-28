@@ -449,7 +449,7 @@
         </div>
     </div>
 
-          <!-- BOTONES DE ZOOM Y GRÁFICA VERTICALES FLOTANTES -->
+    <!-- BOTONES DE ZOOM Y GRÁFICA VERTICALES FLOTANTES -->
     <div id="planner-zoom-controls" class="hidden" style="display: none !important; position: absolute; right: 16px; bottom: 135px; flex-direction: column; gap: 10px; z-index: 20006; transition: right 0.3s ease, left 0.3s ease, bottom 0.3s ease;">
         <button id="btn-planner-graph" title="Perfil de Altitud" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--primary-cyan); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
             <img src="ui-icons/fi-rr-grow-graphs-box.svg" alt="Gráfica" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
@@ -461,7 +461,6 @@
             <img src="ui-icons/fi-rr-zoom-out.svg" alt="-" style="width: 22px; height: 22px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
         </button>
     </div>
-
 
     <!-- ================= PANEL INFERIOR FLOTANTE: PLANIFICADOR DE RUTAS (OPTIMIZADO) ================= -->
     <div id="route-planner-bottom-panel" style="display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--primary-cyan); border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 20005; flex-direction: column; box-sizing: border-box; box-shadow: 0 -6px 20px rgba(0,0,0,0.8); color: #fff;">
@@ -511,45 +510,34 @@
 
         <!-- Barra de herramientas inferior del planificador (Acciones directas) -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
-            
-            <!-- 1. Botón Cancelar / Cerrar -->
             <button id="planner-btn-cancel" class="icon-btn" title="Cancelar / Salir" style="background: rgba(231,76,60,0.15); border: 1px solid #e74c3c; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                 <img src="./ui-icons/fi-rr-square-x.svg" alt="Cancelar" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);">
             </button>
 
             <div style="display: flex; align-items: center; gap: 6px;">
-                <!-- 2. Botón Mapas -->
                 <button id="planner-btn-map" class="icon-btn" title="Seleccionar Mapa" style="background: rgba(0,229,255,0.1); border: 1px solid var(--primary-cyan); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-map.svg" alt="Mapa" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
-
-                <!-- 3. Botón Activar GPS -->
                 <button id="planner-btn-gps" class="icon-btn" title="Centrar en mi ubicación (GPS)" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-location-crosshairs.svg" alt="GPS" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
-
-                <!-- 4. Botón Añadir Punto -->
                 <button id="planner-btn-add" class="icon-btn" title="Añadir punto central" style="background: rgba(0,229,255,0.2); border: 1px solid var(--primary-cyan); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-square-plus.svg" alt="Añadir punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
-
-                <!-- 5. Botón Quitar Punto -->
                 <button id="planner-btn-remove" class="icon-btn" title="Deshacer último punto" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-square-minus.svg" alt="Quitar punto" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
-
-                <!-- 6. Botón Perfiles de Enrutamiento -->
                 <button id="planner-btn-profiles" class="icon-btn" title="Perfil de Enrutamiento" style="background: rgba(0,229,255,0.1); border: 1px solid var(--primary-cyan); border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-user-roadmap.svg" alt="Perfil BRouter" style="width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);">
                 </button>
-
-                <!-- 7. Menú de Opciones Avanzadas -->
                 <button id="planner-btn-menu" class="icon-btn" title="Opciones Avanzadas" style="background: var(--primary-cyan); border: none; border-radius: 12px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <img src="./ui-icons/fi-rr-menu-burger.svg" alt="Menú" style="width: 20px; height: 20px; filter: brightness(0);">
                 </button>
             </div>
         </div>
     </div>
+
+
 
     <!-- ================= MODAL DE SELECCIÓN DE PERFIL DE ENRUTAMIENTO ================= -->
     <div id="planner-profile-modal" class="fullscreen-panel hidden" style="z-index: 20010; background: rgba(18, 18, 20, 0.98);">
