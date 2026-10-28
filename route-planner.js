@@ -56,7 +56,6 @@ const RoutePlanner = {
                 this.isGraphOpen = !this.isGraphOpen;
                 graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
                 
-                // Elevar holgadamente los controles flotantes por encima de la gráfica (340px)
                 if (zoomControls) {
                     zoomControls.style.bottom = this.isGraphOpen ? "340px" : "135px";
                 }
@@ -171,7 +170,7 @@ const RoutePlanner = {
             btnCloseOptions.addEventListener("click", () => document.getElementById("planner-options-modal").classList.add("hidden"));
         }
 
-        // Modo Zurdos (Mueve la botonera flotante a la izquierda y gestiona la posición horizontal)
+        // Modo Zurdos
         const optLefty = document.getElementById("opt-btn-lefty");
         const toggleLefty = document.getElementById("toggle-lefty-mode");
         if (optLefty && toggleLefty) {
@@ -287,26 +286,51 @@ const RoutePlanner = {
             if (data.features && data.features.length > 0) {
                 const feature = data.features[0];
                 const coords = feature.geometry.coordinates; // [lon, lat, ele]
-                const props = feature.properties || {};
 
-                const distanceKm = props.track_length ? (props.track_length / 1000).toFixed(2) : "0";
-                const totalSeconds = props.total_time || 0;
+                // Análisis directo punto a punto de las coordenadas reales devueltas por BRouter
+                let totalDistanceMeters = 0;
+                let ascent = 0;
+                let descent = 0;
+
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const p1 = coords[i];
+                    const p2 = coords[i + 1];
+                    
+                    // Distancia Haversine entre cada par de nodos consecutivos
+                    totalDistanceMeters += this.calculateHaversineDistance(p1[1], p1[0], p2[1], p2[0]);
+
+                    // Desniveles basados en la altitud (tercer valor del array [2])
+                    const ele1 = p1[2] !== undefined ? p1[2] : 0;
+                    const ele2 = p2[2] !== undefined ? p2[2] : 0;
+                    const diff = ele2 - ele1;
+                    if (diff > 0) {
+                        ascent += diff;
+                    } else {
+                        descent += Math.abs(diff);
+                    }
+                }
+
+                const distanceKm = (totalDistanceMeters / 1000).toFixed(2);
+
+                // Estimación de tiempo basada en la distancia (a ~4.2 km/h para senderismo de montaña)
+                const totalSeconds = totalDistanceMeters / 1.16; 
                 const hours = Math.floor(totalSeconds / 3600);
                 const minutes = Math.round((totalSeconds % 3600) / 60);
                 const timeFormatted = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
-                const ascent = props.ascent !== undefined ? Math.round(props.ascent) : 0;
-                const descent = props.descent !== undefined ? Math.round(props.descent) : 0;
+                const finalAscent = Math.round(ascent);
+                const finalDescent = Math.round(descent);
 
                 this.currentRouteData = { 
                     coordinates: coords, 
                     distance: distanceKm, 
                     time: timeFormatted,
-                    ascent: ascent,
-                    descent: descent
+                    ascent: finalAscent,
+                    descent: finalDescent
                 };
 
-                this.updateStats(distanceKm, timeFormatted, ascent, descent);
+                // Actualizar interfaz explícitamente
+                this.updateStats(distanceKm, timeFormatted, finalAscent, finalDescent);
                 this.paintPlannedRouteOnMap(coords);
 
                 if (this.isGraphOpen) {
@@ -319,16 +343,27 @@ const RoutePlanner = {
         }
     },
 
+    calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Radio de la tierra en metros
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    },
+
     updateStats(dist, time, ascent, descent) {
         const elDist = document.getElementById("planner-stat-dist");
         const elTime = document.getElementById("planner-stat-time");
         const elAscent = document.getElementById("planner-stat-ascent");
         const elDescent = document.getElementById("planner-stat-descent");
 
-        if (elDist) elDist.innerText = dist !== "--" ? `${dist} km` : "-- km";
+        if (elDist) elDist.innerText = `${dist} km`;
         if (elTime) elTime.innerText = time;
-        if (elAscent) elAscent.innerText = ascent !== "--" ? `+${ascent} m` : "-- m";
-        if (elDescent) elDescent.innerText = descent !== "--" ? `-${descent} m` : "-- m";
+        if (elAscent) elAscent.innerText = `+${ascent} m`;
+        if (elDescent) elDescent.innerText = `-${descent} m`;
     },
 
     paintPlannedRouteOnMap(coordinates) {
@@ -345,7 +380,6 @@ const RoutePlanner = {
 
         map.addSource('planned-route-source', { type: 'geojson', data: geojson });
 
-        // Línea de fondo blanca para contraste
         map.addLayer({
             id: 'planned-route-casing',
             type: 'line',
@@ -357,7 +391,6 @@ const RoutePlanner = {
             }
         });
 
-        // Línea discontinua principal
         map.addLayer({
             id: 'planned-route-dashed',
             type: 'line',
