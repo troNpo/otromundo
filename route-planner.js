@@ -13,6 +13,20 @@ const RoutePlanner = {
 
     init() {
         this.setupEventListeners();
+
+        // Escuchar cuando el mapa recarga o cambia de estilo base para restaurar la ruta y marcadores
+        if (typeof map !== 'undefined' && map) {
+            map.on('style.load', () => {
+                if (window._isPlannerOpen) {
+                    if (this.currentRouteData && this.currentRouteData.coordinates) {
+                        this.paintPlannedRouteOnMap(this.currentRouteData.coordinates);
+                    }
+                    if (this.points && this.points.length > 0) {
+                        this.renderMarkers();
+                    }
+                }
+            });
+        }
     },
 
     setupEventListeners() {
@@ -421,7 +435,7 @@ const RoutePlanner = {
             `;
             badge.innerText = index + 1;
 
-            // Input editable para el nombre del punto (Protegido contra apertura de teclado/fugas táctiles)
+            // Input editable para el nombre del punto
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.value = point.name;
@@ -436,7 +450,6 @@ const RoutePlanner = {
                 outline: none;
             `;
 
-            // Detener cualquier propagación de eventos táctiles o de foco para evitar que salten otros modales
             ['click', 'focus', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
                 nameInput.addEventListener(evt, (e) => e.stopPropagation());
             });
@@ -608,12 +621,43 @@ const RoutePlanner = {
             geometry: { type: 'LineString', coordinates: coordinates }
         };
 
+        // 1. Limpiar capas anteriores si ya existían
+        if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
         if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
         if (map.getLayer('planned-route-dashed')) map.removeLayer('planned-route-dashed');
         if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
 
+        // 2. Crear y registrar una imagen de flecha en caliente si no existe
+        if (!map.hasImage('route-arrow-icon')) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 24;
+            canvas.height = 24;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#00e5ff';
+            ctx.strokeStyle = '#121212';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(4, 12);
+            ctx.lineTo(16, 12);
+            ctx.moveTo(11, 6);
+            ctx.lineTo(17, 12);
+            ctx.lineTo(11, 18);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            map.addImage('route-arrow-icon', {
+                width: 24,
+                height: 24,
+                data: ctx.getImageData(0, 0, 24, 24).data
+            });
+        }
+
+        // 3. Añadir fuente de datos GeoJSON
         map.addSource('planned-route-source', { type: 'geojson', data: geojson });
 
+        // 4. Capa inferior: Borde negro para contraste
         map.addLayer({
             id: 'planned-route-casing',
             type: 'line',
@@ -625,6 +669,7 @@ const RoutePlanner = {
             }
         });
 
+        // 5. Capa intermedia: Línea discontinua cian
         map.addLayer({
             id: 'planned-route-dashed',
             type: 'line',
@@ -633,6 +678,21 @@ const RoutePlanner = {
                 'line-color': '#00e5ff',
                 'line-width': 4.5,
                 'line-dasharray': [2, 1.5]
+            }
+        });
+
+        // 6. Capa superior: Flechas de sentido distribuidas a lo largo de la ruta
+        map.addLayer({
+            id: 'planned-route-arrows',
+            type: 'symbol',
+            source: 'planned-route-source',
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 120,
+                'icon-image': 'route-arrow-icon',
+                'icon-size': 0.85,
+                'icon-allow-overlap': true,
+                'icon-rotation-alignment': 'map'
             }
         });
     },
@@ -699,6 +759,7 @@ const RoutePlanner = {
 
     clearRoutePolyline() {
         if (typeof map !== 'undefined' && map) {
+            if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
             if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
             if (map.getLayer('planned-route-dashed')) map.removeLayer('planned-route-dashed');
             if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
@@ -740,3 +801,4 @@ const RoutePlanner = {
 document.addEventListener("DOMContentLoaded", () => {
     RoutePlanner.init();
 });
+
