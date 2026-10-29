@@ -1,5 +1,5 @@
 // ==========================================
-// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico / GPX compatible con OruxMaps)
+// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico y GPX optimizado para OruxMaps)
 // ==========================================
 
 const RouteExporter = {
@@ -68,27 +68,47 @@ const RouteExporter = {
 
     downloadKmlHierarchical(filename, planner) {
         let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        kml += `<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">\n`;
+        kml += `<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:om="http://www.oruxmaps.com/oruxmapsextensions/1/0" xmlns:gx="http://www.google.com/kml/ext/2.2">\n`;
         kml += `<Document>\n`;
         kml += `  <name><![CDATA[${filename.replace('.kml', '')}]]></name>\n`;
 
-        // Carpeta Principal: Ruta y Waypoints
-        kml += `  <Folder>\n`;
-        kml += `    <name><![CDATA[Ruta y Waypoints]]></name>\n`;
+        // Carpeta 1: Waypoints de la ruta
+        if (planner.points && planner.points.length > 0) {
+            kml += `  <Folder>\n`;
+            kml += `    <name><![CDATA[Waypoints de Ruta]]></name>\n`;
+            planner.points.forEach((p, idx) => {
+                const puntoName = p.name || (`Punto ${idx + 1}`);
 
-        planner.points.forEach((p, idx) => {
-            kml += `    <Placemark>\n`;
-            kml += `      <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
-            kml += `      <description><![CDATA[Waypoint #${idx + 1}]]></description>\n`;
-            kml += `      <Point>\n`;
-            kml += `        <coordinates>${p.coords[0]},${p.coords[1]},0</coordinates>\n`;
-            kml += `      </Point>\n`;
-            kml += `    </Placemark>\n`;
-        });
+                // Construcción de la descripción con información enriquecida/extra
+                let descHtml = `Waypoint #${idx + 1}<br/>\nname: ${puntoName}`;
+                if (p.coords[2] !== undefined) {
+                    descHtml += `<br/>\nelevación: ${Math.round(p.coords[2])} m`;
+                }
+                if (p.extraInfo) {
+                    Object.keys(p.extraInfo).forEach(key => {
+                        descHtml += `<br/>\n${key}: ${p.extraInfo[key]}`;
+                    });
+                } else if (p.description) {
+                    descHtml += `<br/>\n${p.description}`;
+                }
 
+                kml += `    <Placemark>\n`;
+                kml += `      <name><![CDATA[${puntoName}]]></name>\n`;
+                kml += `      <description><![CDATA[${descHtml}\n]]></description>\n`;
+                kml += `      <Point>\n`;
+                kml += `        <coordinates>${p.coords[0]},${p.coords[1]},${p.coords[2] || 0}</coordinates>\n`;
+                kml += `      </Point>\n`;
+                kml += `    </Placemark>\n`;
+            });
+            kml += `  </Folder>\n`;
+        }
+
+        // Carpeta 2: Traza de la Ruta
         if (planner.currentRouteData && planner.currentRouteData.coordinates) {
+            kml += `  <Folder>\n`;
+            kml += `    <name><![CDATA[Traza de Ruta]]></name>\n`;
             kml += `    <Placemark>\n`;
-            kml += `      <name><![CDATA[Traza de Ruta]]></name>\n`;
+            kml += `      <name><![CDATA[Ruta Activa]]></name>\n`;
             kml += `      <LineString>\n`;
             kml += `        <tessellate>1</tessellate>\n`;
             kml += `        <coordinates>\n`;
@@ -97,7 +117,15 @@ const RouteExporter = {
             kml += `\n        </coordinates>\n`;
             kml += `      </LineString>\n`;
             kml += `    </Placemark>\n`;
+            kml += `  </Folder>\n`;
         }
+
+        // Carpeta para futuros Puntos de Interés (PDI)
+        kml += `  <Folder>\n`;
+        kml += `    <name><![CDATA[Puntos de Interés (PDI)]]></name>\n`;
+        kml += `    <Folder>\n`;
+        kml += `      <name><![CDATA[General]]></name>\n`;
+        kml += `    </Folder>\n`;
         kml += `  </Folder>\n`;
 
         kml += `</Document>\n`;
@@ -121,6 +149,9 @@ const RouteExporter = {
                 gpx += `    <ele>${p.coords[2]}</ele>\n`;
             }
             gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
+            if (p.description) {
+                gpx += `    <desc><![CDATA[${p.description}]]></desc>\n`;
+            }
             gpx += `  </wpt>\n`;
         });
 
