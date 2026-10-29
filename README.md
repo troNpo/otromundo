@@ -1,4 +1,5 @@
-# 🗺️ Otromundo - Planificador de Rutas Outdoor (PWA)
+# 🗺️ Otromundo 
+**Planificador de Rutas Outdoor**
 
 <p align="center">
   <img width="250" alt="Otromundo Logo" src="https://github.com/user-attachments/assets/9519962a-c2d6-40c3-a099-10fdc840b939" />
