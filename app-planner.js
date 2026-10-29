@@ -418,4 +418,6 @@ const RoutePlanner = {
     }
 };
 
+// Exponer globalmente y ejecutar una sola vez al cargar el DOM
+window.RoutePlanner = RoutePlanner;
 document.addEventListener("DOMContentLoaded", () => RoutePlanner.init());
