@@ -1,4 +1,3 @@
-# 🗺️ Otromundo 
 **Planificador de Rutas Outdoor**
 
 <p align="center">
