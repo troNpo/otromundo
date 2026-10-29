@@ -1,5 +1,5 @@
 // ==========================================
-// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico y GPX optimizado para OruxMaps)
+// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico y GPX compatible iOS/Android)
 // ==========================================
 
 const RouteExporter = {
@@ -72,14 +72,13 @@ const RouteExporter = {
         kml += `<Document>\n`;
         kml += `  <name><![CDATA[${filename.replace('.kml', '')}]]></name>\n`;
 
-        // Carpeta 1: Waypoints de la ruta
+        // Carpeta 1: Waypoints de la ruta (Solo si existen para evitar nodos vacíos en iOS)
         if (planner.points && planner.points.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Waypoints de Ruta]]></name>\n`;
             planner.points.forEach((p, idx) => {
                 const puntoName = p.name || (`Punto ${idx + 1}`);
 
-                // Construcción de la descripción con información enriquecida/extra
                 let descHtml = `Waypoint #${idx + 1}<br/>\nname: ${puntoName}`;
                 if (p.coords[2] !== undefined) {
                     descHtml += `<br/>\nelevación: ${Math.round(p.coords[2])} m`;
@@ -103,8 +102,8 @@ const RouteExporter = {
             kml += `  </Folder>\n`;
         }
 
-        // Carpeta 2: Traza de la Ruta
-        if (planner.currentRouteData && planner.currentRouteData.coordinates) {
+        // Carpeta 2: Traza de la Ruta (Solo si hay coordenadas válidas)
+        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Traza de Ruta]]></name>\n`;
             kml += `    <Placemark>\n`;
@@ -120,14 +119,6 @@ const RouteExporter = {
             kml += `  </Folder>\n`;
         }
 
-        // Carpeta para futuros Puntos de Interés (PDI)
-        kml += `  <Folder>\n`;
-        kml += `    <name><![CDATA[Puntos de Interés (PDI)]]></name>\n`;
-        kml += `    <Folder>\n`;
-        kml += `      <name><![CDATA[General]]></name>\n`;
-        kml += `    </Folder>\n`;
-        kml += `  </Folder>\n`;
-
         kml += `</Document>\n`;
         kml += `</kml>`;
 
@@ -136,27 +127,29 @@ const RouteExporter = {
 
     downloadGpx(filename, planner) {
         let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        gpx += `<gpx version="1.1" creator="Otromundo - PWA" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+        gpx += `<gpx version="1.1" creator="Otromundo - PWA" xmlns="http://www.topografix.com/GPX/1/1" xmlns:om="http://www.oruxmaps.com/oruxmapsextensions/1/0">\n`;
         gpx += `  <metadata>\n`;
         gpx += `    <name><![CDATA[${filename.replace('.gpx', '')}]]></name>\n`;
         gpx += `    <time>${new Date().toISOString()}</time>\n`;
         gpx += `  </metadata>\n`;
 
         // Waypoints (puntos de ruta)
-        planner.points.forEach((p, idx) => {
-            gpx += `  <wpt lat="${p.coords[1]}" lon="${p.coords[0]}">\n`;
-            if (p.coords[2] !== undefined) {
-                gpx += `    <ele>${p.coords[2]}</ele>\n`;
-            }
-            gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
-            if (p.description) {
-                gpx += `    <desc><![CDATA[${p.description}]]></desc>\n`;
-            }
-            gpx += `  </wpt>\n`;
-        });
+        if (planner.points && planner.points.length > 0) {
+            planner.points.forEach((p, idx) => {
+                gpx += `  <wpt lat="${p.coords[1]}" lon="${p.coords[0]}">\n`;
+                if (p.coords[2] !== undefined) {
+                    gpx += `    <ele>${p.coords[2]}</ele>\n`;
+                }
+                gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
+                if (p.description) {
+                    gpx += `    <desc><![CDATA[${p.description}]]></desc>\n`;
+                }
+                gpx += `  </wpt>\n`;
+            });
+        }
 
         // Track (traza de la ruta)
-        if (planner.currentRouteData && planner.currentRouteData.coordinates) {
+        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
             gpx += `  <trk>\n`;
             gpx += `    <name><![CDATA[Ruta Otromundo]]></name>\n`;
             gpx += `    <trkseg>\n`;
@@ -173,7 +166,9 @@ const RouteExporter = {
 
         gpx += `</gpx>`;
 
-        this.triggerBlobDownload(gpx, filename, 'application/gpx+xml');
+        // En iOS a veces application/gpx+xml da problemas de tipo MIME al abrir directamente, 
+        // text/xml o application/xml asegura compatibilidad total de guardado/apertura en iOS.
+        this.triggerBlobDownload(gpx, filename, 'application/xml');
     },
 
     triggerBlobDownload(content, filename, contentType) {
@@ -182,10 +177,14 @@ const RouteExporter = {
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        // Soporte específico para evitar bloqueos en WebKit (iOS Safari)
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 };
 
