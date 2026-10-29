@@ -1,11 +1,10 @@
 // ==========================================
-// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico / GPX)
+// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico / GPX compatible con OruxMaps)
 // ==========================================
 
 const RouteExporter = {
     init() {
         this.setupEvents();
-        console.log("[RouteExporter] Inicializado correctamente.");
     },
 
     setupEvents() {
@@ -28,8 +27,6 @@ const RouteExporter = {
                 e.stopPropagation();
                 this.executeExport();
             });
-        } else {
-            console.warn("[RouteExporter] No se encontró el botón #opt-btn-download-file en el DOM.");
         }
 
         // Rotar flecha del acordeón al abrir/cerrar
@@ -45,17 +42,8 @@ const RouteExporter = {
     executeExport() {
         const planner = window.RoutePlanner || (typeof RoutePlanner !== 'undefined' ? RoutePlanner : null);
 
-        if (!planner) {
-            alert("⚠️ Error crítico: El planificador de rutas no está disponible.");
-            console.error("window.RoutePlanner no está definido.");
-            return;
-        }
-
-        console.log("[RouteExporter] Puntos actuales:", planner.points);
-        console.log("[RouteExporter] Datos de ruta actuales:", planner.currentRouteData);
-
-        if (planner.points.length === 0 && !planner.currentRouteData) {
-            alert("⚠️ No hay puntos de ruta ni traza calculada para exportar. Haz clic en el mapa para añadir puntos.");
+        if (!planner || (planner.points.length === 0 && !planner.currentRouteData)) {
+            alert("⚠️ No hay ruta ni puntos para exportar");
             return;
         }
 
@@ -105,19 +93,11 @@ const RouteExporter = {
             kml += `        <tessellate>1</tessellate>\n`;
             kml += `        <coordinates>\n`;
             kml += `          `;
-            kml += planner.currentRouteData.coordinates.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join("\n          ");
+            kml += planner.currentRouteData.coordinates.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
             kml += `\n        </coordinates>\n`;
             kml += `      </LineString>\n`;
             kml += `    </Placemark>\n`;
         }
-        kml += `  </Folder>\n`;
-
-        // Carpeta para futuros PDI
-        kml += `  <Folder>\n`;
-        kml += `    <name><![CDATA[Puntos de Interés (PDI)]]></name>\n`;
-        kml += `    <Folder>\n`;
-        kml += `      <name><![CDATA[General]]></name>\n`;
-        kml += `    </Folder>\n`;
         kml += `  </Folder>\n`;
 
         kml += `</Document>\n`;
@@ -134,12 +114,17 @@ const RouteExporter = {
         gpx += `    <time>${new Date().toISOString()}</time>\n`;
         gpx += `  </metadata>\n`;
 
+        // Waypoints (puntos de ruta)
         planner.points.forEach((p, idx) => {
             gpx += `  <wpt lat="${p.coords[1]}" lon="${p.coords[0]}">\n`;
+            if (p.coords[2] !== undefined) {
+                gpx += `    <ele>${p.coords[2]}</ele>\n`;
+            }
             gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
             gpx += `  </wpt>\n`;
         });
 
+        // Track (traza de la ruta)
         if (planner.currentRouteData && planner.currentRouteData.coordinates) {
             gpx += `  <trk>\n`;
             gpx += `    <name><![CDATA[Ruta Otromundo]]></name>\n`;
@@ -170,7 +155,6 @@ const RouteExporter = {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        console.log(`[RouteExporter] Archivo descargado con éxito: ${filename}`);
     }
 };
 
