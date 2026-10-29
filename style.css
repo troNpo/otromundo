@@ -7,23 +7,30 @@
     --border-color: rgba(0, 229, 255, 0.2);
 }
 
-* { box-sizing: border-box; }
-body, html {
-    margin: 0; padding: 0; width: 100%; height: 100%;
+/* Clave para evitar desbordamientos y sombras fantasma en Android */
+*, *:before, *:after { box-sizing: border-box; }
+
+html, body {
+    margin: 0; 
+    padding: 0; 
+    width: 100%; 
+    height: 100%;
     background-color: var(--bg-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text-main);
     overflow: hidden;
+    position: relative;
 }
 
 #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
 
-/* --- PANELES LATERALES (DRAWER) --- */
+/* --- PANELES LATERALES (DRAWER) CORREGIDOS --- */
 .side-drawer {
     position: fixed;
     top: 0;
-    right: -100%;
-    width: 360px; /* Ampliado para que quepan holgadamente los botones */
+    right: -1000px; /* Fuera de pantalla de forma segura */
+    width: 100%;
+    max-width: 360px; /* Ancho máximo para que en móviles no sea un 100% violento si no se desea */
     height: 100vh;
     background: rgba(18, 18, 20, 0.96);
     backdrop-filter: blur(16px);
@@ -34,7 +41,6 @@ body, html {
     transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: -10px 0 30px rgba(0,0,0,0.8);
 }
-
 
 .side-drawer.active { right: 0; }
 
