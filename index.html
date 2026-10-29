@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
+    <title>otromundo - Planificador de Rutas</title>
+    <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="style.css" rel="stylesheet" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+</head>
+<body class="right-handed">
+
+    <!-- Contenedor del mapa -->
+    <div id="map"></div>
+
+    <!-- Banner Superior: Brújula y Escala -->
+    <div id="top-left-banner" class="top-left-banner-container">
+        <div id="compass-container" class="banner-key-head compass-item" title="Restaurar Norte">
+            <img id="compass-icon" src="ui-icons/brujula.PNG" alt="Brújula" />
+        </div>
+        <div class="banner-key-body">
+            <div id="scale-container" class="banner-item scale-item">
+                <img src="ui-icons/fi-rr-measuring-tape.svg" alt="Escala" class="scale-icon" />
+                <span id="scale-text">-- m</span>
+            </div>
+            <div id="banner-search-container" class="banner-item search-item">
+                <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
+                    <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
+                </button>
+                <input type="text" id="input-banner-search" class="banner-search-input hidden" placeholder="Buscar lugar..." autocomplete="off" />
+                <div id="visor-search-dropdown" class="search-dropdown hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cursor Central Fijo -->
+    <div id="map-center-cursor" class="map-cursor-container">
+        <img src="ui-icons/cen-map.svg" alt="Cursor">
+    </div>
+
+    <!-- Botón flotante para recentrar GPS -->
+    <button id="btn-recenter" class="recenter-float-btn hidden" title="Recentrar GPS">
+        <img src="ui-icons/fi-rr-location-arrow.svg" alt="Recentrar">
+    </button>
+
+    <!-- ================= PANELES LATERALES (DRAWER) ================= -->
+    <!-- Panel Lateral: Selección de Mapas -->
+    <div id="side-panel-maps" class="side-drawer">
+        <div class="side-drawer-header">
+            <h3>Seleccionar Mapa Base</h3>
+            <button id="btn-close-maps-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
+        </div>
+        <div class="side-drawer-body">
+            <div class="map-options-list">
+                <label><input type="radio" name="basemap" value="styles/osm.json" checked> OpenStreetMap</label>
+                <label><input type="radio" name="basemap" value="styles/ignraster.json"> IGN Raster</label>
+                <label><input type="radio" name="basemap" value="styles/opentopomaps.json"> OpenTopoMap</label>
+                <label><input type="radio" name="basemap" value="styles/esri.json"> Esri Satélite</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral: Perfiles de Enrutamiento -->
+    <div id="side-panel-profiles" class="side-drawer">
+        <div class="side-drawer-header">
+            <h3>Perfil de Enrutamiento</h3>
+            <button id="btn-close-profiles-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
+        </div>
+        <div class="side-drawer-body">
+            <div class="map-options-list">
+                <label><input type="radio" name="brouter-profile" value="hiking-mountain" checked> 🥾 Senderismo / Montaña</label>
+                <label><input type="radio" name="brouter-profile" value="trekking"> 🚲 Trekking / Cicloturismo</label>
+                <label><input type="radio" name="brouter-profile" value="mtb"> 🚵 BTT / MTB (Montaña)</label>
+                <label><input type="radio" name="brouter-profile" value="gravel"> 🛤️ Gravel</label>
+                <label><input type="radio" name="brouter-profile" value="fastbike"> ⚡ Carretera (Fastbike)</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral: Opciones del Planificador (Modo Zurdos, Guardar) -->
+    <div id="side-panel-planner-options" class="side-drawer">
+        <div class="side-drawer-header">
+            <h3>Opciones de Ruta</h3>
+            <button id="btn-close-planner-options-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
+        </div>
+        <div class="side-drawer-body" style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+            <button id="opt-btn-save-route" style="width: 100%; background: var(--primary-cyan); color: #121212; border: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <img src="./ui-icons/fi-rr-land-layer-location.svg" width="18" height="18" style="filter: brightness(0);" alt="Guardar">
+                <span>Guardar Ruta en Capas</span>
+            </button>
+
+            <!-- Control Modo Zurdos -->
+            <div id="opt-btn-lefty" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 12px; cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="./ui-icons/fi-rr-hand-paper.svg" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Zurdos">
+                    <span style="font-size: 0.9rem;">Modo Zurdos</span>
+                </div>
+                <label class="switch" style="pointer-events: none;">
+                    <input type="checkbox" id="toggle-lefty-mode">
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral: Puntos de Ruta -->
+    <div id="side-panel-points-list" class="side-drawer">
+        <div class="side-drawer-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h3>Puntos de Ruta</h3>
+                <span id="planner-points-count" style="font-size: 0.8rem; color: var(--primary-cyan); font-weight: bold;">(0)</span>
+            </div>
+            <button id="btn-close-points-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
+        </div>
+        <div class="side-drawer-body" style="padding: 16px;">
+            <div id="planner-points-items-container" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLES VERTICALES FLOTANTES -->
+    <div id="planner-zoom-controls" class="planner-vertical-controls">
+        <button id="btn-planner-graph" title="Perfil de Altitud" class="tool-circle-btn">
+            <img src="ui-icons/fi-rr-grow-graphs-box.svg" alt="Gráfica">
+        </button>
+        <button id="btn-planner-list" title="Puntos de Ruta" class="tool-circle-btn">
+            <img src="ui-icons/fi-rr-list-check.svg" alt="Puntos">
+        </button>
+        <button id="btn-planner-zoomin" title="Acercar" class="tool-circle-btn">
+            <img src="ui-icons/fi-rr-zoom-in.svg" alt="+">
+        </button>
+        <button id="btn-planner-zoomout" title="Alejar" class="tool-circle-btn">
+            <img src="ui-icons/fi-rr-zoom-out.svg" alt="-">
+        </button>
+    </div>
+
+    <!-- ================= PANEL INFERIOR: PLANIFICADOR DE RUTAS ================= -->
+    <div id="route-planner-bottom-panel" class="planner-bottom-card">
+        
+        <!-- Contenedor Desplegable para Gráfica de Elevación -->
+        <div id="planner-graph-container" class="planner-expandable-drawer" style="display: none;">
+            <div class="elevation-header">
+                <span>PERFIL DE ELEVACIÓN</span>
+                <span id="graph-elevation-range">-- m / -- m</span>
+            </div>
+            <div id="elevation-svg-wrapper" style="width: 100%; height: 110px;"></div>
+        </div>
+
+        <!-- 4 Estadísticas Principales -->
+        <div class="planner-stats-bar">
+            <div class="stat-item">
+                <img src="./ui-icons/fi-rr-map-location-track.svg" alt="Distancia">
+                <strong id="planner-stat-dist">-- km</strong>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <img src="./ui-icons/fi-rr-stopwatch.svg" alt="Tiempo">
+                <strong id="planner-stat-time">--</strong>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <img src="./ui-icons/fi-rr-sort-amount-up.svg" alt="Subida">
+                <strong id="planner-stat-ascent">-- m</strong>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <img src="./ui-icons/fi-rr-sort-amount-down.svg" alt="Bajada">
+                <strong id="planner-stat-descent">-- m</strong>
+            </div>
+        </div>
+
+        <!-- Barra de herramientas inferior -->
+        <div class="planner-toolbar">
+            <!-- Izquierda: Borrar -->
+            <button id="planner-btn-clear" class="icon-btn danger" title="Borrar todos los puntos">
+                <img src="./ui-icons/fi-rr-trash.svg" alt="Borrar">
+            </button>
+
+            <div class="planner-tools-group">
+                <button id="planner-btn-map" class="icon-btn" title="Seleccionar Mapa">
+                    <img src="./ui-icons/fi-rr-map.svg" alt="Mapa">
+                </button>
+                <button id="planner-btn-gps" class="icon-btn" title="Centrar GPS">
+                    <img src="./ui-icons/fi-rr-location-crosshairs.svg" alt="GPS">
+                </button>
+                <button id="planner-btn-add" class="icon-btn primary" title="Añadir punto central">
+                    <img src="./ui-icons/fi-rr-square-plus.svg" alt="Añadir">
+                </button>
+                <button id="planner-btn-remove" class="icon-btn" title="Deshacer último punto">
+                    <img src="./ui-icons/fi-rr-square-minus.svg" alt="Quitar">
+                </button>
+                <button id="planner-btn-profiles" class="icon-btn" title="Perfil de Enrutamiento">
+                    <img src="./ui-icons/fi-rr-user-roadmap.svg" alt="Perfil">
+                </button>
+            </div>
+
+            <!-- Derecha: Menú de Opciones -->
+            <button id="planner-btn-options" class="icon-btn primary" title="Opciones de Ruta">
+                <img src="./ui-icons/fi-rr-menu-burger.svg" alt="Opciones">
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts Esenciales -->
+    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <script src="geocoder.js"></script>
+    <script src="app-planner.js"></script>
+
+    <!-- Registro automático del Service Worker para PWA y APK -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+                    .catch(err => console.log('Error al registrar el Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
