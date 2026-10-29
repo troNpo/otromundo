@@ -83,7 +83,42 @@ const RoutePlanner = {
             });
         }
 
-        // 6. Botón Activar GPS
+        // 6. Interceptar el cierre del selector de mapas para volver al planificador si estaba abierto
+        const btnBackLayer = document.getElementById("btn-back");
+        if (btnBackLayer) {
+            btnBackLayer.addEventListener("click", () => {
+                if (window._isPlannerOpen) {
+                    const plannerPanel = document.getElementById("route-planner-bottom-panel");
+                    if (plannerPanel) plannerPanel.style.display = "flex";
+
+                    const zoomControls = document.getElementById("planner-zoom-controls");
+                    if (zoomControls) {
+                        zoomControls.classList.remove("hidden");
+                        zoomControls.style.setProperty("display", "flex", "important");
+                    }
+                }
+            });
+        }
+
+        document.querySelectorAll('input[name="basemap"]').forEach(radio => {
+            radio.addEventListener("change", () => {
+                if (window._isPlannerOpen) {
+                    const modalSelector = document.getElementById('layer-selector-modal');
+                    if (modalSelector) modalSelector.classList.remove('active');
+
+                    const plannerPanel = document.getElementById("route-planner-bottom-panel");
+                    if (plannerPanel) plannerPanel.style.display = "flex";
+
+                    const zoomControls = document.getElementById("planner-zoom-controls");
+                    if (zoomControls) {
+                        zoomControls.classList.remove("hidden");
+                        zoomControls.style.setProperty("display", "flex", "important");
+                    }
+                }
+            });
+        });
+
+        // 7. Botón Activar GPS
         const btnPlannerGps = document.getElementById("planner-btn-gps");
         if (btnPlannerGps) {
             btnPlannerGps.addEventListener("click", () => {
@@ -93,7 +128,7 @@ const RoutePlanner = {
             });
         }
 
-        // 7. Botón Añadir punto
+        // 8. Botón Añadir punto
         const btnAdd = document.getElementById("planner-btn-add");
         if (btnAdd) {
             btnAdd.addEventListener("click", () => {
@@ -106,7 +141,7 @@ const RoutePlanner = {
             });
         }
 
-        // 8. Botón Quitar punto
+        // 9. Botón Quitar punto
         const btnRemove = document.getElementById("planner-btn-remove");
         if (btnRemove) {
             btnRemove.addEventListener("click", () => {
@@ -116,7 +151,7 @@ const RoutePlanner = {
             });
         }
 
-        // 9. Perfiles y Menú opciones
+        // 10. Perfiles y Menú opciones
         const btnProfiles = document.getElementById("planner-btn-profiles");
         const profileModal = document.getElementById("planner-profile-modal");
         const btnCloseProfile = document.getElementById("btn-close-planner-profile");
@@ -382,7 +417,7 @@ const RoutePlanner = {
             `;
             badge.innerText = index + 1;
 
-            // Input editable para el nombre del punto
+            // Input editable para el nombre del punto (con eventos protegidos contra fugas táctiles)
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.value = point.name;
@@ -396,8 +431,14 @@ const RoutePlanner = {
                 padding: 2px 4px;
                 outline: none;
             `;
-            nameInput.addEventListener("change", (e) => {
-                this.points[index].name = e.target.value.trim() || `Punto ${index + 1}`;
+
+            // Bloquear propagación para que al tocar el input no dispare elementos de debajo
+            ['click', 'focus', 'touchstart', 'pointerdown'].forEach(evt => {
+                nameInput.addEventListener(evt, (e) => e.stopPropagation());
+            });
+
+            nameInput.addEventListener("input", (e) => {
+                this.points[index].name = e.target.value;
             });
 
             // Botón ir al punto
@@ -430,7 +471,8 @@ const RoutePlanner = {
     },
 
     renderMarkers() {
-        if (typeof map === 'undefined' || !map) return;
+        if (typeof map === 'undefined' && map) return;
+        if (typeof map === 'undefined') return;
 
         this.markers.forEach(m => m.remove());
         this.markers = [];
