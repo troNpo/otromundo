@@ -63,7 +63,7 @@ const RoutePlanner = {
             });
         }
 
-        // 5. Botón Mapas
+        // 5. Botón Mapas (Abre el selector de capas)
         const btnPlannerMap = document.getElementById("planner-btn-map");
         if (btnPlannerMap) {
             btnPlannerMap.addEventListener("click", () => {
@@ -83,10 +83,13 @@ const RoutePlanner = {
             });
         }
 
-        // 6. Interceptar el cierre del selector de mapas para volver al planificador si estaba abierto
+        // 6. Botón Volver del selector de mapas (Restaura el planificador de forma limpia)
         const btnBackLayer = document.getElementById("btn-back");
         if (btnBackLayer) {
             btnBackLayer.addEventListener("click", () => {
+                const modalSelector = document.getElementById('layer-selector-modal');
+                if (modalSelector) modalSelector.classList.remove('active');
+
                 if (window._isPlannerOpen) {
                     const plannerPanel = document.getElementById("route-planner-bottom-panel");
                     if (plannerPanel) plannerPanel.style.display = "flex";
@@ -100,6 +103,7 @@ const RoutePlanner = {
             });
         }
 
+        // Al cambiar de mapa base, si estamos en el planificador, cerramos el selector y volvemos
         document.querySelectorAll('input[name="basemap"]').forEach(radio => {
             radio.addEventListener("change", () => {
                 if (window._isPlannerOpen) {
@@ -417,7 +421,7 @@ const RoutePlanner = {
             `;
             badge.innerText = index + 1;
 
-            // Input editable para el nombre del punto (con eventos protegidos contra fugas táctiles)
+            // Input editable para el nombre del punto (Protegido contra apertura de teclado/fugas táctiles)
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.value = point.name;
@@ -432,8 +436,8 @@ const RoutePlanner = {
                 outline: none;
             `;
 
-            // Bloquear propagación para que al tocar el input no dispare elementos de debajo
-            ['click', 'focus', 'touchstart', 'pointerdown'].forEach(evt => {
+            // Detener cualquier propagación de eventos táctiles o de foco para evitar que salten otros modales
+            ['click', 'focus', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
                 nameInput.addEventListener(evt, (e) => e.stopPropagation());
             });
 
@@ -446,7 +450,8 @@ const RoutePlanner = {
             btnFocus.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px;";
             btnFocus.innerHTML = `<img src="./ui-icons/fi-rr-location-crosshairs.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Ir">`;
             btnFocus.title = "Centrar punto en el mapa";
-            btnFocus.addEventListener("click", () => {
+            btnFocus.addEventListener("click", (e) => {
+                e.stopPropagation();
                 if (typeof map !== 'undefined' && map) {
                     map.flyTo({ center: point.coords, zoom: 15 });
                 }
@@ -457,7 +462,8 @@ const RoutePlanner = {
             btnDelete.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px;";
             btnDelete.innerHTML = `<img src="./ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg) brightness(97%) contrast(92%);" alt="Borrar">`;
             btnDelete.title = "Eliminar este punto";
-            btnDelete.addEventListener("click", () => {
+            btnDelete.addEventListener("click", (e) => {
+                e.stopPropagation();
                 this.removePoint(index);
             });
 
@@ -471,8 +477,7 @@ const RoutePlanner = {
     },
 
     renderMarkers() {
-        if (typeof map === 'undefined' && map) return;
-        if (typeof map === 'undefined') return;
+        if (typeof map === 'undefined' || !map) return;
 
         this.markers.forEach(m => m.remove());
         this.markers = [];
