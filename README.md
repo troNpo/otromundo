@@ -5,7 +5,7 @@
 </p>
 
 > *Pasando los bocetos de mi cabeza a códigos.*
-
+https://tronpo.github.io/otromundo/
 **Otromundo** es una aplicación web progresiva (PWA) de cartografía y planificación de rutas al aire libre (*outdoor*), diseñada con un enfoque web moderno, rápido y optimizado para dispositivos móviles en línea. Permite trazar rutas en tiempo real utilizando múltiples perfiles de enrutamiento, visualizar perfiles de elevación interactivos y gestionar waypoints, con total compatibilidad para ser empaquetada como una aplicación nativa para Android (APK).
 
 ---
