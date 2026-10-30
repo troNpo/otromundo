@@ -223,70 +223,69 @@ const RoutePlanner = {
         // 1. Limpiar capas y fuentes previas si existen
         this.clearRoute();
 
-        // 2. Crear y registrar la imagen de flecha vectorial si no está cargada en el mapa
-        if (!map.hasImage('route-arrow-icon')) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 24;
-            canvas.height = 24;
-            const ctx = canvas.getContext('2d');
+        // 2. Función interna para añadir la capa una vez que el icono SVG esté listo
+        const addRouteLayers = () => {
+            if (map.getSource('planned-route-source')) return;
+
+            map.addSource('planned-route-source', { type: 'geojson', data: geojson });
             
-            ctx.fillStyle = '#00e5ff';
-            ctx.strokeStyle = '#121212';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(4, 12);
-            ctx.lineTo(16, 12);
-            ctx.moveTo(11, 6);
-            ctx.lineTo(17, 12);
-            ctx.lineTo(11, 18);
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.stroke();
+            // Capa inferior: Borde oscuro para contraste
+            map.addLayer({
+                id: 'planned-route-casing', type: 'line', source: 'planned-route-source',
+                paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+            });
+            
+            // Capa principal: Línea sólida continua (sin discontinuidad)
+            map.addLayer({
+                id: 'planned-route-solid', type: 'line', source: 'planned-route-source',
+                paint: { 'line-color': '#00e5ff', 'line-width': 4.5 }
+            });
 
-            try {
-                map.addImage('route-arrow-icon', {
-                    width: 24,
-                    height: 24,
-                    data: ctx.getImageData(0, 0, 24, 24).data
-                });
-            } catch (err) {
-                console.warn("No se pudo registrar la imagen de flecha:", err);
-            }
+            // Capa superior: Flechas sólidas repetidas a lo largo de la traza
+            map.addLayer({
+                id: 'planned-route-arrows',
+                type: 'symbol',
+                source: 'planned-route-source',
+                layout: {
+                    'symbol-placement': 'line',
+                    'symbol-spacing': 70, // Repetición frecuente de flechas
+                    'icon-image': 'route-svg-arrow',
+                    'icon-size': 0.05,     // Tamaño proporcional óptimo
+                    'icon-allow-overlap': true,
+                    'icon-rotation-alignment': 'map'
+                }
+            });
+        };
+
+        // 3. Registrar el icono SVG sólido apuntando a la derecha
+        if (!map.hasImage('route-svg-arrow')) {
+            const svgString = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+                    <path fill="#00e5ff" stroke="#121212" stroke-width="1.5" stroke-linejoin="round" d="M14,22.03c-.39,0-.78-.08-1.16-.23-1.13-.47-1.84-1.52-1.85-2.75v-2.06H3.97c-2.19,0-3.97-1.8-3.97-4.01v-1.98c0-2.21,1.78-4.01,3.97-4.01h7.03v-2.06c0-1.23,.71-2.28,1.85-2.75,1.13-.47,2.38-.22,3.24,.65l6.72,6.33,.02,.02c1.55,1.55,1.55,4.07,0,5.62l-6.77,6.37c-.56,.56-1.3,.86-2.06,.86ZM3.97,8.99c-1.09,0-1.97,.9-1.97,2.01v1.98c0,1.11,.89,2.01,1.97,2.01H12c.55,0,1,.45,1,1v3.06c0,.6,.47,.84,.61,.9,.14,.06,.64,.22,1.07-.21l6.77-6.37c-.74-.74,.75-1.99-.01-2.76l-6.73-6.33c-.45-.45-.95-.29-1.09-.24-.14,.06-.61,.3-.61,.9v3.05c0,.55-.45,1-1,1H3.97Z"/>
+                </svg>`;
+            
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const URL = window.URL || window.webkitURL || window;
+            const blobURL = URL.createObjectURL(blob);
+            
+            const img = new Image();
+            img.onload = () => {
+                if (!map.hasImage('route-svg-arrow')) {
+                    map.addImage('route-svg-arrow', img);
+                }
+                addRouteLayers();
+            };
+            img.src = blobURL;
+        } else {
+            addRouteLayers();
         }
-
-        // 3. Añadir fuente y capas de renderizado con flechas de dirección
-        map.addSource('planned-route-source', { type: 'geojson', data: geojson });
-        
-        map.addLayer({
-            id: 'planned-route-casing', type: 'line', source: 'planned-route-source',
-            paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-        });
-        
-        map.addLayer({
-            id: 'planned-route-dashed', type: 'line', source: 'planned-route-source',
-            paint: { 'line-color': '#00e5ff', 'line-width': 4.5, 'line-dasharray': [2, 1.5] }
-        });
-
-        map.addLayer({
-            id: 'planned-route-arrows',
-            type: 'symbol',
-            source: 'planned-route-source',
-            layout: {
-                'symbol-placement': 'line',
-                'symbol-spacing': 120,
-                'icon-image': 'route-arrow-icon',
-                'icon-size': 0.85,
-                'icon-allow-overlap': true,
-                'icon-rotation-alignment': 'map'
-            }
-        });
     },
 
     clearRoute() {
         if (!map) return;
         if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
         if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
-        if (map.getLayer('planned-route-dashed')) map.removeLayer('planned-route-dashed');
+        if (map.getLayer('planned-route-solid')) map.removeLayer('planned-route-solid');
         if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
     },
 
