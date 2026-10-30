@@ -35,6 +35,20 @@ const RoutePlanner = {
         setTimeout(() => {
             if (map) map.resize();
         }, 150);
+
+        // Escuchar la recarga del estilo del mapa para restaurar ruta, flechas y marcadores de forma persistente
+        if (map) {
+            map.on('style.load', () => {
+                setTimeout(() => {
+                    if (this.currentRouteData && this.currentRouteData.coordinates) {
+                        this.paintRoute(this.currentRouteData.coordinates);
+                    }
+                    if (this.points && this.points.length > 0) {
+                        this.renderMarkers();
+                    }
+                }, 150);
+            });
+        }
     },
 
     setupEvents() {
@@ -177,8 +191,8 @@ const RoutePlanner = {
                 const timeStr = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
 
                 this.updateStats(distKm, timeStr, Math.round(ascent), Math.round(descent));
-                this.paintRoute(coords);
                 this.currentRouteData = { coordinates: coords };
+                this.paintRoute(coords);
 
                 if (this.isGraphOpen) this.renderElevationGraph(coords);
             }
@@ -203,24 +217,74 @@ const RoutePlanner = {
     },
 
     paintRoute(coords) {
+        if (!map) return;
         const geojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
 
-        if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
-        if (map.getLayer('planned-route-dashed')) map.removeLayer('planned-route-dashed');
-        if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
+        // 1. Limpiar capas y fuentes previas si existen
+        this.clearRoute();
 
+        // 2. Crear y registrar la imagen de flecha vectorial si no está cargada en el mapa
+        if (!map.hasImage('route-arrow-icon')) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 24;
+            canvas.height = 24;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#00e5ff';
+            ctx.strokeStyle = '#121212';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(4, 12);
+            ctx.lineTo(16, 12);
+            ctx.moveTo(11, 6);
+            ctx.lineTo(17, 12);
+            ctx.lineTo(11, 18);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            try {
+                map.addImage('route-arrow-icon', {
+                    width: 24,
+                    height: 24,
+                    data: ctx.getImageData(0, 0, 24, 24).data
+                });
+            } catch (err) {
+                console.warn("No se pudo registrar la imagen de flecha:", err);
+            }
+        }
+
+        // 3. Añadir fuente y capas de renderizado con flechas de dirección
         map.addSource('planned-route-source', { type: 'geojson', data: geojson });
+        
         map.addLayer({
             id: 'planned-route-casing', type: 'line', source: 'planned-route-source',
             paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
         });
+        
         map.addLayer({
             id: 'planned-route-dashed', type: 'line', source: 'planned-route-source',
             paint: { 'line-color': '#00e5ff', 'line-width': 4.5, 'line-dasharray': [2, 1.5] }
         });
+
+        map.addLayer({
+            id: 'planned-route-arrows',
+            type: 'symbol',
+            source: 'planned-route-source',
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 120,
+                'icon-image': 'route-arrow-icon',
+                'icon-size': 0.85,
+                'icon-allow-overlap': true,
+                'icon-rotation-alignment': 'map'
+            }
+        });
     },
 
     clearRoute() {
+        if (!map) return;
+        if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
         if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
         if (map.getLayer('planned-route-dashed')) map.removeLayer('planned-route-dashed');
         if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
@@ -230,6 +294,7 @@ const RoutePlanner = {
         this.points = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
+        this.currentRouteData = null;
         this.clearRoute();
         this.updateStats("--", "--", "--", "--");
         this.renderPointsListDrawer();
@@ -276,7 +341,7 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; box-shadow: 0 3px 8px rgba(0,0,0,0.6); cursor: pointer;
+                font-size: 13px; font-family: sans-serif; box-shadow: none !important; cursor: pointer;
             `;
             el.innerText = index + 1;
 
@@ -418,6 +483,6 @@ const RoutePlanner = {
     }
 };
 
-// Exponer globalmente y ejecutar una sola vez al cargar el DOM
+// Exponer globalmente y ejecutar al cargar el DOM
 window.RoutePlanner = RoutePlanner;
 document.addEventListener("DOMContentLoaded", () => RoutePlanner.init());
