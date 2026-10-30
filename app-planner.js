@@ -21,8 +21,11 @@ map.addControl(geolocateControl);
 
 const RoutePlanner = {
     profile: "hiking-mountain",
+    maxAlternatives: 0,      // Por defecto 0 alternativas adicionales (solo la ruta principal)
     points: [],
     markers: [],
+    routesList: [],          // Almacena todas las alternativas devueltas por BRouter
+    currentRouteIndex: 0,    // Índice de la ruta alternativa actual
     currentRouteData: null,
     isGraphOpen: false,
     isLeftHanded: false,
@@ -40,8 +43,8 @@ const RoutePlanner = {
         if (map) {
             map.on('style.load', () => {
                 setTimeout(() => {
-                    if (this.currentRouteData && this.currentRouteData.coordinates) {
-                        this.paintRoute(this.currentRouteData.coordinates);
+                    if (this.routesList.length > 0) {
+                        this.paintAllRoutes();
                     }
                     if (this.points && this.points.length > 0) {
                         this.renderMarkers();
@@ -84,6 +87,14 @@ const RoutePlanner = {
             });
         });
 
+        // Selector de número de alternativas BRouter
+        document.querySelectorAll('input[name="brouter-alternatives"]').forEach(radio => {
+            radio.addEventListener("change", (e) => {
+                this.maxAlternatives = parseInt(e.target.value, 10);
+                if (this.points.length >= 2) this.calcularRutaBRouter();
+            });
+        });
+
         // 3. Menú de Opciones del Planificador (Panel Lateral)
         const btnOptions = document.getElementById("planner-btn-options");
         const optionsDrawer = document.getElementById("side-panel-planner-options");
@@ -111,6 +122,10 @@ const RoutePlanner = {
             if (toggleLefty) toggleLefty.checked = this.isLeftHanded;
             document.body.className = this.isLeftHanded ? "left-handed" : "right-handed";
         });
+
+        // Evento click para el botón de alternar rutas alternativas
+        const btnAltSwitcher = document.getElementById("planner-alt-switcher");
+        btnAltSwitcher?.addEventListener("click", () => this.cycleAlternativeRoute());
 
         // 5. Botones de Acción de Puntos y GPS
         document.getElementById("planner-btn-add")?.addEventListener("click", () => {
@@ -162,42 +177,101 @@ const RoutePlanner = {
                 this.calcularRutaBRouter();
             } else {
                 this.clearRoute();
+                this.routesList = [];
+                this.currentRouteIndex = 0;
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
+                this.updateAltButtonVisibility();
             }
         }
     },
 
     async calcularRutaBRouter() {
         const lonLats = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
-        const url = `https://brouter.de/brouter?lonlats=${lonLats}&profile=${this.profile}&alternativeidx=0&format=geojson`;
-
+        
+        // Generar índices dinámicos basados en maxAlternatives seleccionadas (0 = solo [0], 3 = [0, 1, 2, 3])
+        const totalCount = this.maxAlternatives + 1;
+        const altIndices = Array.from({ length: totalCount }, (_, i) => i);
+        
         try {
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.features && data.features.length > 0) {
-                const coords = data.features[0].geometry.coordinates;
-                let distM = 0, ascent = 0, descent = 0;
+            const promises = altIndices.map(idx => 
+                fetch(`https://brouter.de/brouter?lonlats=${lonLats}&profile=${this.profile}&alternativeidx=${idx}&format=geojson`)
+                    .then(res => res.json())
+                    .catch(() => null)
+            );
 
-                for (let i = 0; i < coords.length - 1; i++) {
-                    const p1 = coords[i], p2 = coords[i + 1];
-                    distM += this.haversine(p1[1], p1[0], p2[1], p2[0]);
-                    const diff = (p2[2] || 0) - (p1[2] || 0);
-                    if (diff > 0) ascent += diff; else descent += Math.abs(diff);
+            const results = await Promise.all(promises);
+            this.routesList = [];
+
+            results.forEach((data, idx) => {
+                if (data && data.features && data.features.length > 0) {
+                    const coords = data.features[0].geometry.coordinates;
+                    let distM = 0, ascent = 0, descent = 0;
+
+                    for (let i = 0; i < coords.length - 1; i++) {
+                        const p1 = coords[i], p2 = coords[i + 1];
+                        distM += this.haversine(p1[1], p1[0], p2[1], p2[0]);
+                        const diff = (p2[2] || 0) - (p1[2] || 0);
+                        if (diff > 0) ascent += diff; else descent += Math.abs(diff);
+                    }
+
+                    const distKm = (distM / 1000).toFixed(2);
+                    const mins = Math.round((distM / 1.16) / 60);
+                    const timeStr = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+
+                    this.routesList.push({
+                        index: idx,
+                        coordinates: coords,
+                        distKm,
+                        timeStr,
+                        ascent: Math.round(ascent),
+                        descent: Math.round(descent)
+                    });
                 }
+            });
 
-                const distKm = (distM / 1000).toFixed(2);
-                const mins = Math.round((distM / 1.16) / 60);
-                const timeStr = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
-
-                this.updateStats(distKm, timeStr, Math.round(ascent), Math.round(descent));
-                this.currentRouteData = { coordinates: coords };
-                this.paintRoute(coords);
-
-                if (this.isGraphOpen) this.renderElevationGraph(coords);
+            if (this.routesList.length > 0) {
+                if (this.currentRouteIndex >= this.routesList.length) {
+                    this.currentRouteIndex = 0;
+                }
+                this.activateRouteVariant(this.currentRouteIndex);
+                this.updateAltButtonVisibility();
             }
         } catch (e) {
             console.error("Error BRouter:", e);
+        }
+    },
+
+    cycleAlternativeRoute() {
+        if (this.routesList.length <= 1) return;
+        this.currentRouteIndex = (this.currentRouteIndex + 1) % this.routesList.length;
+        this.activateRouteVariant(this.currentRouteIndex);
+    },
+
+    activateRouteVariant(index) {
+        this.currentRouteIndex = index;
+        const activeRoute = this.routesList[index];
+        if (!activeRoute) return;
+
+        this.currentRouteData = { coordinates: activeRoute.coordinates };
+        this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
+        this.paintAllRoutes();
+
+        if (this.isGraphOpen) {
+            this.renderElevationGraph(activeRoute.coordinates);
+        }
+
+        // Actualizar etiqueta del contador en el grupo lateral
+        const counter = document.getElementById("alt-counter");
+        if (counter) {
+            counter.innerText = `${index + 1}/${this.routesList.length}`;
+        }
+    },
+
+    updateAltButtonVisibility() {
+        const btn = document.getElementById("planner-alt-switcher");
+        if (btn) {
+            btn.style.display = this.routesList.length > 1 ? "flex" : "none";
         }
     },
 
@@ -216,48 +290,10 @@ const RoutePlanner = {
         document.getElementById("planner-stat-descent").innerText = `-${desc} m`;
     },
 
-    paintRoute(coords) {
+    paintAllRoutes() {
         if (!map) return;
-        const geojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
-
-        // 1. Limpiar capas y fuentes previas si existen
         this.clearRoute();
 
-        // 2. Función interna para añadir capas de ruta y flechas de alto contraste
-        const addRouteLayers = () => {
-            if (map.getSource('planned-route-source')) return;
-
-            map.addSource('planned-route-source', { type: 'geojson', data: geojson });
-            
-            // Capa inferior: Borde oscuro para contraste de la línea cian
-            map.addLayer({
-                id: 'planned-route-casing', type: 'line', source: 'planned-route-source',
-                paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-            });
-            
-            // Capa principal: Línea sólida continua cian
-            map.addLayer({
-                id: 'planned-route-solid', type: 'line', source: 'planned-route-source',
-                paint: { 'line-color': '#00e5ff', 'line-width': 4.5 }
-            });
-
-            // Capa superior: Flechas blancas de alto contraste con borde oscuro
-            map.addLayer({
-                id: 'planned-route-arrows',
-                type: 'symbol',
-                source: 'planned-route-source',
-                layout: {
-                    'symbol-placement': 'line',
-                    'symbol-spacing': 70,
-                    'icon-image': 'route-svg-arrow',
-                    'icon-size': 0.05,
-                    'icon-allow-overlap': true,
-                    'icon-rotation-alignment': 'map'
-                }
-            });
-        };
-
-        // 3. Registrar el icono SVG de alta visibilidad (Cuerpo blanco puro y borde negro grueso)
         if (!map.hasImage('route-svg-arrow')) {
             const svgString = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 580" width="580" height="580">
@@ -273,35 +309,110 @@ const RoutePlanner = {
                 if (!map.hasImage('route-svg-arrow')) {
                     map.addImage('route-svg-arrow', img);
                 }
-                addRouteLayers();
-            };
-            img.onerror = (err) => {
-                console.error("Error al cargar la imagen SVG de la flecha:", err);
-                addRouteLayers();
+                this._executeLayerPainting();
             };
             img.src = blobURL;
         } else {
-            addRouteLayers();
+            this._executeLayerPainting();
         }
+    },
+
+    _executeLayerPainting() {
+        if (!map || this.routesList.length === 0) return;
+
+        this.clearRoute();
+
+        // Paleta de colores distintos para las rutas alternativas inactivas (Azul, Rojo, Morado...)
+        const altColors = ['#3498db', '#e74c3c', '#9b59b6', '#f39c12'];
+
+        // 1. Pintar primero las rutas alternativas inactivas con colores diferenciados y semitransparentes
+        this.routesList.forEach((route, idx) => {
+            if (idx === this.currentRouteIndex) return;
+
+            const sourceId = `alt-route-source-${idx}`;
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: { type: 'Feature', geometry: { type: 'LineString', coordinates: route.coordinates } }
+            });
+
+            const strokeColor = altColors[(idx - 1) % altColors.length] || '#7f8c8d';
+
+            map.addLayer({
+                id: `alt-route-casing-${idx}`,
+                type: 'line',
+                source: sourceId,
+                paint: { 'line-color': '#121212', 'line-width': 5, 'line-opacity': 0.4 }
+            });
+
+            map.addLayer({
+                id: `alt-route-solid-${idx}`,
+                type: 'line',
+                source: sourceId,
+                paint: { 'line-color': strokeColor, 'line-width': 3.5, 'line-opacity': 0.7 }
+            });
+        });
+
+        // 2. Pintar la ruta ACTIVA seleccionada (Cian brillante con flechas blancas)
+        const activeRoute = this.routesList[this.currentRouteIndex];
+        const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
+
+        map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
+
+        map.addLayer({
+            id: 'planned-route-active-casing',
+            type: 'line',
+            source: 'planned-route-source',
+            paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+        });
+
+        map.addLayer({
+            id: 'planned-route-active-solid',
+            type: 'line',
+            source: 'planned-route-source',
+            paint: { 'line-color': '#00e5ff', 'line-width': 4.5 }
+        });
+
+        map.addLayer({
+            id: 'planned-route-arrows',
+            type: 'symbol',
+            source: 'planned-route-source',
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 70,
+                'icon-image': 'route-svg-arrow',
+                'icon-size': 0.05,
+                'icon-allow-overlap': true,
+                'icon-rotation-alignment': 'map'
+            }
+        });
     },
 
     clearRoute() {
         if (!map) return;
         if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
-        if (map.getLayer('planned-route-casing')) map.removeLayer('planned-route-casing');
-        if (map.getLayer('planned-route-solid')) map.removeLayer('planned-route-solid');
+        if (map.getLayer('planned-route-active-solid')) map.removeLayer('planned-route-active-solid');
+        if (map.getLayer('planned-route-active-casing')) map.removeLayer('planned-route-active-casing');
         if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
+
+        this.routesList.forEach((_, idx) => {
+            if (map.getLayer(`alt-route-casing-${idx}`)) map.removeLayer(`alt-route-casing-${idx}`);
+            if (map.getLayer(`alt-route-solid-${idx}`)) map.removeLayer(`alt-route-solid-${idx}`);
+            if (map.getSource(`alt-route-source-${idx}`)) map.removeSource(`alt-route-source-${idx}`);
+        });
     },
 
     clearAllPoints() {
         this.points = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
+        this.routesList = [];
+        this.currentRouteIndex = 0;
         this.currentRouteData = null;
         this.clearRoute();
         this.updateStats("--", "--", "--", "--");
         this.renderPointsListDrawer();
         this.hideGraph();
+        this.updateAltButtonVisibility();
     },
 
     toggleGraph() {
