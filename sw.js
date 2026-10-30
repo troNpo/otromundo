@@ -1,4 +1,4 @@
-const CACHE_NAME = 'otromundo-v2';
+const CACHE_NAME = 'otromundo-v3';
 // Archivos estáticos clave a precachar para uso offline
 const ASSETS_TO_CACHE = [
     './',
