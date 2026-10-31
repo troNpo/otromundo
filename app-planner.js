@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -186,10 +186,26 @@ const RoutePlanner = {
         }
     },
 
+    movePoint(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= this.points.length) return;
+
+        // Intercambiar posición en el array
+        const temp = this.points[index];
+        this.points[index] = this.points[newIndex];
+        this.points[newIndex] = temp;
+
+        this.renderMarkers();
+        this.renderPointsListDrawer();
+
+        if (this.points.length >= 2) {
+            this.calcularRutaBRouter();
+        }
+    },
+
     async calcularRutaBRouter() {
         const lonLats = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
         
-        // Generar índices dinámicos basados en maxAlternatives seleccionadas (0 = solo [0], 3 = [0, 1, 2, 3])
         const totalCount = this.maxAlternatives + 1;
         const altIndices = Array.from({ length: totalCount }, (_, i) => i);
         
@@ -261,7 +277,6 @@ const RoutePlanner = {
             this.renderElevationGraph(activeRoute.coordinates);
         }
 
-        // Actualizar etiqueta del contador en el grupo lateral
         const counter = document.getElementById("alt-counter");
         if (counter) {
             counter.innerText = `${index + 1}/${this.routesList.length}`;
@@ -322,10 +337,8 @@ const RoutePlanner = {
 
         this.clearRoute();
 
-        // Paleta de colores distintos para las rutas alternativas inactivas (Azul, Rojo, Morado...)
         const altColors = ['#3498db', '#e74c3c', '#9b59b6', '#f39c12'];
 
-        // 1. Pintar primero las rutas alternativas inactivas con colores diferenciados y semitransparentes
         this.routesList.forEach((route, idx) => {
             if (idx === this.currentRouteIndex) return;
 
@@ -352,7 +365,6 @@ const RoutePlanner = {
             });
         });
 
-        // 2. Pintar la ruta ACTIVA seleccionada (Cian brillante con flechas blancas)
         const activeRoute = this.routesList[this.currentRouteIndex];
         const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
 
@@ -487,7 +499,6 @@ const RoutePlanner = {
                 border-radius: 10px; padding: 8px 10px; gap: 8px; width: 100%; box-sizing: border-box;
             `;
 
-            // Círculo numerado
             const badge = document.createElement("div");
             badge.style.cssText = `
                 background: #121212; color: #00e5ff; border: 1.5px solid #00e5ff;
@@ -496,7 +507,6 @@ const RoutePlanner = {
             `;
             badge.innerText = index + 1;
 
-            // Input para renombrar
             const nameInput = document.createElement("input");
             nameInput.type = "text";
             nameInput.value = point.name;
@@ -511,11 +521,30 @@ const RoutePlanner = {
                 this.points[index].name = e.target.value;
             });
 
-            // Contenedor agrupado para los botones de la derecha
             const actionsDiv = document.createElement("div");
             actionsDiv.style.cssText = `
                 display: flex; align-items: center; gap: 4px; flex-shrink: 0;
             `;
+
+            // Botón Subir orden (▲)
+            const btnUp = document.createElement("button");
+            btnUp.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 2px; display: flex; align-items: center;";
+            btnUp.innerHTML = `<span style="font-size: 14px; color: ${index === 0 ? '#444' : '#00e5ff'};">▲</span>`;
+            btnUp.disabled = index === 0;
+            btnUp.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.movePoint(index, -1);
+            });
+
+            // Botón Bajar orden (▼)
+            const btnDown = document.createElement("button");
+            btnDown.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 2px; display: flex; align-items: center;";
+            btnDown.innerHTML = `<span style="font-size: 14px; color: ${index === this.points.length - 1 ? '#444' : '#00e5ff'};">▼</span>`;
+            btnDown.disabled = index === this.points.length - 1;
+            btnDown.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.movePoint(index, 1);
+            });
 
             // Botón centrar mapa
             const btnFocus = document.createElement("button");
@@ -536,6 +565,8 @@ const RoutePlanner = {
                 this.renderPointsListDrawer();
             });
 
+            actionsDiv.appendChild(btnUp);
+            actionsDiv.appendChild(btnDown);
             actionsDiv.appendChild(btnFocus);
             actionsDiv.appendChild(btnDelete);
 
@@ -597,6 +628,5 @@ const RoutePlanner = {
     }
 };
 
-// Exponer globalmente y ejecutar al cargar el DOM
 window.RoutePlanner = RoutePlanner;
 document.addEventListener("DOMContentLoaded", () => RoutePlanner.init());
