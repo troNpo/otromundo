@@ -42,7 +42,7 @@ const RouteExporter = {
     executeExport() {
         const planner = window.RoutePlanner || (typeof RoutePlanner !== 'undefined' ? RoutePlanner : null);
 
-        if (!planner || (planner.points.length === 0 && (!planner.routesList || planner.routesList.length === 0) && !planner.currentRouteData)) {
+        if (!planner || (planner.points.length === 0 && !planner.currentRouteData)) {
             alert("⚠️ No hay ruta ni puntos para exportar");
             return;
         }
@@ -54,10 +54,6 @@ const RouteExporter = {
 
         const inputNombre = document.getElementById("export-filename-input");
         let filename = inputNombre && inputNombre.value.trim() ? inputNombre.value.trim() : `otromundo_ruta.${format}`;
-        
-        // Sanitizar nombre: Reemplazar espacios y caracteres no válidos para evitar errores de ruta en iOS
-        filename = filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-
         if (!filename.endsWith(`.${format}`)) filename += `.${format}`;
 
         if (format === 'kml') {
@@ -76,33 +72,23 @@ const RouteExporter = {
         kml += `<Document>\n`;
         kml += `  <name><![CDATA[${filename.replace('.kml', '')}]]></name>\n`;
 
-        // Definición de estilos KML (AABBGGRR) para la ruta activa y alternativas
-        kml += `  <Style id="style-active">\n`;
-        kml += `    <LineStyle><color>ffffd700</color><width>5</width></LineStyle>\n`;
-        kml += `  </Style>\n`;
-
-        const altStyles = [
-            { id: 'style-alt-0', color: 'ff3498db' }, // Azul
-            { id: 'style-alt-1', color: 'ff3ce74c' }, // Rojo
-            { id: 'style-alt-2', color: 'ffb6599b' }, // Morado
-            { id: 'style-alt-3', color: 'ff129cf3' }  // Naranja
-        ];
-
-        altStyles.forEach(st => {
-            kml += `  <Style id="${st.id}">\n`;
-            kml += `    <LineStyle><color>${st.color}</color><width>3</width></LineStyle>\n`;
-            kml += `  </Style>\n`;
-        });
-
-        // Carpeta 1: Waypoints de la ruta (Puntos de paso)
+        // Carpeta 1: Waypoints de la ruta (Solo si existen para evitar nodos vacíos en iOS)
         if (planner.points && planner.points.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Waypoints de Ruta]]></name>\n`;
             planner.points.forEach((p, idx) => {
                 const puntoName = p.name || (`Punto ${idx + 1}`);
+
                 let descHtml = `Waypoint #${idx + 1}<br/>\nname: ${puntoName}`;
                 if (p.coords[2] !== undefined) {
                     descHtml += `<br/>\nelevación: ${Math.round(p.coords[2])} m`;
+                }
+                if (p.extraInfo) {
+                    Object.keys(p.extraInfo).forEach(key => {
+                        descHtml += `<br/>\n${key}: ${p.extraInfo[key]}`;
+                    });
+                } else if (p.description) {
+                    descHtml += `<br/>\n${p.description}`;
                 }
 
                 kml += `    <Placemark>\n`;
@@ -116,52 +102,12 @@ const RouteExporter = {
             kml += `  </Folder>\n`;
         }
 
-        // Carpeta 2: Ruta Principal Activa
-        if (planner.routesList && planner.routesList.length > 0) {
-            const activeRoute = planner.routesList[planner.currentRouteIndex] || planner.routesList[0];
-            kml += `  <Folder>\n`;
-            kml += `    <name><![CDATA[Ruta Principal (Activa)]]></name>\n`;
-            kml += `    <Placemark>\n`;
-            kml += `      <name><![CDATA[${activeRoute.distKm} km - ${activeRoute.timeStr}]]></name>\n`;
-            kml += `      <styleUrl>#style-active</styleUrl>\n`;
-            kml += `      <LineString>\n`;
-            kml += `        <tessellate>1</tessellate>\n`;
-            kml += `        <coordinates>\n`;
-            kml += `          `;
-            kml += activeRoute.coordinates.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
-            kml += `\n        </coordinates>\n`;
-            kml += `      </LineString>\n`;
-            kml += `    </Placemark>\n`;
-            kml += `  </Folder>\n`;
-
-            // Carpeta 3: Rutas Alternativas Inactivas
-            const inactiveRoutes = planner.routesList.filter((_, idx) => idx !== planner.currentRouteIndex);
-            if (inactiveRoutes.length > 0) {
-                kml += `  <Folder>\n`;
-                kml += `    <name><![CDATA[Rutas Alternativas]]></name>\n`;
-                inactiveRoutes.forEach((route, index) => {
-                    const styleRef = altStyles[index % altStyles.length].id;
-                    kml += `    <Placemark>\n`;
-                    kml += `      <name><![CDATA[Alternativa ${index + 1} (${route.distKm} km)]]></name>\n`;
-                    kml += `      <styleUrl>#${styleRef}</styleUrl>\n`;
-                    kml += `      <LineString>\n`;
-                    kml += `        <tessellate>1</tessellate>\n`;
-                    kml += `        <coordinates>\n`;
-                    kml += `          `;
-                    kml += route.coordinates.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
-                    kml += `\n        </coordinates>\n`;
-                    kml += `      </LineString>\n`;
-                    kml += `    </Placemark>\n`;
-                });
-                kml += `  </Folder>\n`;
-            }
-        } else if (planner.currentRouteData && planner.currentRouteData.coordinates) {
-            // Fallback para ruta simple
+        // Carpeta 2: Traza de la Ruta (Solo si hay coordenadas válidas)
+        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Traza de Ruta]]></name>\n`;
             kml += `    <Placemark>\n`;
             kml += `      <name><![CDATA[Ruta Activa]]></name>\n`;
-            kml += `      <styleUrl>#style-active</styleUrl>\n`;
             kml += `      <LineString>\n`;
             kml += `        <tessellate>1</tessellate>\n`;
             kml += `        <coordinates>\n`;
@@ -187,6 +133,7 @@ const RouteExporter = {
         gpx += `    <time>${new Date().toISOString()}</time>\n`;
         gpx += `  </metadata>\n`;
 
+        // Waypoints (puntos de ruta)
         if (planner.points && planner.points.length > 0) {
             planner.points.forEach((p, idx) => {
                 gpx += `  <wpt lat="${p.coords[1]}" lon="${p.coords[0]}">\n`;
@@ -194,18 +141,19 @@ const RouteExporter = {
                     gpx += `    <ele>${p.coords[2]}</ele>\n`;
                 }
                 gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
+                if (p.description) {
+                    gpx += `    <desc><![CDATA[${p.description}]]></desc>\n`;
+                }
                 gpx += `  </wpt>\n`;
             });
         }
 
-        const activeRoute = (planner.routesList && planner.routesList[planner.currentRouteIndex]) ? planner.routesList[planner.currentRouteIndex] : null;
-        const coords = activeRoute ? activeRoute.coordinates : (planner.currentRouteData ? planner.currentRouteData.coordinates : null);
-
-        if (coords && coords.length > 0) {
+        // Track (traza de la ruta)
+        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
             gpx += `  <trk>\n`;
-            gpx += `    <name><![CDATA[Ruta Otromundo Principal]]></name>\n`;
+            gpx += `    <name><![CDATA[Ruta Otromundo]]></name>\n`;
             gpx += `    <trkseg>\n`;
-            coords.forEach(c => {
+            planner.currentRouteData.coordinates.forEach(c => {
                 gpx += `      <trkpt lat="${c[1]}" lon="${c[0]}">\n`;
                 if (c[2] !== undefined) {
                     gpx += `        <ele>${c[2]}</ele>\n`;
@@ -218,6 +166,8 @@ const RouteExporter = {
 
         gpx += `</gpx>`;
 
+        // En iOS a veces application/gpx+xml da problemas de tipo MIME al abrir directamente, 
+        // text/xml o application/xml asegura compatibilidad total de guardado/apertura en iOS.
         this.triggerBlobDownload(gpx, filename, 'application/xml');
     },
 
@@ -227,6 +177,7 @@ const RouteExporter = {
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        // Soporte específico para evitar bloqueos en WebKit (iOS Safari)
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
