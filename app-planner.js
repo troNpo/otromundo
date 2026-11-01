@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -24,11 +24,14 @@ const RoutePlanner = {
     maxAlternatives: 0,      // Por defecto 0 alternativas adicionales (solo la ruta principal)
     points: [],
     markers: [],
+    autoMarkers: [],         // Almacena los marcadores visuales de los puntos intermedios automáticos
     routesList: [],          // Almacena todas las alternativas devueltas por BRouter
     currentRouteIndex: 0,    // Índice de la ruta alternativa actual
     currentRouteData: null,
     isGraphOpen: false,
     isLeftHanded: false,
+    autoIntervalKm: 0,       // 0 = desactivado, 2 = cada 2km, 5 = cada 5km
+    autoIntermediatePoints: [], // Coordenadas [lng, lat, ele] de los puntos automáticos generados
 
     init() {
         this.setupEvents();
@@ -93,6 +96,26 @@ const RoutePlanner = {
                 this.maxAlternatives = parseInt(e.target.value, 10);
                 if (this.points.length >= 2) this.calcularRutaBRouter();
             });
+        });
+
+        // Selector de puntos intermedios automáticos por distancia (Acordeón de Opciones)
+        document.querySelectorAll('input[name="auto-intermediate-points"]').forEach(radio => {
+            radio.addEventListener("change", (e) => {
+                this.autoIntervalKm = parseInt(e.target.value, 10);
+                if (this.currentRouteData && this.currentRouteData.coordinates) {
+                    this.generateAutoIntermediatePoints(this.currentRouteData.coordinates);
+                    this.renderMarkers(); // Refrescar marcadores principales y automáticos en el mapa
+                }
+            });
+        });
+
+        // Rotar flecha del acordeón de puntos automáticos si existe
+        const autoDetailsEl = document.getElementById("auto-points-accordion");
+        autoDetailsEl?.addEventListener("toggle", () => {
+            const arrow = document.getElementById("auto-points-arrow");
+            if (arrow) {
+                arrow.style.transform = autoDetailsEl.open ? "rotate(180deg)" : "rotate(0deg)";
+            }
         });
 
         // 3. Menú de Opciones del Planificador (Panel Lateral)
@@ -179,6 +202,9 @@ const RoutePlanner = {
                 this.clearRoute();
                 this.routesList = [];
                 this.currentRouteIndex = 0;
+                this.currentRouteData = null;
+                this.autoIntermediatePoints = [];
+                this.renderMarkers(); // Limpiar marcadores automáticos restantes
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
                 this.updateAltButtonVisibility();
@@ -200,6 +226,34 @@ const RoutePlanner = {
 
         if (this.points.length >= 2) {
             this.calcularRutaBRouter();
+        }
+    },
+
+    generateAutoIntermediatePoints(coords) {
+        this.autoIntermediatePoints = [];
+        if (this.autoIntervalKm <= 0 || !coords || coords.length < 2) return;
+
+        let accumulatedMeters = 0;
+        const targetMeters = this.autoIntervalKm * 1000;
+
+        for (let i = 0; i < coords.length - 1; i++) {
+            const p1 = coords[i];
+            const p2 = coords[i + 1];
+            const segmentDist = this.haversine(p1[1], p1[0], p2[1], p2[0]);
+
+            accumulatedMeters += segmentDist;
+
+            while (accumulatedMeters >= targetMeters) {
+                const excess = accumulatedMeters - targetMeters;
+                const ratio = 1 - (excess / segmentDist);
+
+                const interpolatedLng = p1[0] + (p2[0] - p1[0]) * ratio;
+                const interpolatedLat = p1[1] + (p2[1] - p1[1]) * ratio;
+                const interpolatedEle = (p1[2] || 0) + ((p2[2] || 0) - (p1[2] || 0)) * ratio;
+
+                this.autoIntermediatePoints.push([interpolatedLng, interpolatedLat, interpolatedEle]);
+                accumulatedMeters -= targetMeters;
+            }
         }
     },
 
@@ -270,8 +324,13 @@ const RoutePlanner = {
         if (!activeRoute) return;
 
         this.currentRouteData = { coordinates: activeRoute.coordinates };
+        
+        // Generar puntos intermedios automáticos exclusivamente sobre la ruta principal activa
+        this.generateAutoIntermediatePoints(activeRoute.coordinates);
+
         this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
         this.paintAllRoutes();
+        this.renderMarkers();
 
         if (this.isGraphOpen) {
             this.renderElevationGraph(activeRoute.coordinates);
@@ -415,6 +474,7 @@ const RoutePlanner = {
 
     clearAllPoints() {
         this.points = [];
+        this.autoIntermediatePoints = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
         this.routesList = [];
@@ -460,6 +520,31 @@ const RoutePlanner = {
         this.markers.forEach(m => m.remove());
         this.markers = [];
 
+        // 1. Renderizar puntos intermedios automáticos (Círculo corporativo cian pequeño con punto negro en medio)
+        this.autoIntermediatePoints.forEach((coord) => {
+            const el = document.createElement('div');
+            el.className = 'planner-auto-marker';
+            el.style.cssText = `
+                background-color: #00e5ff; width: 12px; height: 12px;
+                border-radius: 50%;
+                border: 1.5px solid #121212;
+                display: flex; align-items: center; justify-content: center;
+                box-shadow: none; cursor: pointer; pointer-events: none;
+            `;
+            // Punto negro central
+            const innerDot = document.createElement('div');
+            innerDot.style.cssText = `
+                background-color: #121212; width: 4px; height: 4px; border-radius: 50%;
+            `;
+            el.appendChild(innerDot);
+
+            const marker = new maplibregl.Marker({ element: el })
+                .setLngLat(coord)
+                .addTo(map);
+            this.markers.push(marker);
+        });
+
+        // 2. Renderizar puntos de ruta principales (Círculos numerados e interactivos)
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -467,7 +552,7 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; box-shadow: none !important; cursor: pointer;
+                font-size: 13px; font-family: sans-serif; box-shadow: none; cursor: pointer;
             `;
             el.innerText = index + 1;
 

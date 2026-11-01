@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
-    <title>otromundo </title>
+    <title>otromundo - Planificador de Rutas</title>
     <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
     <link href="style.css" rel="stylesheet" />
     <link rel="manifest" href="manifest.json">
@@ -145,7 +145,27 @@
                     </div>
                 </div>
             </details>
-
+<!-- Tarjeta con acordeón para Puntos Automáticos -->
+<details id="auto-points-accordion" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+    <summary style="cursor: pointer; font-weight: bold; font-size: 0.9rem; color: #fff; display: flex; align-items: center; justify-content: space-between; outline: none; list-style: none;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="./ui-icons/fi-rr-marker.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Puntos">
+            <span>Puntos Intermedios Automáticos</span>
+        </div>
+        <span id="auto-points-arrow" style="font-size: 0.8rem; transition: transform 0.2s;">▼</span>
+    </summary>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+            <input type="radio" name="auto-intermediate-points" value="0" checked style="accent-color: #00e5ff;"> Desactivado (0)
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+            <input type="radio" name="auto-intermediate-points" value="2" style="accent-color: #00e5ff;"> Cada 2 km
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+            <input type="radio" name="auto-intermediate-points" value="5" style="accent-color: #00e5ff;"> Cada 5 km
+        </label>
+    </div>
+</details>
 
             <!-- Control Modo Zurdos -->
             <div id="opt-btn-lefty" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 12px; cursor: pointer;">
