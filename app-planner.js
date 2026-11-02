@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -21,28 +21,27 @@ map.addControl(geolocateControl);
 
 const RoutePlanner = {
     profile: "hiking-mountain",
-    maxAlternatives: 0,      // Por defecto 0 alternativas adicionales (solo la ruta principal)
+    maxAlternatives: 0,
     points: [],
     markers: [],
-    autoMarkers: [],         // Almacena los marcadores visuales de los puntos intermedios automáticos
-    routesList: [],          // Almacena todas las alternativas devueltas por BRouter
-    currentRouteIndex: 0,    // Índice de la ruta alternativa actual
+    autoIntermediatePoints: [],
+    routesList: [],
+    currentRouteIndex: 0,
     currentRouteData: null,
     isGraphOpen: false,
     isLeftHanded: false,
-    autoIntervalKm: 0,       // 0 = desactivado, 2 = cada 2km, 5 = cada 5km
-    autoIntermediatePoints: [], // Coordenadas [lng, lat, ele] de los puntos automáticos generados
+    autoIntervalKm: 0,
+    activeTab: 'points',    // 'points' o 'segments'
+    segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
 
     init() {
         this.setupEvents();
         this.activateMapClick();
         
-        // Forzar redibujado para garantizar visibilidad del mapa
         setTimeout(() => {
             if (map) map.resize();
         }, 150);
 
-        // Escuchar la recarga del estilo del mapa para restaurar ruta, flechas y marcadores de forma persistente
         if (map) {
             map.on('style.load', () => {
                 setTimeout(() => {
@@ -58,7 +57,7 @@ const RoutePlanner = {
     },
 
     setupEvents() {
-        // 1. Selector de Mapas (Panel Lateral)
+        // 1. Selector de Mapas
         const btnMap = document.getElementById("planner-btn-map");
         const mapsDrawer = document.getElementById("side-panel-maps");
         const closeMaps = document.getElementById("btn-close-maps-drawer");
@@ -74,7 +73,7 @@ const RoutePlanner = {
             });
         });
 
-        // 2. Selector de Perfiles BRouter (Panel Lateral)
+        // 2. Selector de Perfiles BRouter
         const btnProfiles = document.getElementById("planner-btn-profiles");
         const profilesDrawer = document.getElementById("side-panel-profiles");
         const closeProfiles = document.getElementById("btn-close-profiles-drawer");
@@ -90,7 +89,6 @@ const RoutePlanner = {
             });
         });
 
-        // Selector de número de alternativas BRouter
         document.querySelectorAll('input[name="brouter-alternatives"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.maxAlternatives = parseInt(e.target.value, 10);
@@ -98,18 +96,17 @@ const RoutePlanner = {
             });
         });
 
-        // Selector de puntos intermedios automáticos por distancia (Acordeón de Opciones)
+        // Selector de puntos intermedios automáticos
         document.querySelectorAll('input[name="auto-intermediate-points"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.autoIntervalKm = parseInt(e.target.value, 10);
                 if (this.currentRouteData && this.currentRouteData.coordinates) {
                     this.generateAutoIntermediatePoints(this.currentRouteData.coordinates);
-                    this.renderMarkers(); // Refrescar marcadores principales y automáticos en el mapa
+                    this.renderMarkers();
                 }
             });
         });
 
-        // Rotar flecha del acordeón de puntos automáticos si existe
         const autoDetailsEl = document.getElementById("auto-points-accordion");
         autoDetailsEl?.addEventListener("toggle", () => {
             const arrow = document.getElementById("auto-points-arrow");
@@ -118,7 +115,7 @@ const RoutePlanner = {
             }
         });
 
-        // 3. Menú de Opciones del Planificador (Panel Lateral)
+        // 3. Menú de Opciones
         const btnOptions = document.getElementById("planner-btn-options");
         const optionsDrawer = document.getElementById("side-panel-planner-options");
         const closeOptions = document.getElementById("btn-close-planner-options-drawer");
@@ -126,16 +123,38 @@ const RoutePlanner = {
         btnOptions?.addEventListener("click", () => optionsDrawer?.classList.add("active"));
         closeOptions?.addEventListener("click", () => optionsDrawer?.classList.remove("active"));
 
-        // 4. Listado de Puntos de Ruta (Panel Lateral dedicado)
+        // 4. Listado de Puntos y Segmentos (Panel Lateral dedicado)
         const btnList = document.getElementById("btn-planner-list");
         const pointsDrawer = document.getElementById("side-panel-points-list");
         const closePoints = document.getElementById("btn-close-points-drawer");
 
         btnList?.addEventListener("click", () => {
             pointsDrawer?.classList.add("active");
-            this.renderPointsListDrawer();
+            this.renderActiveDrawerTab();
         });
         closePoints?.addEventListener("click", () => pointsDrawer?.classList.remove("active"));
+
+        // Pestañas del Panel (Puntos / Segmentos)
+        const tabPointsBtn = document.getElementById("tab-btn-points");
+        const tabSegmentsBtn = document.getElementById("tab-btn-segments");
+
+        tabPointsBtn?.addEventListener("click", () => {
+            this.activeTab = 'points';
+            tabPointsBtn.style.background = "#00e5ff";
+            tabPointsBtn.style.color = "#121212";
+            tabSegmentsBtn.style.background = "transparent";
+            tabSegmentsBtn.style.color = "#aaa";
+            this.renderPointsListDrawer();
+        });
+
+        tabSegmentsBtn?.addEventListener("click", () => {
+            this.activeTab = 'segments';
+            tabSegmentsBtn.style.background = "#00e5ff";
+            tabSegmentsBtn.style.color = "#121212";
+            tabPointsBtn.style.background = "transparent";
+            tabPointsBtn.style.color = "#aaa";
+            this.renderSegmentsListDrawer();
+        });
 
         // Modo Zurdos Toggle
         const optLefty = document.getElementById("opt-btn-lefty");
@@ -146,11 +165,10 @@ const RoutePlanner = {
             document.body.className = this.isLeftHanded ? "left-handed" : "right-handed";
         });
 
-        // Evento click para el botón de alternar rutas alternativas
         const btnAltSwitcher = document.getElementById("planner-alt-switcher");
         btnAltSwitcher?.addEventListener("click", () => this.cycleAlternativeRoute());
 
-        // 5. Botones de Acción de Puntos y GPS
+        // 5. Botones de Acción
         document.getElementById("planner-btn-add")?.addEventListener("click", () => {
             const center = map.getCenter();
             this.addPoint([center.lng, center.lat]);
@@ -164,10 +182,8 @@ const RoutePlanner = {
         document.getElementById("planner-btn-cancel")?.addEventListener("click", () => this.clearAllPoints());
         document.getElementById("planner-btn-gps")?.addEventListener("click", () => geolocateControl.trigger());
 
-        // 6. Botón Gráfica de Altitud (Toggle inferior)
         document.getElementById("btn-planner-graph")?.addEventListener("click", () => this.toggleGraph());
 
-        // Zoom
         document.getElementById("btn-planner-zoomin")?.addEventListener("click", () => map.zoomIn());
         document.getElementById("btn-planner-zoomout")?.addEventListener("click", () => map.zoomOut());
     },
@@ -180,31 +196,52 @@ const RoutePlanner = {
         });
     },
 
+    syncSegmentsArray() {
+        const expectedCount = Math.max(0, this.points.length - 1);
+        
+        while (this.segments.length < expectedCount) {
+            const idx = this.segments.length + 1;
+            const lastColor = this.segments.length > 0 ? this.segments[this.segments.length - 1].color : '#00e5ff';
+            this.segments.push({
+                name: `Tramo ${idx}`,
+                color: lastColor
+            });
+        }
+        
+        if (this.segments.length > expectedCount) {
+            this.segments = this.segments.slice(0, expectedCount);
+        }
+    },
+
     addPoint(lngLat) {
         const idx = this.points.length + 1;
         this.points.push({ coords: lngLat, name: `Punto ${idx}` });
+        this.syncSegmentsArray();
         
         this.renderMarkers();
-        this.renderPointsListDrawer();
+        this.renderActiveDrawerTab();
 
-        if (this.points.length >= 2) this.calcularRutaBRouter();
+        if (this.points.length >= 2) {
+            this.calcularRutaBRouter();
+        }
     },
 
     removePoint(index) {
         if (this.points.length > 0 && index >= 0) {
             this.points.splice(index, 1);
-            this.renderMarkers();
-            this.renderPointsListDrawer();
+            this.syncSegmentsArray();
+            this.renderActiveDrawerTab();
 
             if (this.points.length >= 2) {
                 this.calcularRutaBRouter();
+                this.renderMarkers();
             } else {
                 this.clearRoute();
                 this.routesList = [];
                 this.currentRouteIndex = 0;
                 this.currentRouteData = null;
                 this.autoIntermediatePoints = [];
-                this.renderMarkers(); // Limpiar marcadores automáticos restantes
+                this.renderMarkers();
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
                 this.updateAltButtonVisibility();
@@ -216,16 +253,22 @@ const RoutePlanner = {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= this.points.length) return;
 
-        // Intercambiar posición en el array
         const temp = this.points[index];
         this.points[index] = this.points[newIndex];
         this.points[newIndex] = temp;
 
         this.renderMarkers();
-        this.renderPointsListDrawer();
-
+        this.renderActiveDrawerTab();
         if (this.points.length >= 2) {
             this.calcularRutaBRouter();
+        }
+    },
+
+    renderActiveDrawerTab() {
+        if (this.activeTab === 'points') {
+            this.renderPointsListDrawer();
+        } else {
+            this.renderSegmentsListDrawer();
         }
     },
 
@@ -259,7 +302,6 @@ const RoutePlanner = {
 
     async calcularRutaBRouter() {
         const lonLats = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
-        
         const totalCount = this.maxAlternatives + 1;
         const altIndices = Array.from({ length: totalCount }, (_, i) => i);
         
@@ -324,8 +366,6 @@ const RoutePlanner = {
         if (!activeRoute) return;
 
         this.currentRouteData = { coordinates: activeRoute.coordinates };
-        
-        // Generar puntos intermedios automáticos exclusivamente sobre la ruta principal activa
         this.generateAutoIntermediatePoints(activeRoute.coordinates);
 
         this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
@@ -425,28 +465,94 @@ const RoutePlanner = {
         });
 
         const activeRoute = this.routesList[this.currentRouteIndex];
-        const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
+        this.syncSegmentsArray();
+        
+        if (this.segments.length > 0 && this.points.length >= 2) {
+            let coordIndex = 0;
+            
+            this.segments.forEach((seg, sIdx) => {
+                const nextPoint = this.points[sIdx + 1];
+                if (!nextPoint) return;
 
-        map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
+                const subCoords = [];
+                // Recorremos las coordenadas de la ruta buscando el punto de llegada de este tramo
+                while (coordIndex < activeRoute.coordinates.length) {
+                    const pt = activeRoute.coordinates[coordIndex];
+                    subCoords.push(pt);
+                    
+                    const distToNext = this.haversine(pt[1], pt[0], nextPoint.coords[1], nextPoint.coords[0]);
+                    coordIndex++;
+                    
+                    // Si estamos cerca del punto de ruta y no es el último tramo, cerramos este segmento
+                    if (distToNext < 40 && sIdx < this.segments.length - 1) {
+                        break;
+                    }
+                }
+                
+                // Si es el último segmento, aseguramos que coja hasta el final exacto del array
+                if (sIdx === this.segments.length - 1) {
+                    while (coordIndex < activeRoute.coordinates.length) {
+                        subCoords.push(activeRoute.coordinates[coordIndex]);
+                        coordIndex++;
+                    }
+                }
 
-        map.addLayer({
-            id: 'planned-route-active-casing',
-            type: 'line',
-            source: 'planned-route-source',
-            paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-        });
+                // Asegurar mínimo 2 puntos para que MapLibre pinte la línea sin errores
+                if (subCoords.length < 2 && activeRoute.coordinates.length >= 2) {
+                    subCoords.push(activeRoute.coordinates[activeRoute.coordinates.length - 1]);
+                }
 
-        map.addLayer({
-            id: 'planned-route-active-solid',
-            type: 'line',
-            source: 'planned-route-source',
-            paint: { 'line-color': '#00e5ff', 'line-width': 4.5 }
-        });
+                const segSourceId = `active-segment-source-${sIdx}`;
+                map.addSource(segSourceId, {
+                    type: 'geojson',
+                    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: subCoords } }
+                });
+
+                map.addLayer({
+                    id: `active-segment-casing-${sIdx}`,
+                    type: 'line',
+                    source: segSourceId,
+                    paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+                });
+
+                map.addLayer({
+                    id: `active-segment-solid-${sIdx}`,
+                    type: 'line',
+                    source: segSourceId,
+                    paint: { 'line-color': seg.color || '#00e5ff', 'line-width': 4.5 }
+                });
+            });
+        } else {
+            const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
+
+            map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
+
+            map.addLayer({
+                id: 'planned-route-active-casing',
+                type: 'line',
+                source: 'planned-route-source',
+                paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+            });
+
+            map.addLayer({
+                id: 'planned-route-active-solid',
+                type: 'line',
+                source: 'planned-route-source',
+                paint: { 'line-color': this.segments[0]?.color || '#00e5ff', 'line-width': 4.5 }
+            });
+        }
+
+        const fullGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
+        if (!map.getSource('planned-route-arrows-source')) {
+            map.addSource('planned-route-arrows-source', { type: 'geojson', data: fullGeojson });
+        } else {
+            map.getSource('planned-route-arrows-source').setData(fullGeojson);
+        }
 
         map.addLayer({
             id: 'planned-route-arrows',
             type: 'symbol',
-            source: 'planned-route-source',
+            source: 'planned-route-arrows-source',
             layout: {
                 'symbol-placement': 'line',
                 'symbol-spacing': 70,
@@ -461,9 +567,17 @@ const RoutePlanner = {
     clearRoute() {
         if (!map) return;
         if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
+        if (map.getSource('planned-route-arrows-source')) map.removeSource('planned-route-arrows-source');
+        
         if (map.getLayer('planned-route-active-solid')) map.removeLayer('planned-route-active-solid');
         if (map.getLayer('planned-route-active-casing')) map.removeLayer('planned-route-active-casing');
         if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
+
+        for (let i = 0; i < 20; i++) {
+            if (map.getLayer(`active-segment-solid-${i}`)) map.removeLayer(`active-segment-solid-${i}`);
+            if (map.getLayer(`active-segment-casing-${i}`)) map.removeLayer(`active-segment-casing-${i}`);
+            if (map.getSource(`active-segment-source-${i}`)) map.removeSource(`active-segment-source-${i}`);
+        }
 
         this.routesList.forEach((_, idx) => {
             if (map.getLayer(`alt-route-casing-${idx}`)) map.removeLayer(`alt-route-casing-${idx}`);
@@ -474,6 +588,7 @@ const RoutePlanner = {
 
     clearAllPoints() {
         this.points = [];
+        this.segments = [];
         this.autoIntermediatePoints = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
@@ -482,7 +597,7 @@ const RoutePlanner = {
         this.currentRouteData = null;
         this.clearRoute();
         this.updateStats("--", "--", "--", "--");
-        this.renderPointsListDrawer();
+        this.renderActiveDrawerTab();
         this.hideGraph();
         this.updateAltButtonVisibility();
     },
@@ -520,22 +635,17 @@ const RoutePlanner = {
         this.markers.forEach(m => m.remove());
         this.markers = [];
 
-        // 1. Renderizar puntos intermedios automáticos (Círculo corporativo cian pequeño con punto negro en medio)
         this.autoIntermediatePoints.forEach((coord) => {
             const el = document.createElement('div');
             el.className = 'planner-auto-marker';
             el.style.cssText = `
                 background-color: #00e5ff; width: 12px; height: 12px;
-                border-radius: 50%;
-                border: 1.5px solid #121212;
+                border-radius: 50%; border: 1.5px solid #121212;
                 display: flex; align-items: center; justify-content: center;
                 box-shadow: none; cursor: pointer; pointer-events: none;
             `;
-            // Punto negro central
             const innerDot = document.createElement('div');
-            innerDot.style.cssText = `
-                background-color: #121212; width: 4px; height: 4px; border-radius: 50%;
-            `;
+            innerDot.style.cssText = `background-color: #121212; width: 4px; height: 4px; border-radius: 50%;`;
             el.appendChild(innerDot);
 
             const marker = new maplibregl.Marker({ element: el })
@@ -544,7 +654,6 @@ const RoutePlanner = {
             this.markers.push(marker);
         });
 
-        // 2. Renderizar puntos de ruta principales (Círculos numerados e interactivos)
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -607,11 +716,8 @@ const RoutePlanner = {
             });
 
             const actionsDiv = document.createElement("div");
-            actionsDiv.style.cssText = `
-                display: flex; align-items: center; gap: 4px; flex-shrink: 0;
-            `;
+            actionsDiv.style.cssText = `display: flex; align-items: center; gap: 4px; flex-shrink: 0;`;
 
-            // Botón Subir orden (▲)
             const btnUp = document.createElement("button");
             btnUp.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 2px; display: flex; align-items: center;";
             btnUp.innerHTML = `<span style="font-size: 14px; color: ${index === 0 ? '#444' : '#00e5ff'};">▲</span>`;
@@ -621,7 +727,6 @@ const RoutePlanner = {
                 this.movePoint(index, -1);
             });
 
-            // Botón Bajar orden (▼)
             const btnDown = document.createElement("button");
             btnDown.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 2px; display: flex; align-items: center;";
             btnDown.innerHTML = `<span style="font-size: 14px; color: ${index === this.points.length - 1 ? '#444' : '#00e5ff'};">▼</span>`;
@@ -631,7 +736,6 @@ const RoutePlanner = {
                 this.movePoint(index, 1);
             });
 
-            // Botón centrar mapa
             const btnFocus = document.createElement("button");
             btnFocus.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;";
             btnFocus.innerHTML = `<img src="./ui-icons/fi-rr-location-crosshairs.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Ir">`;
@@ -640,14 +744,12 @@ const RoutePlanner = {
                 if (map) map.flyTo({ center: point.coords, zoom: 15 });
             });
 
-            // Botón eliminar
             const btnDelete = document.createElement("button");
             btnDelete.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;";
             btnDelete.innerHTML = `<img src="./ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg);" alt="Borrar">`;
             btnDelete.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this.removePoint(index);
-                this.renderPointsListDrawer();
             });
 
             actionsDiv.appendChild(btnUp);
@@ -658,6 +760,72 @@ const RoutePlanner = {
             itemRow.appendChild(badge);
             itemRow.appendChild(nameInput);
             itemRow.appendChild(actionsDiv);
+            container.appendChild(itemRow);
+        });
+    },
+
+    renderSegmentsListDrawer() {
+        const container = document.getElementById("planner-points-items-container");
+        const countLabel = document.getElementById("planner-points-count");
+        if (!container) return;
+
+        this.syncSegmentsArray();
+        if (countLabel) countLabel.innerText = `(${this.segments.length})`;
+        container.innerHTML = "";
+
+        if (this.segments.length === 0) {
+            container.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 20px;">Se necesitan al menos 2 puntos para generar segmentos</div>`;
+            return;
+        }
+
+        this.segments.forEach((seg, index) => {
+            const itemRow = document.createElement("div");
+            itemRow.style.cssText = `
+                display: flex; align-items: center; justify-content: space-between;
+                background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 10px; padding: 8px 10px; gap: 8px; width: 100%; box-sizing: border-box;
+            `;
+
+            const badge = document.createElement("div");
+            badge.style.cssText = `
+                background: #121212; color: #00e5ff; border: 1.5px solid #00e5ff;
+                border-radius: 6px; width: 26px; height: 26px; display: flex;
+                align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; flex-shrink: 0;
+            `;
+            badge.innerText = `S${index + 1}`;
+
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.value = seg.name;
+            nameInput.style.cssText = `
+                background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2);
+                color: #fff; font-size: 0.85rem; flex: 1; min-width: 0; padding: 2px 4px; outline: none;
+            `;
+            ['click', 'focus', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+                nameInput.addEventListener(evt, (e) => e.stopPropagation());
+            });
+            nameInput.addEventListener("input", (e) => {
+                this.segments[index].name = e.target.value;
+            });
+
+            const colorInput = document.createElement("input");
+            colorInput.type = "color";
+            colorInput.value = seg.color || "#00e5ff";
+            colorInput.style.cssText = `
+                width: 26px; height: 26px; border: none; border-radius: 50%;
+                background: transparent; cursor: pointer; padding: 0; flex-shrink: 0;
+            `;
+            colorInput.addEventListener("click", (e) => e.stopPropagation());
+            colorInput.addEventListener("input", (e) => {
+                this.segments[index].color = e.target.value;
+                if (this.currentRouteData) {
+                    this.paintAllRoutes();
+                }
+            });
+
+            itemRow.appendChild(badge);
+            itemRow.appendChild(nameInput);
+            itemRow.appendChild(colorInput);
             container.appendChild(itemRow);
         });
     },

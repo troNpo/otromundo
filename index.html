@@ -79,7 +79,7 @@
         </div>
     </div>
 
-             <!-- Panel Lateral: Opciones del Planificador (Descarga, Zurdos, Alternativas) -->
+    <!-- Panel Lateral: Opciones del Planificador -->
     <div id="side-panel-planner-options" class="side-drawer">
         <div class="side-drawer-header">
             <h3>Opciones de Ruta</h3>
@@ -97,7 +97,6 @@
                     <span id="export-accordion-arrow" style="font-size: 0.8rem; color: #aaa; transition: transform 0.2s ease;">▼</span>
                 </summary>
                 
-                <!-- Contenido desplegable -->
                 <div style="padding: 12px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 10px;">
                     <input type="text" id="export-filename-input" value="otromundo_ruta.kml" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.85rem; padding: 8px; outline: none;" placeholder="Nombre de archivo...">
                     
@@ -117,7 +116,7 @@
                 </div>
             </details>
 
-                        <!-- Tarjeta Acordeón: Variantes de Ruta (Alternativas BRouter) -->
+            <!-- Tarjeta Acordeón: Variantes de Ruta -->
             <details id="alt-routes-accordion" style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: all 0.2s ease;">
                 <summary style="padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; list-style: none;">
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -145,27 +144,28 @@
                     </div>
                 </div>
             </details>
-<!-- Tarjeta con acordeón para Puntos Automáticos -->
-<details id="auto-points-accordion" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
-    <summary style="cursor: pointer; font-weight: bold; font-size: 0.9rem; color: #fff; display: flex; align-items: center; justify-content: space-between; outline: none; list-style: none;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="./ui-icons/fi-rr-marker.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Puntos">
-            <span>Puntos Intermedios Automáticos</span>
-        </div>
-        <span id="auto-points-arrow" style="font-size: 0.8rem; transition: transform 0.2s;">▼</span>
-    </summary>
-    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
-            <input type="radio" name="auto-intermediate-points" value="0" checked style="accent-color: #00e5ff;"> Desactivado (0)
-        </label>
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
-            <input type="radio" name="auto-intermediate-points" value="2" style="accent-color: #00e5ff;"> Cada 2 km
-        </label>
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
-            <input type="radio" name="auto-intermediate-points" value="5" style="accent-color: #00e5ff;"> Cada 5 km
-        </label>
-    </div>
-</details>
+
+            <!-- Tarjeta con acordeón para Puntos Automáticos -->
+            <details id="auto-points-accordion" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+                <summary style="cursor: pointer; font-weight: bold; font-size: 0.9rem; color: #fff; display: flex; align-items: center; justify-content: space-between; outline: none; list-style: none;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img src="./ui-icons/fi-rr-marker.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Puntos">
+                        <span>Puntos Intermedios Automáticos</span>
+                    </div>
+                    <span id="auto-points-arrow" style="font-size: 0.8rem; transition: transform 0.2s;">▼</span>
+                </summary>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+                        <input type="radio" name="auto-intermediate-points" value="0" checked style="accent-color: #00e5ff;"> Desactivado (0)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+                        <input type="radio" name="auto-intermediate-points" value="2" style="accent-color: #00e5ff;"> Cada 2 km
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #ccc; cursor: pointer;">
+                        <input type="radio" name="auto-intermediate-points" value="5" style="accent-color: #00e5ff;"> Cada 5 km
+                    </label>
+                </div>
+            </details>
 
             <!-- Control Modo Zurdos -->
             <div id="opt-btn-lefty" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 12px; cursor: pointer;">
@@ -181,26 +181,31 @@
         </div>
     </div>
 
-
-    <!-- Panel Lateral: Puntos de Ruta -->
+    <!-- Panel Lateral: Puntos y Segmentos de Ruta (Único y con pestañas) -->
     <div id="side-panel-points-list" class="side-drawer">
-        <div class="side-drawer-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <h3>Puntos de Ruta</h3>
-                <span id="planner-points-count" style="font-size: 0.8rem; color: var(--primary-cyan); font-weight: bold;">(0)</span>
+        <div class="side-drawer-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3>Gestión de Ruta</h3>
+                    <span id="planner-points-count" style="font-size: 0.8rem; color: var(--primary-cyan); font-weight: bold;">(0)</span>
+                </div>
+                <button id="btn-close-points-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
             </div>
-            <button id="btn-close-points-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
+            <!-- Pestañas de Navegación del Panel -->
+            <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                <button id="tab-btn-points" style="flex: 1; background: #00e5ff; color: #121212; border: none; border-radius: 6px; padding: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;">Puntos</button>
+                <button id="tab-btn-segments" style="flex: 1; background: transparent; color: #aaa; border: none; border-radius: 6px; padding: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;">Segmentos</button>
+            </div>
         </div>
         <div class="side-drawer-body" style="padding: 16px;">
-            <div id="planner-points-items-container" style="display: flex; flex-direction: column; gap: 10px;">
+            <div id="planner-points-items-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto;">
                 <!-- Dinámico -->
             </div>
         </div>
     </div>
 
-       <!-- CONTROLES VERTICALES FLOTANTES -->
+    <!-- CONTROLES VERTICALES FLOTANTES -->
     <div id="planner-zoom-controls" class="planner-vertical-controls">
-        <!-- Botón de Alternativas de Ruta (Oculto por defecto hasta que hay variantes) -->
         <button id="planner-alt-switcher" title="Alternar ruta activa" class="tool-circle-btn" style="display: none;">
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;">
                 <img src="ui-icons/fi-rr-route.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg) brightness(103%) contrast(101%);" alt="Ruta">
@@ -222,11 +227,9 @@
         </button>
     </div>
 
-
     <!-- ================= PANEL INFERIOR: PLANIFICADOR DE RUTAS ================= -->
     <div id="route-planner-bottom-panel" class="planner-bottom-card">
         
-        <!-- Contenedor Desplegable para Gráfica de Elevación -->
         <div id="planner-graph-container" class="planner-expandable-drawer" style="display: none;">
             <div class="elevation-header">
                 <span>PERFIL DE ELEVACIÓN</span>
@@ -235,7 +238,6 @@
             <div id="elevation-svg-wrapper" style="width: 100%; height: 110px;"></div>
         </div>
 
-        <!-- 4 Estadísticas Principales -->
         <div class="planner-stats-bar">
             <div class="stat-item">
                 <img src="./ui-icons/fi-rr-map-location-track.svg" alt="Distancia">
@@ -258,9 +260,7 @@
             </div>
         </div>
 
-        <!-- Barra de herramientas inferior -->
         <div class="planner-toolbar">
-            <!-- Izquierda: Borrar -->
             <button id="planner-btn-clear" class="icon-btn danger" title="Borrar todos los puntos">
                 <img src="./ui-icons/fi-rr-trash.svg" alt="Borrar">
             </button>
@@ -283,21 +283,18 @@
                 </button>
             </div>
 
-            <!-- Derecha: Menú de Opciones -->
             <button id="planner-btn-options" class="icon-btn primary" title="Opciones de Ruta">
                 <img src="./ui-icons/fi-rr-menu-burger.svg" alt="Opciones">
             </button>
         </div>
     </div>
 
-        <!-- Scripts Esenciales -->
+    <!-- Scripts Esenciales -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="geocoder.js"></script>
     <script src="exporter.js"></script>
     <script src="app-planner.js"></script>
 
-
-    <!-- Registro automático del Service Worker para PWA y APK -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
