@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS + MARCADORES ARRASTRABLES
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -475,7 +475,6 @@ const RoutePlanner = {
                 if (!nextPoint) return;
 
                 const subCoords = [];
-                // Recorremos las coordenadas de la ruta buscando el punto de llegada de este tramo
                 while (coordIndex < activeRoute.coordinates.length) {
                     const pt = activeRoute.coordinates[coordIndex];
                     subCoords.push(pt);
@@ -483,13 +482,11 @@ const RoutePlanner = {
                     const distToNext = this.haversine(pt[1], pt[0], nextPoint.coords[1], nextPoint.coords[0]);
                     coordIndex++;
                     
-                    // Si estamos cerca del punto de ruta y no es el último tramo, cerramos este segmento
                     if (distToNext < 40 && sIdx < this.segments.length - 1) {
                         break;
                     }
                 }
                 
-                // Si es el último segmento, aseguramos que coja hasta el final exacto del array
                 if (sIdx === this.segments.length - 1) {
                     while (coordIndex < activeRoute.coordinates.length) {
                         subCoords.push(activeRoute.coordinates[coordIndex]);
@@ -497,7 +494,6 @@ const RoutePlanner = {
                     }
                 }
 
-                // Asegurar mínimo 2 puntos para que MapLibre pinte la línea sin errores
                 if (subCoords.length < 2 && activeRoute.coordinates.length >= 2) {
                     subCoords.push(activeRoute.coordinates[activeRoute.coordinates.length - 1]);
                 }
@@ -661,13 +657,35 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; box-shadow: none; cursor: pointer;
+                font-size: 13px; font-family: sans-serif; box-shadow: none; cursor: grab;
             `;
             el.innerText = index + 1;
 
-            const marker = new maplibregl.Marker({ element: el })
+            // Hacemos el marcador arrastrable con draggable: true
+            const marker = new maplibregl.Marker({ element: el, draggable: true })
                 .setLngLat(point.coords)
                 .addTo(map);
+
+            // Evento al terminar de arrastrar el punto en el mapa
+            marker.on('dragend', () => {
+                const lngLat = marker.getLngLat();
+                this.points[index].coords = [lngLat.lng, lngLat.lat];
+                
+                if (this.points.length >= 2) {
+                    this.calcularRutaBRouter();
+                } else {
+                    this.clearRoute();
+                    this.routesList = [];
+                    this.currentRouteIndex = 0;
+                    this.currentRouteData = null;
+                    this.autoIntermediatePoints = [];
+                    this.renderMarkers();
+                    this.updateStats("--", "--", "--", "--");
+                    this.hideGraph();
+                    this.updateAltButtonVisibility();
+                }
+            });
+
             this.markers.push(marker);
         });
     },
