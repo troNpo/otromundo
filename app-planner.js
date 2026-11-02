@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS + MARCADORES ARRASTRABLES
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS + MARCADORES ARRASTRABLES Y CON AVISOS
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -25,6 +25,7 @@ const RoutePlanner = {
     points: [],
     markers: [],
     autoIntermediatePoints: [],
+    autoPointsObjects: [],  // Almacena los puntos intermedios editables/arrastrables
     routesList: [],
     currentRouteIndex: 0,
     currentRouteData: null,
@@ -241,6 +242,7 @@ const RoutePlanner = {
                 this.currentRouteIndex = 0;
                 this.currentRouteData = null;
                 this.autoIntermediatePoints = [];
+                this.autoPointsObjects = [];
                 this.renderMarkers();
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
@@ -274,6 +276,7 @@ const RoutePlanner = {
 
     generateAutoIntermediatePoints(coords) {
         this.autoIntermediatePoints = [];
+        this.autoPointsObjects = [];
         if (this.autoIntervalKm <= 0 || !coords || coords.length < 2) return;
 
         let accumulatedMeters = 0;
@@ -294,7 +297,9 @@ const RoutePlanner = {
                 const interpolatedLat = p1[1] + (p2[1] - p1[1]) * ratio;
                 const interpolatedEle = (p1[2] || 0) + ((p2[2] || 0) - (p1[2] || 0)) * ratio;
 
-                this.autoIntermediatePoints.push([interpolatedLng, interpolatedLat, interpolatedEle]);
+                const pt = [interpolatedLng, interpolatedLat, interpolatedEle];
+                this.autoIntermediatePoints.push(pt);
+                this.autoPointsObjects.push(pt);
                 accumulatedMeters -= targetMeters;
             }
         }
@@ -586,6 +591,7 @@ const RoutePlanner = {
         this.points = [];
         this.segments = [];
         this.autoIntermediatePoints = [];
+        this.autoPointsObjects = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
         this.routesList = [];
@@ -626,30 +632,66 @@ const RoutePlanner = {
         if (zoomControls) zoomControls.style.bottom = "140px";
     },
 
+    showToast(message) {
+        let toast = document.getElementById("planner-toast-notification");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "planner-toast-notification";
+            toast.style.cssText = `
+                position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
+                background: rgba(0, 229, 255, 0.95); color: #121212; padding: 8px 16px;
+                border-radius: 20px; font-weight: bold; font-size: 0.85rem; font-family: sans-serif;
+                z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.innerText = message;
+        toast.style.opacity = "1";
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
+            toast.style.opacity = "0";
+        }, 2200);
+    },
+
     renderMarkers() {
         if (!map) return;
         this.markers.forEach(m => m.remove());
         this.markers = [];
 
-        this.autoIntermediatePoints.forEach((coord) => {
+        // 1. Renderizar puntos intermedios automáticos (arrastrables y convertibles)
+        this.autoPointsObjects.forEach((coord) => {
             const el = document.createElement('div');
             el.className = 'planner-auto-marker';
             el.style.cssText = `
-                background-color: #00e5ff; width: 12px; height: 12px;
+                background-color: #00e5ff; width: 14px; height: 14px;
                 border-radius: 50%; border: 1.5px solid #121212;
                 display: flex; align-items: center; justify-content: center;
-                box-shadow: none; cursor: pointer; pointer-events: none;
+                cursor: grab; pointer-events: auto; transition: transform 0.2s;
             `;
             const innerDot = document.createElement('div');
             innerDot.style.cssText = `background-color: #121212; width: 4px; height: 4px; border-radius: 50%;`;
             el.appendChild(innerDot);
 
-            const marker = new maplibregl.Marker({ element: el })
+            const marker = new maplibregl.Marker({ element: el, draggable: true })
                 .setLngLat(coord)
                 .addTo(map);
+
+            marker.on('dragstart', () => {
+                el.style.transform = "scale(1.4)";
+                this.showToast("🔄 Desplazando punto intermedio...");
+            });
+
+            marker.on('dragend', () => {
+                el.style.transform = "scale(1)";
+                const lngLat = marker.getLngLat();
+                this.showToast("⚡ Añadiendo como punto de ruta y recalculando...");
+                this.addPoint([lngLat.lng, lngLat.lat]);
+            });
+
             this.markers.push(marker);
         });
 
+        // 2. Renderizar puntos de ruta principales (numerados y arrastrables)
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -657,21 +699,26 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; box-shadow: none; cursor: grab;
+                font-size: 13px; font-family: sans-serif; cursor: grab; transition: transform 0.2s;
             `;
             el.innerText = index + 1;
 
-            // Hacemos el marcador arrastrable con draggable: true
             const marker = new maplibregl.Marker({ element: el, draggable: true })
                 .setLngLat(point.coords)
                 .addTo(map);
 
-            // Evento al terminar de arrastrar el punto en el mapa
+            marker.on('dragstart', () => {
+                el.style.transform = "scale(1.3)";
+                this.showToast(`🔄 Moviendo Punto ${index + 1}...`);
+            });
+
             marker.on('dragend', () => {
+                el.style.transform = "scale(1)";
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 
                 if (this.points.length >= 2) {
+                    this.showToast("⚡ Recalculando ruta...");
                     this.calcularRutaBRouter();
                 } else {
                     this.clearRoute();
@@ -679,6 +726,7 @@ const RoutePlanner = {
                     this.currentRouteIndex = 0;
                     this.currentRouteData = null;
                     this.autoIntermediatePoints = [];
+                    this.autoPointsObjects = [];
                     this.renderMarkers();
                     this.updateStats("--", "--", "--", "--");
                     this.hideGraph();
@@ -822,6 +870,10 @@ const RoutePlanner = {
             ['click', 'focus', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
                 nameInput.addEventListener(evt, (e) => e.stopPropagation());
             });
+            nameInput.nameInput?.addEventListener("input", (e) => {
+                this.segments[index].name = e.target.value;
+            });
+            // Corrección limpia del evento input para el nombre
             nameInput.addEventListener("input", (e) => {
                 this.segments[index].name = e.target.value;
             });
