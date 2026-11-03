@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + PUNTOS AUTOMÁTICOS + SEGMENTOS + MARCADORES ARRASTRABLES Y CON AVISOS
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + DESTINOS Y PUNTOS DE PASO + GUÍA RÁPIDA JSON
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -24,20 +24,18 @@ const RoutePlanner = {
     maxAlternatives: 0,
     points: [],
     markers: [],
-    autoIntermediatePoints: [],
-    autoPointsObjects: [],  // Almacena los puntos intermedios editables/arrastrables
     routesList: [],
     currentRouteIndex: 0,
     currentRouteData: null,
     isGraphOpen: false,
     isLeftHanded: false,
-    autoIntervalKm: 0,
     activeTab: 'points',    // 'points' o 'segments'
     segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
 
     init() {
         this.setupEvents();
-        this.activateMapClick();
+        this.activateMapInteractions();
+        this.setupGuideModalEvents(); // Inicializa los eventos del Manual Rápido
         
         setTimeout(() => {
             if (map) map.resize();
@@ -46,13 +44,17 @@ const RoutePlanner = {
         if (map) {
             map.on('style.load', () => {
                 setTimeout(() => {
+                    // Forzamos la recarga de la imagen de flecha antes de repintar
+                    if (map.hasImage('route-svg-arrow')) {
+                        map.removeImage('route-svg-arrow');
+                    }
                     if (this.routesList.length > 0) {
                         this.paintAllRoutes();
                     }
                     if (this.points && this.points.length > 0) {
                         this.renderMarkers();
                     }
-                }, 150);
+                }, 200);
             });
         }
     },
@@ -95,25 +97,6 @@ const RoutePlanner = {
                 this.maxAlternatives = parseInt(e.target.value, 10);
                 if (this.points.length >= 2) this.calcularRutaBRouter();
             });
-        });
-
-        // Selector de puntos intermedios automáticos
-        document.querySelectorAll('input[name="auto-intermediate-points"]').forEach(radio => {
-            radio.addEventListener("change", (e) => {
-                this.autoIntervalKm = parseInt(e.target.value, 10);
-                if (this.currentRouteData && this.currentRouteData.coordinates) {
-                    this.generateAutoIntermediatePoints(this.currentRouteData.coordinates);
-                    this.renderMarkers();
-                }
-            });
-        });
-
-        const autoDetailsEl = document.getElementById("auto-points-accordion");
-        autoDetailsEl?.addEventListener("toggle", () => {
-            const arrow = document.getElementById("auto-points-arrow");
-            if (arrow) {
-                arrow.style.transform = autoDetailsEl.open ? "rotate(180deg)" : "rotate(0deg)";
-            }
         });
 
         // 3. Menú de Opciones
@@ -189,12 +172,165 @@ const RoutePlanner = {
         document.getElementById("btn-planner-zoomout")?.addEventListener("click", () => map.zoomOut());
     },
 
-    activateMapClick() {
+    setupGuideModalEvents() {
+        const card = document.getElementById("planner-quick-guide-card");
+        const modal = document.getElementById("planner-guide-modal");
+        const closeBtn = document.getElementById("btn-close-guide-modal");
+        const optionsDrawer = document.getElementById("side-panel-planner-options");
+
+        card?.addEventListener("click", () => {
+            this.loadGuideContent();
+            if (modal) modal.style.display = "flex";
+            if (optionsDrawer) optionsDrawer.classList.remove("active");
+        });
+
+        closeBtn?.addEventListener("click", () => {
+            if (modal) modal.style.display = "none";
+        });
+
+        modal?.addEventListener("click", (e) => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+    },
+
+    loadGuideContent() {
+        const contentContainer = document.getElementById("guide-modal-content");
+        const titleEl = document.getElementById("guide-modal-title");
+        if (!contentContainer) return;
+
+        if (contentContainer.dataset.loaded === "true") return;
+
+        const data = window.PLANNER_GUIDE_DATA;
+        if (!data) {
+            contentContainer.innerHTML = `<div style="text-align: center; color: #ff5252; padding: 20px;">No se encontró la guía de uso.</div>`;
+            return;
+        }
+
+        if (titleEl && data.title) {
+            titleEl.innerText = data.title;
+        }
+
+        contentContainer.innerHTML = "";
+        data.sections.forEach(sec => {
+            const item = document.createElement("div");
+
+            if (sec.isHeader) {
+                item.style.cssText = `
+                    font-weight: bold; color: #00e5ff; font-size: 0.95rem; 
+                    margin-top: 14px; margin-bottom: -2px; padding-bottom: 6px;
+                    border-bottom: 1px solid rgba(0,229,255,0.3); font-family: sans-serif;
+                    display: flex; align-items: center; gap: 8px;
+                `;
+                item.innerHTML = `
+                    <img src="${sec.icon}" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(93%) saturate(1352%) hue-rotate(130deg);" alt="${sec.title}">
+                    <span>${sec.title}</span>
+                `;
+            } else {
+                item.style.cssText = `
+                    display: flex; gap: 14px; align-items: flex-start;
+                    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+                    border-radius: 10px; padding: 12px;
+                `;
+                item.innerHTML = `
+                    <div style="background: rgba(0,229,255,0.1); border-radius: 8px; padding: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <img src="${sec.icon}" width="20" height="20" style="filter: brightness(0) saturate(100%) invert(77%) sepia(93%) saturate(1352%) hue-rotate(130deg);" alt="${sec.title}">
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; color: #00e5ff; margin-bottom: 4px; font-size: 0.9rem;">${sec.title}</div>
+                        <div style="color: #ccc; font-size: 0.82rem; line-height: 1.4;">${sec.desc}</div>
+                    </div>
+                `;
+            }
+            contentContainer.appendChild(item);
+        });
+
+        contentContainer.dataset.loaded = "true";
+    },
+
+    activateMapInteractions() {
         map.on('click', (e) => {
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none") return;
-            this.addPoint([e.lngLat.lng, e.lngLat.lat]);
+            this.addPoint([e.lngLat.lng, e.lngLat.lat], "Destino");
         });
+
+        map.on('contextmenu', (e) => {
+            const panel = document.getElementById("route-planner-bottom-panel");
+            if (!panel || panel.style.display === "none") return;
+            this.insertIntermediatePoint(e.lngLat);
+        });
+
+        const mapContainer = map.getContainer();
+        let touchTimer = null;
+        let startTouchCoord = null;
+
+        mapContainer.addEventListener('touchstart', (e) => {
+            const panel = document.getElementById("route-planner-bottom-panel");
+            if (!panel || panel.style.display === "none" || e.touches.length !== 1) return;
+
+            const touch = e.touches[0];
+            startTouchCoord = { x: touch.clientX, y: touch.clientY };
+
+            clearTimeout(touchTimer);
+            touchTimer = setTimeout(() => {
+                const rect = mapContainer.getBoundingClientRect();
+                const point = [startTouchCoord.x - rect.left, startTouchCoord.y - rect.top];
+                const lngLat = map.unproject(point);
+
+                if (navigator.vibrate) navigator.vibrate(50);
+                this.insertIntermediatePoint(lngLat);
+                startTouchCoord = null;
+            }, 600);
+        }, { passive: true });
+
+        mapContainer.addEventListener('touchmove', (e) => {
+            if (!startTouchCoord || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            const dx = touch.clientX - startTouchCoord.x;
+            const dy = touch.clientY - startTouchCoord.y;
+            if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+                clearTimeout(touchTimer);
+                startTouchCoord = null;
+            }
+        }, { passive: true });
+
+        mapContainer.addEventListener('touchend', () => {
+            clearTimeout(touchTimer);
+            startTouchCoord = null;
+        }, { passive: true });
+    },
+
+    insertIntermediatePoint(lngLat) {
+        if (this.points.length < 2) {
+            this.addPoint([lngLat.lng, lngLat.lat], "Inicio/Fin");
+            return;
+        }
+
+        let insertIndex = 1;
+        let minDst = Infinity;
+
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const pA = this.points[i].coords;
+            const pB = this.points[i + 1].coords;
+            const midLat = (pA[1] + pB[1]) / 2;
+            const midLng = (pA[0] + pB[0]) / 2;
+            const d = this.haversine(lngLat.lat, lngLat.lng, midLat, midLng);
+
+            if (d < minDst) {
+                minDst = d;
+                insertIndex = i + 1;
+            }
+        }
+
+        this.showToast("📍 Insertando punto de paso...");
+        this.points.splice(insertIndex, 0, {
+            coords: [lngLat.lng, lngLat.lat],
+            name: "Paso"
+        });
+
+        this.syncSegmentsArray();
+        this.renderActiveDrawerTab();
+        this.calcularRutaBRouter();
     },
 
     syncSegmentsArray() {
@@ -214,16 +350,19 @@ const RoutePlanner = {
         }
     },
 
-    addPoint(lngLat) {
+    addPoint(lngLat, defaultName = "Punto") {
         const idx = this.points.length + 1;
-        this.points.push({ coords: lngLat, name: `Punto ${idx}` });
+        this.points.push({ coords: lngLat, name: `${defaultName} ${idx}` });
         this.syncSegmentsArray();
         
         this.renderMarkers();
         this.renderActiveDrawerTab();
 
         if (this.points.length >= 2) {
+            this.showToast("⚡ Calculando ruta en BRouter...");
             this.calcularRutaBRouter();
+        } else {
+            this.showToast("📍 Punto inicial fijado. Añade otro para trazar ruta.");
         }
     },
 
@@ -234,6 +373,7 @@ const RoutePlanner = {
             this.renderActiveDrawerTab();
 
             if (this.points.length >= 2) {
+                this.showToast("⚡ Actualizando ruta...");
                 this.calcularRutaBRouter();
                 this.renderMarkers();
             } else {
@@ -241,12 +381,11 @@ const RoutePlanner = {
                 this.routesList = [];
                 this.currentRouteIndex = 0;
                 this.currentRouteData = null;
-                this.autoIntermediatePoints = [];
-                this.autoPointsObjects = [];
                 this.renderMarkers();
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
                 this.updateAltButtonVisibility();
+                this.showToast("🗑️ Punto eliminado.");
             }
         }
     },
@@ -262,6 +401,7 @@ const RoutePlanner = {
         this.renderMarkers();
         this.renderActiveDrawerTab();
         if (this.points.length >= 2) {
+            this.showToast("⚡ Reordenando tramos...");
             this.calcularRutaBRouter();
         }
     },
@@ -271,37 +411,6 @@ const RoutePlanner = {
             this.renderPointsListDrawer();
         } else {
             this.renderSegmentsListDrawer();
-        }
-    },
-
-    generateAutoIntermediatePoints(coords) {
-        this.autoIntermediatePoints = [];
-        this.autoPointsObjects = [];
-        if (this.autoIntervalKm <= 0 || !coords || coords.length < 2) return;
-
-        let accumulatedMeters = 0;
-        const targetMeters = this.autoIntervalKm * 1000;
-
-        for (let i = 0; i < coords.length - 1; i++) {
-            const p1 = coords[i];
-            const p2 = coords[i + 1];
-            const segmentDist = this.haversine(p1[1], p1[0], p2[1], p2[0]);
-
-            accumulatedMeters += segmentDist;
-
-            while (accumulatedMeters >= targetMeters) {
-                const excess = accumulatedMeters - targetMeters;
-                const ratio = 1 - (excess / segmentDist);
-
-                const interpolatedLng = p1[0] + (p2[0] - p1[0]) * ratio;
-                const interpolatedLat = p1[1] + (p2[1] - p1[1]) * ratio;
-                const interpolatedEle = (p1[2] || 0) + ((p2[2] || 0) - (p1[2] || 0)) * ratio;
-
-                const pt = [interpolatedLng, interpolatedLat, interpolatedEle];
-                this.autoIntermediatePoints.push(pt);
-                this.autoPointsObjects.push(pt);
-                accumulatedMeters -= targetMeters;
-            }
         }
     },
 
@@ -371,7 +480,6 @@ const RoutePlanner = {
         if (!activeRoute) return;
 
         this.currentRouteData = { coordinates: activeRoute.coordinates };
-        this.generateAutoIntermediatePoints(activeRoute.coordinates);
 
         this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
         this.paintAllRoutes();
@@ -447,26 +555,32 @@ const RoutePlanner = {
             if (idx === this.currentRouteIndex) return;
 
             const sourceId = `alt-route-source-${idx}`;
-            map.addSource(sourceId, {
-                type: 'geojson',
-                data: { type: 'Feature', geometry: { type: 'LineString', coordinates: route.coordinates } }
-            });
+            if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, {
+                    type: 'geojson',
+                    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: route.coordinates } }
+                });
+            }
 
             const strokeColor = altColors[(idx - 1) % altColors.length] || '#7f8c8d';
 
-            map.addLayer({
-                id: `alt-route-casing-${idx}`,
-                type: 'line',
-                source: sourceId,
-                paint: { 'line-color': '#121212', 'line-width': 5, 'line-opacity': 0.4 }
-            });
+            if (!map.getLayer(`alt-route-casing-${idx}`)) {
+                map.addLayer({
+                    id: `alt-route-casing-${idx}`,
+                    type: 'line',
+                    source: sourceId,
+                    paint: { 'line-color': '#121212', 'line-width': 5, 'line-opacity': 0.4 }
+                });
+            }
 
-            map.addLayer({
-                id: `alt-route-solid-${idx}`,
-                type: 'line',
-                source: sourceId,
-                paint: { 'line-color': strokeColor, 'line-width': 3.5, 'line-opacity': 0.7 }
-            });
+            if (!map.getLayer(`alt-route-solid-${idx}`)) {
+                map.addLayer({
+                    id: `alt-route-solid-${idx}`,
+                    type: 'line',
+                    source: sourceId,
+                    paint: { 'line-color': strokeColor, 'line-width': 3.5, 'line-opacity': 0.7 }
+                });
+            }
         });
 
         const activeRoute = this.routesList[this.currentRouteIndex];
@@ -504,43 +618,55 @@ const RoutePlanner = {
                 }
 
                 const segSourceId = `active-segment-source-${sIdx}`;
-                map.addSource(segSourceId, {
-                    type: 'geojson',
-                    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: subCoords } }
-                });
+                if (!map.getSource(segSourceId)) {
+                    map.addSource(segSourceId, {
+                        type: 'geojson',
+                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: subCoords } }
+                    });
+                }
 
-                map.addLayer({
-                    id: `active-segment-casing-${sIdx}`,
-                    type: 'line',
-                    source: segSourceId,
-                    paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-                });
+                if (!map.getLayer(`active-segment-casing-${sIdx}`)) {
+                    map.addLayer({
+                        id: `active-segment-casing-${sIdx}`,
+                        type: 'line',
+                        source: segSourceId,
+                        paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+                    });
+                }
 
-                map.addLayer({
-                    id: `active-segment-solid-${sIdx}`,
-                    type: 'line',
-                    source: segSourceId,
-                    paint: { 'line-color': seg.color || '#00e5ff', 'line-width': 4.5 }
-                });
+                if (!map.getLayer(`active-segment-solid-${sIdx}`)) {
+                    map.addLayer({
+                        id: `active-segment-solid-${sIdx}`,
+                        type: 'line',
+                        source: segSourceId,
+                        paint: { 'line-color': seg.color || '#00e5ff', 'line-width': 4.5 }
+                    });
+                }
             });
         } else {
             const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
 
-            map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
+            if (!map.getSource('planned-route-source')) {
+                map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
+            }
 
-            map.addLayer({
-                id: 'planned-route-active-casing',
-                type: 'line',
-                source: 'planned-route-source',
-                paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-            });
+            if (!map.getLayer('planned-route-active-casing')) {
+                map.addLayer({
+                    id: 'planned-route-active-casing',
+                    type: 'line',
+                    source: 'planned-route-source',
+                    paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+                });
+            }
 
-            map.addLayer({
-                id: 'planned-route-active-solid',
-                type: 'line',
-                source: 'planned-route-source',
-                paint: { 'line-color': this.segments[0]?.color || '#00e5ff', 'line-width': 4.5 }
-            });
+            if (!map.getLayer('planned-route-active-solid')) {
+                map.addLayer({
+                    id: 'planned-route-active-solid',
+                    type: 'line',
+                    source: 'planned-route-source',
+                    paint: { 'line-color': this.segments[0]?.color || '#00e5ff', 'line-width': 4.5 }
+                });
+            }
         }
 
         const fullGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
@@ -550,48 +676,52 @@ const RoutePlanner = {
             map.getSource('planned-route-arrows-source').setData(fullGeojson);
         }
 
-        map.addLayer({
-            id: 'planned-route-arrows',
-            type: 'symbol',
-            source: 'planned-route-arrows-source',
-            layout: {
-                'symbol-placement': 'line',
-                'symbol-spacing': 70,
-                'icon-image': 'route-svg-arrow',
-                'icon-size': 0.05,
-                'icon-allow-overlap': true,
-                'icon-rotation-alignment': 'map'
-            }
-        });
+        if (!map.getLayer('planned-route-arrows')) {
+            map.addLayer({
+                id: 'planned-route-arrows',
+                type: 'symbol',
+                source: 'planned-route-arrows-source',
+                layout: {
+                    'symbol-placement': 'line',
+                    'symbol-spacing': 70,
+                    'icon-image': 'route-svg-arrow',
+                    'icon-size': 0.05,
+                    'icon-allow-overlap': true,
+                    'icon-rotation-alignment': 'map'
+                }
+            });
+        }
     },
 
     clearRoute() {
         if (!map) return;
-        if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
-        if (map.getSource('planned-route-arrows-source')) map.removeSource('planned-route-arrows-source');
-        
-        if (map.getLayer('planned-route-active-solid')) map.removeLayer('planned-route-active-solid');
-        if (map.getLayer('planned-route-active-casing')) map.removeLayer('planned-route-active-casing');
-        if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
+        try {
+            if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
+            if (map.getSource('planned-route-arrows-source')) map.removeSource('planned-route-arrows-source');
+            
+            if (map.getLayer('planned-route-active-solid')) map.removeLayer('planned-route-active-solid');
+            if (map.getLayer('planned-route-active-casing')) map.removeLayer('planned-route-active-casing');
+            if (map.getSource('planned-route-source')) map.removeSource('planned-route-source');
 
-        for (let i = 0; i < 20; i++) {
-            if (map.getLayer(`active-segment-solid-${i}`)) map.removeLayer(`active-segment-solid-${i}`);
-            if (map.getLayer(`active-segment-casing-${i}`)) map.removeLayer(`active-segment-casing-${i}`);
-            if (map.getSource(`active-segment-source-${i}`)) map.removeSource(`active-segment-source-${i}`);
+            for (let i = 0; i < 20; i++) {
+                if (map.getLayer(`active-segment-solid-${i}`)) map.removeLayer(`active-segment-solid-${i}`);
+                if (map.getLayer(`active-segment-casing-${i}`)) map.removeLayer(`active-segment-casing-${i}`);
+                if (map.getSource(`active-segment-source-${i}`)) map.removeSource(`active-segment-source-${i}`);
+            }
+
+            this.routesList.forEach((_, idx) => {
+                if (map.getLayer(`alt-route-casing-${idx}`)) map.removeLayer(`alt-route-casing-${idx}`);
+                if (map.getLayer(`alt-route-solid-${idx}`)) map.removeLayer(`alt-route-solid-${idx}`);
+                if (map.getSource(`alt-route-source-${idx}`)) map.removeSource(`alt-route-source-${idx}`);
+            });
+        } catch (e) {
+            // Evita interrupciones
         }
-
-        this.routesList.forEach((_, idx) => {
-            if (map.getLayer(`alt-route-casing-${idx}`)) map.removeLayer(`alt-route-casing-${idx}`);
-            if (map.getLayer(`alt-route-solid-${idx}`)) map.removeLayer(`alt-route-solid-${idx}`);
-            if (map.getSource(`alt-route-source-${idx}`)) map.removeSource(`alt-route-source-${idx}`);
-        });
     },
 
     clearAllPoints() {
         this.points = [];
         this.segments = [];
-        this.autoIntermediatePoints = [];
-        this.autoPointsObjects = [];
         this.markers.forEach(m => m.remove());
         this.markers = [];
         this.routesList = [];
@@ -602,6 +732,7 @@ const RoutePlanner = {
         this.renderActiveDrawerTab();
         this.hideGraph();
         this.updateAltButtonVisibility();
+        this.showToast("🧹 Planificación limpia.");
     },
 
     toggleGraph() {
@@ -658,40 +789,6 @@ const RoutePlanner = {
         this.markers.forEach(m => m.remove());
         this.markers = [];
 
-        // 1. Renderizar puntos intermedios automáticos (arrastrables y convertibles)
-        this.autoPointsObjects.forEach((coord) => {
-            const el = document.createElement('div');
-            el.className = 'planner-auto-marker';
-            el.style.cssText = `
-                background-color: #00e5ff; width: 14px; height: 14px;
-                border-radius: 50%; border: 1.5px solid #121212;
-                display: flex; align-items: center; justify-content: center;
-                cursor: grab; pointer-events: auto; transition: transform 0.2s;
-            `;
-            const innerDot = document.createElement('div');
-            innerDot.style.cssText = `background-color: #121212; width: 4px; height: 4px; border-radius: 50%;`;
-            el.appendChild(innerDot);
-
-            const marker = new maplibregl.Marker({ element: el, draggable: true })
-                .setLngLat(coord)
-                .addTo(map);
-
-            marker.on('dragstart', () => {
-                el.style.transform = "scale(1.4)";
-                this.showToast("🔄 Desplazando punto intermedio...");
-            });
-
-            marker.on('dragend', () => {
-                el.style.transform = "scale(1)";
-                const lngLat = marker.getLngLat();
-                this.showToast("⚡ Añadiendo como punto de ruta y recalculando...");
-                this.addPoint([lngLat.lng, lngLat.lat]);
-            });
-
-            this.markers.push(marker);
-        });
-
-        // 2. Renderizar puntos de ruta principales (numerados y arrastrables)
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -699,34 +796,38 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; cursor: grab; transition: transform 0.2s;
+                font-size: 13px; font-family: sans-serif; cursor: grab;
+                position: absolute; transform: translate(-50%, -50%) translateZ(0);
+                will-change: transform; pointer-events: auto;
             `;
             el.innerText = index + 1;
 
-            const marker = new maplibregl.Marker({ element: el, draggable: true })
+            const marker = new maplibregl.Marker({ 
+                element: el, 
+                draggable: true,
+                offset: [0, 0]
+            })
                 .setLngLat(point.coords)
                 .addTo(map);
 
             marker.on('dragstart', () => {
-                el.style.transform = "scale(1.3)";
-                this.showToast(`🔄 Moviendo Punto ${index + 1}...`);
+                el.style.transform = "translate(-50%, -50%) scale(1.35) translateZ(0)";
+                this.showToast(`🔄 Moviendo punto ${index + 1}...`);
             });
 
             marker.on('dragend', () => {
-                el.style.transform = "scale(1)";
+                el.style.transform = "translate(-50%, -50%) scale(1) translateZ(0)";
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 
                 if (this.points.length >= 2) {
-                    this.showToast("⚡ Recalculando ruta...");
+                    this.showToast("⚡ Recalculando ruta en BRouter...");
                     this.calcularRutaBRouter();
                 } else {
                     this.clearRoute();
                     this.routesList = [];
                     this.currentRouteIndex = 0;
                     this.currentRouteData = null;
-                    this.autoIntermediatePoints = [];
-                    this.autoPointsObjects = [];
                     this.renderMarkers();
                     this.updateStats("--", "--", "--", "--");
                     this.hideGraph();
@@ -870,10 +971,6 @@ const RoutePlanner = {
             ['click', 'focus', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
                 nameInput.addEventListener(evt, (e) => e.stopPropagation());
             });
-            nameInput.nameInput?.addEventListener("input", (e) => {
-                this.segments[index].name = e.target.value;
-            });
-            // Corrección limpia del evento input para el nombre
             nameInput.addEventListener("input", (e) => {
                 this.segments[index].name = e.target.value;
             });
