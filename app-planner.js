@@ -364,7 +364,7 @@ const RoutePlanner = {
         this.renderActiveDrawerTab();
 
         if (this.points.length >= 2) {
-            this.showToast("Calculando ");
+            this.showToast("Calculando...");
             this.calcularRutaBRouter();
         } else {
             this.showToast("Punto inicial fijado.");
@@ -613,7 +613,7 @@ const RoutePlanner = {
                 
                 if (sIdx === this.segments.length - 1) {
                     while (coordIndex < activeRoute.coordinates.length) {
-                        subCoords.push(activeRoute.coordinates[activeRoute.coordinates.length - 1]);
+                        subCoords.push(activeRoute.coordinates[coordIndex]);
                         coordIndex++;
                     }
                 }
@@ -772,7 +772,6 @@ const RoutePlanner = {
         const statusTextEl = document.getElementById("banner-status-text");
         if (!statusTextEl) return;
 
-        // Elimina cualquier emoji del mensaje para mantener la estética sobria
         const cleanMessage = message.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '').trim();
 
         statusTextEl.innerText = cleanMessage;
@@ -838,7 +837,7 @@ const RoutePlanner = {
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 
                 if (this.points.length >= 2) {
-                    this.showToast("Recalculando ruta ");
+                    this.showToast("Recalculando...");
                     this.calcularRutaBRouter();
                 } else {
                     this.clearRoute();
@@ -1021,49 +1020,103 @@ const RoutePlanner = {
     renderElevationGraph(coordinates) {
         const wrapper = document.getElementById("elevation-svg-wrapper");
         const rangeLabel = document.getElementById("graph-elevation-range");
-        if (!wrapper) return;
-
+        if (!wrapper || !coordinates || coordinates.length === 0) return;
+        
         const elevations = coordinates.map(c => c[2] !== undefined ? c[2] : 0);
-        if (elevations.length === 0) return;
-
-        const minEle = Math.min(...elevations);
-        const maxEle = Math.max(...elevations);
-        if (rangeLabel) rangeLabel.innerText = `${Math.round(minEle)} m / ${Math.round(maxEle)} m`;
-
-        const width = wrapper.clientWidth || 300;
-        const height = 110;
-        const padding = 10;
-        const effectiveHeight = height - padding * 2;
-        const effectiveWidth = width - padding * 2;
+        const minEleRaw = Math.min(...elevations);
+        const maxEleRaw = Math.max(...elevations);
+        
+        const paddingEle = Math.max(5, (maxEleRaw - minEleRaw) * 0.1);
+        const minEle = Math.floor(minEleRaw - paddingEle);
+        const maxEle = Math.ceil(maxEleRaw + paddingEle);
         const rangeEle = maxEle - minEle || 1;
-
-        let points = `${padding},${height - padding} `;
+        
+        if (rangeLabel) rangeLabel.innerText = `${Math.round(minEleRaw)} m / ${Math.round(maxEleRaw)} m`;
+        
+        let totalDistM = 0;
+        const distances = [0];
+        for (let i = 0; i < coordinates.length - 1; i++) {
+            const p1 = coordinates[i],
+                p2 = coordinates[i + 1];
+            const d = this.haversine(p1[1], p1[0], p2[1], p2[0]);
+            totalDistM += d;
+            distances.push(totalDistM);
+        }
+        
+        const width = wrapper.clientWidth || 350;
+        const height = 110;
+        const marginLeft = 40;
+        const marginBottom = 20;
+        const effectiveWidth = width - marginLeft - 10;
+        const effectiveHeight = height - marginBottom - 10;
+        
+        let polylinePoints = "";
+        let polygonPoints = `${marginLeft},${height - marginBottom} `;
+        
         coordinates.forEach((c, i) => {
-            const x = padding + (i / (coordinates.length - 1)) * effectiveWidth;
-            const ele = c[2] !== undefined ? c[2] : minEle;
-            const y = (height - padding) - ((ele - minEle) / rangeEle) * effectiveHeight;
-            points += `${x},${y} `;
+            const distRatio = totalDistM > 0 ? distances[i] / totalDistM : 0;
+            const x = marginLeft + distRatio * effectiveWidth;
+            const ele = elevations[i];
+            const y = (height - marginBottom) - ((ele - minEle) / rangeEle) * effectiveHeight;
+            
+            polylinePoints += `${x.toFixed(1)},${y.toFixed(1)} `;
+            polygonPoints += `${x.toFixed(1)},${y.toFixed(1)} `;
         });
-        points += `${width - padding},${height - padding}`;
-
-        let linePoints = "";
-        coordinates.forEach((c, i) => {
-            const x = padding + (i / (coordinates.length - 1)) * effectiveWidth;
-            const ele = c[2] !== undefined ? c[2] : minEle;
-            const y = (height - padding) - ((ele - minEle) / rangeEle) * effectiveHeight;
-            linePoints += `${x},${y} `;
-        });
-
+        polygonPoints += `${marginLeft + effectiveWidth},${height - marginBottom}`;
+        
+        let gridLinesY = "";
+        let labelsY = "";
+        const stepsY = 4;
+        for (let i = 0; i <= stepsY; i++) {
+            const val = minEle + (rangeEle / stepsY) * i;
+            const y = (height - marginBottom) - (i / stepsY) * effectiveHeight;
+            
+            gridLinesY += `<line x1="${marginLeft}" y1="${y}" x2="${width - 10}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-dasharray="3,3" />`;
+            labelsY += `<text x="${marginLeft - 6}" y="${y + 3}" fill="#888" font-size="9" text-anchor="end" font-family="sans-serif">${Math.round(val)}</text>`;
+        }
+        
+        let gridLinesX = "";
+        let labelsX = "";
+        const stepsX = 3;
+        for (let i = 0; i <= stepsX; i++) {
+            const distVal = (totalDistM / stepsX) * i;
+            const x = marginLeft + (i / stepsX) * effectiveWidth;
+            
+            if (i > 0 && i < stepsX) {
+                gridLinesX += `<line x1="${x}" y1="10" x2="${x}" y2="${height - marginBottom}" stroke="rgba(255,255,255,0.1)" stroke-dasharray="3,3" />`;
+            }
+            
+            let distStr = "";
+            if (totalDistM < 1000) {
+                distStr = `${Math.round(distVal)} m`;
+            } else {
+                distStr = `${(distVal / 1000).toFixed(1).replace('.', ',')} km`;
+            }
+            
+            if (i > 0) {
+                labelsX += `<text x="${x}" y="${height - 4}" fill="#888" font-size="9" text-anchor="middle" font-family="sans-serif">${distStr}</text>`;
+            }
+        }
+        
         wrapper.innerHTML = `
             <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="overflow: visible;">
                 <defs>
                     <linearGradient id="elevation-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.4"/>
+                        <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.35"/>
                         <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0"/>
                     </linearGradient>
                 </defs>
-                <polygon points="${points}" fill="url(#elevation-gradient)" />
-                <polyline points="${linePoints}" fill="none" stroke="#00e5ff" stroke-width="2" />
+                
+                ${gridLinesY}
+                ${gridLinesX}
+                <line x1="${marginLeft}" y1="${height - marginBottom}" x2="${width - 10}" y2="${height - marginBottom}" stroke="rgba(255,255,255,0.2)" />
+                <line x1="${marginLeft}" y1="10" x2="${marginLeft}" y2="${height - marginBottom}" stroke="rgba(255,255,255,0.2)" />
+
+                ${labelsY}
+                ${labelsX}
+
+                <polygon points="${polygonPoints}" fill="url(#elevation-gradient)" />
+                <polyline points="${polylinePoints}" fill="none" stroke="#00e5ff" stroke-width="2" stroke-linejoin="round" />
             </svg>
         `;
     }
