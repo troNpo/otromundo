@@ -32,6 +32,8 @@ const RoutePlanner = {
     activeTab: 'points',    // 'points' o 'segments'
     segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
     isDraggingMarker: false, // Bandera para evitar clics fantasma al soltar un marcador arrastrado
+    _cursorMarker: null,     // Marcador HTML flotante para la distancia al centro
+    _segmentMarkers: [],     // Marcadores HTML flotantes para las medidas de cada tramo
 
     init() {
         this.setupEvents();
@@ -57,6 +59,14 @@ const RoutePlanner = {
                         this.renderMarkers();
                     }
                 }, 200);
+            });
+
+            // Actualizar línea guía y etiqueta al mover el mapa
+            map.on('move', () => {
+                this.updateDynamicCursorLine();
+            });
+            map.on('moveend', () => {
+                this.updateDynamicCursorLine();
             });
         }
     },
@@ -369,6 +379,7 @@ const RoutePlanner = {
         } else {
             this.showToast("Punto inicial fijado.");
         }
+        this.updateDynamicCursorLine();
     },
 
     removePoint(index) {
@@ -392,6 +403,7 @@ const RoutePlanner = {
                 this.updateAltButtonVisibility();
                 this.showToast("Punto eliminado.");
             }
+            this.updateDynamicCursorLine();
         }
     },
 
@@ -419,7 +431,7 @@ const RoutePlanner = {
         }
     },
 
-    // NUEVA LÓGICA DE CÁLCULO DE TIEMPO ESTIMADO (ETA) REALISTA
+    // LÓGICA DE TIEMPO ESTIMADO (ETA) REALISTA
     calculateRealisticTime(distMeters, ascentMeters, descentMeters, profile) {
         const baseSpeeds = {
             "hiking-mountain": 1.15, // ~4.1 km/h (Senderismo)
@@ -478,7 +490,6 @@ const RoutePlanner = {
                     }
 
                     const distKm = (distM / 1000).toFixed(2);
-                    // Usamos la nueva función realista en lugar de la división estática simple
                     const timeStr = this.calculateRealisticTime(distM, Math.round(ascent), Math.round(descent), this.profile);
 
                     this.routesList.push({
@@ -520,6 +531,7 @@ const RoutePlanner = {
         this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
         this.paintAllRoutes();
         this.renderMarkers();
+        this.updateSegmentLabels();
 
         if (this.isGraphOpen) {
             this.renderElevationGraph(activeRoute.coordinates);
@@ -551,6 +563,164 @@ const RoutePlanner = {
         document.getElementById("planner-stat-time").innerText = time;
         document.getElementById("planner-stat-ascent").innerText = `+${asc} m`;
         document.getElementById("planner-stat-descent").innerText = `-${desc} m`;
+    },
+
+    // LÍNEA GUÍA NEGRA DISCONTINUA (2.5px) Y ETIQUETA COLGADA BAJO EL CENTRO
+    updateDynamicCursorLine() {
+        const sourceId = 'cursor-helper-source';
+        const lineLayerId = 'cursor-helper-layer';
+
+        if (!this.points || this.points.length === 0) {
+            if (map && map.getSource(sourceId)) {
+                if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
+                map.removeSource(sourceId);
+            }
+            if (this._cursorMarker) {
+                this._cursorMarker.remove();
+                this._cursorMarker = null;
+            }
+            return;
+        }
+
+        const lastPoint = this.points[this.points.length - 1].coords;
+        const center = map.getCenter();
+        const centerCoord = [center.lng, center.lat];
+
+        // Calcular distancia dinámica entre el último punto y el centro del mapa
+        const distM = this.haversine(lastPoint[1], lastPoint[0], center.lat, center.lng);
+        const distStr = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2).replace('.', ',')} km`;
+
+        const geojson = {
+            type: 'Feature',
+            geometry: {
+                type: 'LineString',
+                coordinates: [lastPoint, centerCoord]
+            }
+        };
+
+        // 1. Dibujar/actualizar la línea negra discontinua (ancho 2.5px)
+        if (!map.getSource(sourceId)) {
+            map.addSource(sourceId, { type: 'geojson', data: geojson });
+            map.addLayer({
+                id: lineLayerId,
+                type: 'line',
+                source: sourceId,
+                paint: {
+                    'line-color': '#000000',    // Negro formal
+                    'line-width': 2.5,          // Ancho destacado
+                    'line-dasharray': [3, 3],
+                    'line-opacity': 0.85
+                }
+            });
+        } else {
+            map.getSource(sourceId).setData(geojson);
+        }
+
+        // 2. Posicionar la etiqueta usando el anclaje 'top' y un offset vertical para que cuelgue debajo
+        if (!this._cursorMarker) {
+            const el = document.createElement('div');
+            el.style.cssText = `
+                background: transparent;
+                color: #ffffff;
+                font-size: 11px;
+                font-family: sans-serif;
+                font-weight: bold;
+                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap;
+                pointer-events: none;
+            `;
+            el.innerText = distStr;
+
+            // anchor: 'top' hace que el punto geográfico sea la parte superior de la etiqueta, 
+            // y offset [0, 20] la empuja 20 píxeles hacia abajo por debajo de la cruceta central.
+            this._cursorMarker = new maplibregl.Marker({ element: el, anchor: 'top', offset: [0, 20] })
+                .setLngLat(centerCoord)
+                .addTo(map);
+        } else {
+            this._cursorMarker.setLngLat(centerCoord);
+            const el = this._cursorMarker.getElement();
+            if (el) el.innerText = distStr;
+        }
+    },
+
+    // ETIQUETAS DE MEDIDA PARA CADA TRAMO DE LA RUTA PRINCIPAL
+    updateSegmentLabels() {
+        if (this._segmentMarkers && Array.isArray(this._segmentMarkers)) {
+            this._segmentMarkers.forEach(m => m.remove());
+        }
+        this._segmentMarkers = [];
+
+        if (!this.points || this.points.length < 2 || !this.currentRouteData || !this.currentRouteData.coordinates) {
+            return;
+        }
+
+        const coords = this.currentRouteData.coordinates;
+        
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const pStart = this.points[i].coords;
+            const pEnd = this.points[i+1].coords;
+
+            const midTargetLng = (pStart[0] + pEnd[0]) / 2;
+            const midTargetLat = (pStart[1] + pEnd[1]) / 2;
+
+            let closestCoord = coords[0];
+            let minDist = Infinity;
+            let segmentDistM = 0;
+            let subCoords = [];
+            let isCollecting = false;
+
+            for (let j = 0; j < coords.length; j++) {
+                const c = coords[j];
+                
+                if (!isCollecting && this.haversine(c[1], c[0], pStart[1], pStart[0]) < 50) {
+                    isCollecting = true;
+                }
+
+                if (isCollecting) {
+                    subCoords.push(c);
+                    if (subCoords.length > 1) {
+                        const prev = subCoords[subCoords.length - 2];
+                        segmentDistM += this.haversine(prev[1], prev[0], c[1], c[0]);
+                    }
+                }
+
+                if (isCollecting && this.haversine(c[1], c[0], pEnd[1], pEnd[0]) < 50) {
+                    break;
+                }
+
+                const dToMidTarget = this.haversine(c[1], c[0], midTargetLat, midTargetLng);
+                if (dToMidTarget < minDist) {
+                    minDist = dToMidTarget;
+                    closestCoord = c;
+                }
+            }
+
+            if (segmentDistM === 0) {
+                segmentDistM = this.haversine(pStart[1], pStart[0], pEnd[1], pEnd[0]);
+            }
+
+            const distStr = segmentDistM < 1000 ? `${Math.round(segmentDistM)} m` : `${(segmentDistM / 1000).toFixed(2).replace('.', ',')} km`;
+
+            const el = document.createElement('div');
+            el.style.cssText = `
+                background: transparent;
+                color: #ffffff;
+                font-size: 10px;
+                font-family: sans-serif;
+                font-weight: bold;
+                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap;
+                pointer-events: none;
+                transform: translate(-50%, -50%);
+            `;
+            el.innerText = distStr;
+
+            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+                .setLngLat(closestCoord)
+                .addTo(map);
+
+            this._segmentMarkers.push(marker);
+        }
     },
 
     paintAllRoutes() {
@@ -768,6 +938,23 @@ const RoutePlanner = {
         this.renderActiveDrawerTab();
         this.hideGraph();
         this.updateAltButtonVisibility();
+        
+        // Limpiar la línea guía, su marcador HTML y las etiquetas de los tramos
+        const sourceId = 'cursor-helper-source';
+        const layerId = 'cursor-helper-layer';
+        if (map && map.getSource(sourceId)) {
+            if (map.getLayer(layerId)) map.removeLayer(layerId);
+            map.removeSource(sourceId);
+        }
+        if (this._cursorMarker) {
+            this._cursorMarker.remove();
+            this._cursorMarker = null;
+        }
+        if (this._segmentMarkers && Array.isArray(this._segmentMarkers)) {
+            this._segmentMarkers.forEach(m => m.remove());
+            this._segmentMarkers = [];
+        }
+
         this.showToast("Planificación limpia.");
     },
 
@@ -862,6 +1049,12 @@ const RoutePlanner = {
                 this.showToast(`Moviendo punto ${index + 1}...`);
             });
 
+            marker.on('drag', () => {
+                const lngLat = marker.getLngLat();
+                this.points[index].coords = [lngLat.lng, lngLat.lat];
+                this.updateDynamicCursorLine();
+            });
+
             marker.on('dragend', () => {
                 el.style.transform = "translate(-50%, -50%) scale(1) translateZ(0)";
                 const lngLat = marker.getLngLat();
@@ -881,6 +1074,7 @@ const RoutePlanner = {
                     this.updateAltButtonVisibility();
                 }
 
+                this.updateDynamicCursorLine();
                 setTimeout(() => {
                     this.isDraggingMarker = false;
                 }, 300);
