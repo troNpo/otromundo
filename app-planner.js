@@ -37,6 +37,7 @@ const RoutePlanner = {
         this.setupEvents();
         this.activateMapInteractions();
         this.setupGuideModalEvents(); // Inicializa los eventos del Manual Rápido
+        this.updateDefaultProfileStatus(); // Establece el perfil inicial en el banner superior
         
         setTimeout(() => {
             if (map) map.resize();
@@ -88,6 +89,7 @@ const RoutePlanner = {
         document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 this.profile = e.target.value;
+                this.updateDefaultProfileStatus();
                 profilesDrawer?.classList.remove("active");
                 if (this.points.length >= 2) this.calcularRutaBRouter();
             });
@@ -250,7 +252,6 @@ const RoutePlanner = {
 
     activateMapInteractions() {
         map.on('click', (e) => {
-            // Si acabamos de soltar un marcador al arrastrarlo, ignoramos este clic fantasma
             if (this.isDraggingMarker) return;
 
             const panel = document.getElementById("route-planner-bottom-panel");
@@ -326,7 +327,7 @@ const RoutePlanner = {
             }
         }
 
-        this.showToast("📍 Insertando punto de paso...");
+        this.showToast("Insertando punto");
         this.points.splice(insertIndex, 0, {
             coords: [lngLat.lng, lngLat.lat],
             name: "Paso"
@@ -363,10 +364,10 @@ const RoutePlanner = {
         this.renderActiveDrawerTab();
 
         if (this.points.length >= 2) {
-            this.showToast("⚡ Calculando ruta en BRouter...");
+            this.showToast("Calculando ");
             this.calcularRutaBRouter();
         } else {
-            this.showToast("📍 Punto inicial fijado. Añade otro para trazar ruta.");
+            this.showToast("Punto inicial fijado.");
         }
     },
 
@@ -377,7 +378,7 @@ const RoutePlanner = {
             this.renderActiveDrawerTab();
 
             if (this.points.length >= 2) {
-                this.showToast("⚡ Actualizando ruta...");
+                this.showToast("Actualizando ruta...");
                 this.calcularRutaBRouter();
                 this.renderMarkers();
             } else {
@@ -389,7 +390,7 @@ const RoutePlanner = {
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
                 this.updateAltButtonVisibility();
-                this.showToast("🗑️ Punto eliminado.");
+                this.showToast("Punto eliminado.");
             }
         }
     },
@@ -405,7 +406,7 @@ const RoutePlanner = {
         this.renderMarkers();
         this.renderActiveDrawerTab();
         if (this.points.length >= 2) {
-            this.showToast("⚡ Reordenando tramos...");
+            this.showToast("Reordenando tramos...");
             this.calcularRutaBRouter();
         }
     },
@@ -612,7 +613,7 @@ const RoutePlanner = {
                 
                 if (sIdx === this.segments.length - 1) {
                     while (coordIndex < activeRoute.coordinates.length) {
-                        subCoords.push(activeRoute.coordinates[coordIndex]);
+                        subCoords.push(activeRoute.coordinates[activeRoute.coordinates.length - 1]);
                         coordIndex++;
                     }
                 }
@@ -736,7 +737,7 @@ const RoutePlanner = {
         this.renderActiveDrawerTab();
         this.hideGraph();
         this.updateAltButtonVisibility();
-        this.showToast("🧹 Planificación limpia.");
+        this.showToast("Planificación limpia.");
     },
 
     toggleGraph() {
@@ -768,24 +769,35 @@ const RoutePlanner = {
     },
 
     showToast(message) {
-        let toast = document.getElementById("planner-toast-notification");
-        if (!toast) {
-            toast = document.createElement("div");
-            toast.id = "planner-toast-notification";
-            toast.style.cssText = `
-                position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
-                background: rgba(0, 229, 255, 0.95); color: #121212; padding: 8px 16px;
-                border-radius: 20px; font-weight: bold; font-size: 0.85rem; font-family: sans-serif;
-                z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s ease;
-            `;
-            document.body.appendChild(toast);
-        }
-        toast.innerText = message;
-        toast.style.opacity = "1";
+        const statusTextEl = document.getElementById("banner-status-text");
+        if (!statusTextEl) return;
+
+        // Elimina cualquier emoji del mensaje para mantener la estética sobria
+        const cleanMessage = message.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '').trim();
+
+        statusTextEl.innerText = cleanMessage;
+        statusTextEl.style.color = "#ffffff";
+
         clearTimeout(this.toastTimer);
         this.toastTimer = setTimeout(() => {
-            toast.style.opacity = "0";
-        }, 2200);
+            this.updateDefaultProfileStatus();
+        }, 2800);
+    },
+
+    updateDefaultProfileStatus() {
+        const statusTextEl = document.getElementById("banner-status-text");
+        if (!statusTextEl) return;
+
+        const profileNames = {
+            "hiking-mountain": "Senderismo",
+            "trekking": "Trekking",
+            "mtb": "MTB",
+            "gravel": "Gravel",
+            "fastbike": "Carretera"
+        };
+
+        statusTextEl.innerText = profileNames[this.profile] || "Planificador";
+        statusTextEl.style.color = "var(--primary-cyan)";
     },
 
     renderMarkers() {
@@ -815,9 +827,9 @@ const RoutePlanner = {
                 .addTo(map);
 
             marker.on('dragstart', () => {
-                this.isDraggingMarker = true; // Activamos la bandera al empezar a arrastrar
+                this.isDraggingMarker = true;
                 el.style.transform = "translate(-50%, -50%) scale(1.35) translateZ(0)";
-                this.showToast(`🔄 Moviendo punto ${index + 1}...`);
+                this.showToast(`Moviendo punto ${index + 1}...`);
             });
 
             marker.on('dragend', () => {
@@ -826,7 +838,7 @@ const RoutePlanner = {
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 
                 if (this.points.length >= 2) {
-                    this.showToast("⚡ Recalculando ruta en BRouter...");
+                    this.showToast("Recalculando ruta ");
                     this.calcularRutaBRouter();
                 } else {
                     this.clearRoute();
@@ -839,7 +851,6 @@ const RoutePlanner = {
                     this.updateAltButtonVisibility();
                 }
 
-                // Desactivamos la bandera tras un breve retardo para ignorar el clic fantasma
                 setTimeout(() => {
                     this.isDraggingMarker = false;
                 }, 300);

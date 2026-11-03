@@ -15,7 +15,7 @@
     <!-- Contenedor del mapa -->
     <div id="map"></div>
 
-    <!-- Banner Superior: Brújula y Escala -->
+    <!-- Banner Superior: Brújula, Escala, Estado en Vivo y Búsqueda -->
     <div id="top-left-banner" class="top-left-banner-container">
         <div id="compass-container" class="banner-key-head compass-item" title="Restaurar Norte">
             <img id="compass-icon" src="ui-icons/brujula.PNG" alt="Brújula" />
@@ -25,6 +25,12 @@
                 <img src="ui-icons/fi-rr-measuring-tape.svg" alt="Escala" class="scale-icon" />
                 <span id="scale-text">-- m</span>
             </div>
+
+            <!-- NUEVO: Banner de Estado / Notificaciones en Vivo -->
+            <div id="banner-status-container" class="banner-item status-item" style="padding: 0 8px; display: flex; align-items: center; border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); max-width: 150px; overflow: hidden; white-space: nowrap;">
+                <span id="banner-status-text" style="font-size: 0.72rem; color: var(--primary-cyan); text-overflow: ellipsis; overflow: hidden; font-family: sans-serif; font-weight: bold;">Senderismo</span>
+            </div>
+            
             <div id="banner-search-container" class="banner-item search-item">
                 <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
                     <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
@@ -62,7 +68,7 @@
         </div>
     </div>
 
-    <!-- Panel Lateral: Perfiles de Enrutamiento -->
+    <!-- Panel Lateral: Perfiles de Enrutamiento (Emojis Eliminados) -->
     <div id="side-panel-profiles" class="side-drawer">
         <div class="side-drawer-header">
             <h3>Perfil de Enrutamiento</h3>
@@ -70,11 +76,11 @@
         </div>
         <div class="side-drawer-body">
             <div class="map-options-list">
-                <label><input type="radio" name="brouter-profile" value="hiking-mountain" checked> 🥾 Senderismo / Montaña</label>
-                <label><input type="radio" name="brouter-profile" value="trekking"> 🚲 Trekking / Cicloturismo</label>
-                <label><input type="radio" name="brouter-profile" value="mtb"> 🚵 BTT / MTB (Montaña)</label>
-                <label><input type="radio" name="brouter-profile" value="gravel"> 🛤️ Gravel</label>
-                <label><input type="radio" name="brouter-profile" value="fastbike"> ⚡ Carretera (Fastbike)</label>
+                <label><input type="radio" name="brouter-profile" value="hiking-mountain" checked> Senderismo</label>
+                <label><input type="radio" name="brouter-profile" value="trekking"> Trekking</label>
+                <label><input type="radio" name="brouter-profile" value="mtb">MTB</label>
+                <label><input type="radio" name="brouter-profile" value="gravel"> Gravel</label>
+                <label><input type="radio" name="brouter-profile" value="fastbike"> Carretera</label>
             </div>
         </div>
     </div>
@@ -283,21 +289,20 @@
     <div id="planner-guide-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: #18181b; border: 1px solid rgba(0,229,255,0.3); border-radius: 16px; width: 100%; max-width: 420px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between;">
-                <h3 id="guide-modal-title" style="margin: 0; color: #00e5ff; font-size: 1.1rem; font-family: sans-serif;">📖 Guía de Uso</h3>
+                <h3 id="guide-modal-title" style="margin: 0; color: #00e5ff; font-size: 1.1rem; font-family: sans-serif;">Guía de Uso</h3>
                 <button id="btn-close-guide-modal" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; padding: 4px;">✕</button>
             </div>
             <div id="guide-modal-content" style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; color: #ddd; font-size: 0.88rem; font-family: sans-serif;">
-                <!-- Contenido cargado dinámicamente desde guide.json -->
+                <!-- Contenido cargado dinámicamente desde guide-data.js -->
             </div>
         </div>
     </div>
 
-   
-       <!-- Scripts Esenciales -->
+    <!-- Scripts Esenciales -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="geocoder.js"></script>
     <script src="exporter.js"></script>
-    <script src="guide-data.js"></script> <!-- <--- AÑADIDO AQUÍ -->
+    <script src="guide-data.js"></script>
     <script src="app-planner.js"></script>
     
     <script>
@@ -309,6 +314,5 @@
             });
         }
     </script>
-    </body>
-    
-    </html>
+</body>
+</html>
