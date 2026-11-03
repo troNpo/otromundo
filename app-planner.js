@@ -419,6 +419,37 @@ const RoutePlanner = {
         }
     },
 
+    // NUEVA LÓGICA DE CÁLCULO DE TIEMPO ESTIMADO (ETA) REALISTA
+    calculateRealisticTime(distMeters, ascentMeters, descentMeters, profile) {
+        const baseSpeeds = {
+            "hiking-mountain": 1.15, // ~4.1 km/h (Senderismo)
+            "trekking": 3.5,         // ~12.6 km/h (Trekking / Cicloturismo)
+            "mtb": 3.0,              // ~10.8 km/h (BTT / Montaña)
+            "gravel": 4.2,           // ~15.1 km/h (Gravel)
+            "fastbike": 5.5          // ~19.8 km/h (Carretera)
+        };
+
+        const baseSpeed = baseSpeeds[profile] || 1.15;
+        const isCycling = profile !== "hiking-mountain";
+        
+        const ascentPenaltyFactor = isCycling ? 12 : 25; 
+        const descentPenaltyFactor = isCycling ? 4 : 8;
+
+        let totalSeconds = distMeters / baseSpeed;
+        totalSeconds += (ascentMeters * ascentPenaltyFactor);
+        totalSeconds += (descentMeters * descentPenaltyFactor);
+
+        const mins = Math.round(totalSeconds / 60);
+
+        if (mins >= 60) {
+            const hours = Math.floor(mins / 60);
+            const remainingMins = mins % 60;
+            return `${hours}h ${remainingMins}m`;
+        } else {
+            return `${Math.max(1, mins)}m`;
+        }
+    },
+
     async calcularRutaBRouter() {
         const lonLats = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
         const totalCount = this.maxAlternatives + 1;
@@ -447,8 +478,8 @@ const RoutePlanner = {
                     }
 
                     const distKm = (distM / 1000).toFixed(2);
-                    const mins = Math.round((distM / 1.16) / 60);
-                    const timeStr = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+                    // Usamos la nueva función realista en lugar de la división estática simple
+                    const timeStr = this.calculateRealisticTime(distM, Math.round(ascent), Math.round(descent), this.profile);
 
                     this.routesList.push({
                         index: idx,
