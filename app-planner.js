@@ -31,6 +31,7 @@ const RoutePlanner = {
     isLeftHanded: false,
     activeTab: 'points',    // 'points' o 'segments'
     segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
+    isDraggingMarker: false, // Bandera para evitar clics fantasma al soltar un marcador arrastrado
 
     init() {
         this.setupEvents();
@@ -249,6 +250,9 @@ const RoutePlanner = {
 
     activateMapInteractions() {
         map.on('click', (e) => {
+            // Si acabamos de soltar un marcador al arrastrarlo, ignoramos este clic fantasma
+            if (this.isDraggingMarker) return;
+
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none") return;
             this.addPoint([e.lngLat.lng, e.lngLat.lat], "Destino");
@@ -811,6 +815,7 @@ const RoutePlanner = {
                 .addTo(map);
 
             marker.on('dragstart', () => {
+                this.isDraggingMarker = true; // Activamos la bandera al empezar a arrastrar
                 el.style.transform = "translate(-50%, -50%) scale(1.35) translateZ(0)";
                 this.showToast(`🔄 Moviendo punto ${index + 1}...`);
             });
@@ -833,6 +838,11 @@ const RoutePlanner = {
                     this.hideGraph();
                     this.updateAltButtonVisibility();
                 }
+
+                // Desactivamos la bandera tras un breve retardo para ignorar el clic fantasma
+                setTimeout(() => {
+                    this.isDraggingMarker = false;
+                }, 300);
             });
 
             this.markers.push(marker);
