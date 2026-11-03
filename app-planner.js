@@ -34,6 +34,7 @@ const RoutePlanner = {
     isDraggingMarker: false, // Bandera para evitar clics fantasma al soltar un marcador arrastrado
     _cursorMarker: null,     // Marcador HTML flotante para la distancia al centro
     _segmentMarkers: [],     // Marcadores HTML flotantes para las medidas de cada tramo
+    _minMaxMarkers: [],      // Marcadores HTML flotantes para cota máxima y mínima
 
     init() {
         this.setupEvents();
@@ -532,6 +533,7 @@ const RoutePlanner = {
         this.paintAllRoutes();
         this.renderMarkers();
         this.updateSegmentLabels();
+        this.renderMinMaxMarkers(); // Muestra puntos de cota máx y mín sobre el mapa
 
         if (this.isGraphOpen) {
             this.renderElevationGraph(activeRoute.coordinates);
@@ -631,8 +633,6 @@ const RoutePlanner = {
             `;
             el.innerText = distStr;
 
-            // anchor: 'top' hace que el punto geográfico sea la parte superior de la etiqueta, 
-            // y offset [0, 20] la empuja 20 píxeles hacia abajo por debajo de la cruceta central.
             this._cursorMarker = new maplibregl.Marker({ element: el, anchor: 'top', offset: [0, 20] })
                 .setLngLat(centerCoord)
                 .addTo(map);
@@ -722,6 +722,99 @@ const RoutePlanner = {
             this._segmentMarkers.push(marker);
         }
     },
+
+    // MARCADORES AUTOMÁTICOS DE COTA MÁXIMA Y MÍNIMA DENTRO DE UN TRIÁNGULO ESTILIZADO
+    renderMinMaxMarkers() {
+        if (this._minMaxMarkers && Array.isArray(this._minMaxMarkers)) {
+            this._minMaxMarkers.forEach(m => m.remove());
+        }
+        this._minMaxMarkers = [];
+
+        if (!this.currentRouteData || !this.currentRouteData.coordinates || this.currentRouteData.coordinates.length === 0) {
+            return;
+        }
+
+        const coords = this.currentRouteData.coordinates;
+        let maxPt = coords[0];
+        let minPt = coords[0];
+
+        coords.forEach(pt => {
+            const ele = pt[2] !== undefined ? pt[2] : 0;
+            if (ele > (maxPt[2] !== undefined ? maxPt[2] : -Infinity)) maxPt = pt;
+            if (ele < (minPt[2] !== undefined ? minPt[2] : Infinity)) minPt = pt;
+        });
+
+        const targets = [
+            { pt: maxPt, type: 'max', color: '#00e5ff', prefix: '▲ ' }, // Cyan para Máximo
+            { pt: minPt, type: 'min', color: '#ff7043', prefix: '▼ ' }  // Naranja cálido para Mínimo
+        ];
+
+        targets.forEach(item => {
+            if (item.pt[2] === undefined) return;
+
+            const eleStr = `${item.prefix}${Math.round(item.pt[2])} m`;
+
+            // Contenedor principal
+            const container = document.createElement('div');
+            container.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                pointer-events: none;
+                transform: translate(-50%, -50%);
+            `;
+
+            // Insignia triangular a juego con los puntos de ruta (Fondo oscuro, borde de color)
+            const badge = document.createElement('div');
+            badge.style.cssText = `
+                background-color: #121212;
+                color: ${item.color};
+                border: 2px solid ${item.color};
+                border-radius: 8px;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            `;
+
+            // Icono de montaña dentro del triángulo
+            const iconImg = document.createElement('img');
+            iconImg.src = './ui-icons/fi-rr-mountains.svg';
+            iconImg.width = 16;
+            iconImg.height = 16;
+            iconImg.style.filter = item.type === 'max'
+                ? 'brightness(0) saturate(100%) invert(77%) sepia(93%) saturate(1352%) hue-rotate(130deg)'
+                : 'brightness(0) saturate(100%) invert(56%) sepia(85%) saturate(1480%) hue-rotate(338deg)';
+
+            badge.appendChild(iconImg);
+
+            // Etiqueta de altura situada abajo con texto plano y sombra
+            const label = document.createElement('div');
+            label.style.cssText = `
+                background: transparent;
+                color: ${item.color};
+                font-size: 10px;
+                font-family: sans-serif;
+                font-weight: bold;
+                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap;
+                margin-top: 3px;
+            `;
+            label.innerText = eleStr;
+
+            container.appendChild(badge);
+            container.appendChild(label);
+
+            const marker = new maplibregl.Marker({ element: container, anchor: 'center' })
+                .setLngLat([item.pt[0], item.pt[1]])
+                .addTo(map);
+
+            this._minMaxMarkers.push(marker);
+        });
+    },
+
 
     paintAllRoutes() {
         if (!map) return;
@@ -939,7 +1032,7 @@ const RoutePlanner = {
         this.hideGraph();
         this.updateAltButtonVisibility();
         
-        // Limpiar la línea guía, su marcador HTML y las etiquetas de los tramos
+        // Limpiar la línea guía, marcadores HTML y puntos Max/Min
         const sourceId = 'cursor-helper-source';
         const layerId = 'cursor-helper-layer';
         if (map && map.getSource(sourceId)) {
@@ -953,6 +1046,10 @@ const RoutePlanner = {
         if (this._segmentMarkers && Array.isArray(this._segmentMarkers)) {
             this._segmentMarkers.forEach(m => m.remove());
             this._segmentMarkers = [];
+        }
+        if (this._minMaxMarkers && Array.isArray(this._minMaxMarkers)) {
+            this._minMaxMarkers.forEach(m => m.remove());
+            this._minMaxMarkers = [];
         }
 
         this.showToast("Planificación limpia.");
