@@ -27,12 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2. Escuchar la entrada de texto en tiempo real con retardo (debounce)
+        // 2. Escuchar la entrada de texto adaptada a las políticas de Nominatim (Mín. 4 caracteres y 1s de retardo)
         inputBannerSearch.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(searchTimeout);
 
-            if (query.length < 3) {
+            if (query.length < 4) {
                 searchResultsDropdown.classList.add('hidden');
                 searchResultsDropdown.innerHTML = '';
                 return;
@@ -40,14 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             searchTimeout = setTimeout(() => {
                 executeNominatimSearch(query);
-            }, 300);
+            }, 1000);
         });
 
-        // 3. Capturar Enter en el teclado táctil móvil
+        // 3. Capturar Enter en el teclado táctil móvil o físico
         inputBannerSearch.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') {
                 const query = inputBannerSearch.value.trim();
-                if (query.length >= 3) {
+                if (query.length >= 4) {
                     clearTimeout(searchTimeout);
                     executeNominatimSearch(query);
                     inputBannerSearch.blur(); 
