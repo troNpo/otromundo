@@ -22,6 +22,7 @@ map.addControl(geolocateControl);
 const RoutePlanner = {
     profile: "hiking-mountain",
     maxAlternatives: 0,
+    applyOnlyToFuture: false, // Control para aplicar el nuevo perfil solo a los siguientes puntos
     points: [],
     markers: [],
     routesList: [],
@@ -31,7 +32,7 @@ const RoutePlanner = {
     isLeftHanded: false,
     isTouchAddEnabled: false, // Estado inicial: Bloqueado por defecto para evitar puntos fantasma
     activeTab: 'points',    // 'points' o 'segments'
-    segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
+    segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff", profile: "..." }, ...]
     isDraggingMarker: false, // Bandera para evitar clics fantasma al soltar un marcador arrastrado
     _cursorMarker: null,     // Marcador HTML flotante para la distancia al centro
     _segmentMarkers: [],     // Marcadores HTML flotantes para las medidas de cada tramo
@@ -99,11 +100,32 @@ const RoutePlanner = {
 
         document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
-                this.profile = e.target.value;
-                this.updateDefaultProfileStatus();
+                const newProfile = e.target.value;
+
+                if (this.applyOnlyToFuture) {
+                    this.profile = newProfile;
+                    this.updateDefaultProfileStatus();
+                    this.showToast(`Próximo tramo: ${newProfile}`);
+                } else {
+                    this.profile = newProfile;
+                    this.updateDefaultProfileStatus();
+                    this.segments.forEach(seg => {
+                        seg.profile = this.profile;
+                    });
+                    if (this.points.length >= 2) this.calcularRutaBRouter();
+                }
+
                 profilesDrawer?.classList.remove("active");
-                if (this.points.length >= 2) this.calcularRutaBRouter();
             });
+        });
+
+        // Evento para el interruptor de "Aplicar solo a nuevos puntos"
+        const optFuture = document.getElementById("opt-btn-apply-future");
+        const toggleFuture = document.getElementById("toggle-apply-future-mode");
+        optFuture?.addEventListener("click", () => {
+            this.applyOnlyToFuture = !this.applyOnlyToFuture;
+            if (toggleFuture) toggleFuture.checked = this.applyOnlyToFuture;
+            this.showToast(this.applyOnlyToFuture ? "Perfil futuro activado" : "Perfil global activado");
         });
 
         document.querySelectorAll('input[name="brouter-alternatives"]').forEach(radio => {
@@ -349,7 +371,6 @@ const RoutePlanner = {
     },
 
     activateMapInteractions() {
-        // Clic rápido bloqueado si el candado está cerrado
         map.on('click', (e) => {
             if (this.isDraggingMarker) return;
             if (!this.isTouchAddEnabled) return;
@@ -369,7 +390,6 @@ const RoutePlanner = {
         let touchTimer = null;
         let startTouchCoord = null;
 
-        // Pulsación prolongada bloqueada si el candado está cerrado
         mapContainer.addEventListener('touchstart', (e) => {
             if (!this.isTouchAddEnabled) return;
 
@@ -449,7 +469,8 @@ const RoutePlanner = {
             const lastColor = this.segments.length > 0 ? this.segments[this.segments.length - 1].color : '#00e5ff';
             this.segments.push({
                 name: `Tramo ${idx}`,
-                color: lastColor
+                color: lastColor,
+                profile: this.profile // Hereda el perfil activo actual
             });
         }
         
@@ -530,11 +551,12 @@ const RoutePlanner = {
             "trekking": 3.5,
             "mtb": 3.0,
             "gravel": 4.2,
-            "fastbike": 5.5
+            "fastbike": 5.5,
+            "manual-straight": 4.0
         };
 
         const baseSpeed = baseSpeeds[profile] || 1.15;
-        const isCycling = profile !== "hiking-mountain";
+        const isCycling = profile !== "hiking-mountain" && profile !== "manual-straight";
         
         const ascentPenaltyFactor = isCycling ? 12 : 25; 
         const descentPenaltyFactor = isCycling ? 4 : 8;
@@ -555,55 +577,101 @@ const RoutePlanner = {
     },
 
     async calcularRutaBRouter() {
-        const lonLats = this.points.map(p => `${p.coords[0]},${p.coords[1]}`).join("|");
-        const totalCount = this.maxAlternatives + 1;
-        const altIndices = Array.from({ length: totalCount }, (_, i) => i);
-        
+        if (this.points.length < 2) return;
+        this.syncSegmentsArray();
+
         try {
-            const promises = altIndices.map(idx => 
-                fetch(`https://brouter.de/brouter?lonlats=${lonLats}&profile=${this.profile}&alternativeidx=${idx}&format=geojson`)
-                    .then(res => res.json())
-                    .catch(() => null)
-            );
+            const segmentFetchPromises = [];
 
-            const results = await Promise.all(promises);
-            this.routesList = [];
+            for (let i = 0; i < this.points.length - 1; i++) {
+                const p1 = this.points[i].coords;
+                const p2 = this.points[i + 1].coords;
+                const segProfile = this.segments[i]?.profile || this.profile;
 
-            results.forEach((data, idx) => {
-                if (data && data.features && data.features.length > 0) {
-                    const coords = data.features[0].geometry.coordinates;
-                    let distM = 0, ascent = 0, descent = 0;
-
-                    for (let i = 0; i < coords.length - 1; i++) {
-                        const p1 = coords[i], p2 = coords[i + 1];
-                        distM += this.haversine(p1[1], p1[0], p2[1], p2[0]);
-                        const diff = (p2[2] || 0) - (p1[2] || 0);
-                        if (diff > 0) ascent += diff; else descent += Math.abs(diff);
+                // SI EL PERFIL ES MANUAL (LÍNEA RECTA PUNTO A PUNTO SIN BROUTER)
+                if (segProfile === "manual-straight") {
+                    const straightCoords = [];
+                    const distanceMeters = this.haversine(p1[1], p1[0], p2[1], p2[0]);
+                    const steps = Math.max(2, Math.floor(distanceMeters / 100)); // Puntos intermedios cada ~100m
+                    
+                    for (let s = 0; s <= steps; s++) {
+                        const t = s / steps;
+                        const lng = p1[0] + (p2[0] - p1[0]) * t;
+                        const lat = p1[1] + (p2[1] - p1[1]) * t;
+                        const ele1 = p1[2] !== undefined ? p1[2] : 0;
+                        const ele2 = p2[2] !== undefined ? p2[2] : 0;
+                        const ele = ele1 + (ele2 - ele1) * t;
+                        
+                        straightCoords.push([lng, lat, ele]);
                     }
 
-                    const distKm = (distM / 1000).toFixed(2);
-                    const timeStr = this.calculateRealisticTime(distM, Math.round(ascent), Math.round(descent), this.profile);
+                    segmentFetchPromises.push(
+                        Promise.resolve({
+                            coordinates: straightCoords,
+                            profile: segProfile
+                        })
+                    );
+                } else {
+                    // LLAMADA NORMAL A BROUTER
+                    const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${segProfile}&alternativeidx=0&format=geojson`;
+                    
+                    segmentFetchPromises.push(
+                        fetch(url)
+                            .then(res => res.json())
+                            .then(data => ({
+                                coordinates: data?.features?.[0]?.geometry?.coordinates || [p1, p2],
+                                profile: segProfile
+                            }))
+                            .catch(() => ({
+                                coordinates: [p1, p2],
+                                profile: segProfile
+                            }))
+                    );
+                }
+            }
 
-                    this.routesList.push({
-                        index: idx,
-                        coordinates: coords,
-                        distKm,
-                        timeStr,
-                        ascent: Math.round(ascent),
-                        descent: Math.round(descent)
-                    });
+            const segmentResults = await Promise.all(segmentFetchPromises);
+
+            let combinedCoordinates = [];
+            let totalDistM = 0;
+            let totalAscent = 0;
+            let totalDescent = 0;
+
+            segmentResults.forEach((segRes, idx) => {
+                const coords = segRes.coordinates;
+
+                if (idx > 0 && combinedCoordinates.length > 0) {
+                    combinedCoordinates.push(...coords.slice(1));
+                } else {
+                    combinedCoordinates.push(...coords);
+                }
+
+                for (let j = 0; j < coords.length - 1; j++) {
+                    const c1 = coords[j], c2 = coords[j + 1];
+                    totalDistM += this.haversine(c1[1], c1[0], c2[1], c2[0]);
+                    const diff = (c2[2] || 0) - (c1[2] || 0);
+                    if (diff > 0) totalAscent += diff; else totalDescent += Math.abs(diff);
                 }
             });
 
-            if (this.routesList.length > 0) {
-                if (this.currentRouteIndex >= this.routesList.length) {
-                    this.currentRouteIndex = 0;
-                }
-                this.activateRouteVariant(this.currentRouteIndex);
-                this.updateAltButtonVisibility();
-            }
+            const distKm = (totalDistM / 1000).toFixed(2);
+            const timeStr = this.calculateRealisticTime(totalDistM, Math.round(totalAscent), Math.round(totalDescent), this.profile);
+
+            this.routesList = [{
+                index: 0,
+                coordinates: combinedCoordinates,
+                distKm,
+                timeStr,
+                ascent: Math.round(totalAscent),
+                descent: Math.round(totalDescent)
+            }];
+
+            this.currentRouteIndex = 0;
+            this.activateRouteVariant(0);
+            this.updateAltButtonVisibility();
+
         } catch (e) {
-            console.error("Error BRouter:", e);
+            console.error("Error al calcular la ruta:", e);
         }
     },
 
@@ -901,40 +969,6 @@ const RoutePlanner = {
 
         this.clearRoute();
 
-        const altColors = ['#3498db', '#e74c3c', '#9b59b6', '#f39c12'];
-
-        this.routesList.forEach((route, idx) => {
-            if (idx === this.currentRouteIndex) return;
-
-            const sourceId = `alt-route-source-${idx}`;
-            if (!map.getSource(sourceId)) {
-                map.addSource(sourceId, {
-                    type: 'geojson',
-                    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: route.coordinates } }
-                });
-            }
-
-            const strokeColor = altColors[(idx - 1) % altColors.length] || '#7f8c8d';
-
-            if (!map.getLayer(`alt-route-casing-${idx}`)) {
-                map.addLayer({
-                    id: `alt-route-casing-${idx}`,
-                    type: 'line',
-                    source: sourceId,
-                    paint: { 'line-color': '#121212', 'line-width': 5, 'line-opacity': 0.4 }
-                });
-            }
-
-            if (!map.getLayer(`alt-route-solid-${idx}`)) {
-                map.addLayer({
-                    id: `alt-route-solid-${idx}`,
-                    type: 'line',
-                    source: sourceId,
-                    paint: { 'line-color': strokeColor, 'line-width': 3.5, 'line-opacity': 0.7 }
-                });
-            }
-        });
-
         const activeRoute = this.routesList[this.currentRouteIndex];
         this.syncSegmentsArray();
         
@@ -986,39 +1020,22 @@ const RoutePlanner = {
                     });
                 }
 
+                // Detectar si el tramo es manual para aplicar línea intermitente
+                const isManual = seg.profile === "manual-straight";
+
                 if (!map.getLayer(`active-segment-solid-${sIdx}`)) {
                     map.addLayer({
                         id: `active-segment-solid-${sIdx}`,
                         type: 'line',
                         source: segSourceId,
-                        paint: { 'line-color': seg.color || '#00e5ff', 'line-width': 4.5 }
+                        paint: { 
+                            'line-color': seg.color || '#00e5ff', 
+                            'line-width': 4.5,
+                            ...(isManual ? { 'line-dasharray': [2, 2] } : {})
+                        }
                     });
                 }
             });
-        } else {
-            const activeGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
-
-            if (!map.getSource('planned-route-source')) {
-                map.addSource('planned-route-source', { type: 'geojson', data: activeGeojson });
-            }
-
-            if (!map.getLayer('planned-route-active-casing')) {
-                map.addLayer({
-                    id: 'planned-route-active-casing',
-                    type: 'line',
-                    source: 'planned-route-source',
-                    paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-                });
-            }
-
-            if (!map.getLayer('planned-route-active-solid')) {
-                map.addLayer({
-                    id: 'planned-route-active-solid',
-                    type: 'line',
-                    source: 'planned-route-source',
-                    paint: { 'line-color': this.segments[0]?.color || '#00e5ff', 'line-width': 4.5 }
-                });
-            }
         }
 
         const fullGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
@@ -1060,12 +1077,6 @@ const RoutePlanner = {
                 if (map.getLayer(`active-segment-casing-${i}`)) map.removeLayer(`active-segment-casing-${i}`);
                 if (map.getSource(`active-segment-source-${i}`)) map.removeSource(`active-segment-source-${i}`);
             }
-
-            this.routesList.forEach((_, idx) => {
-                if (map.getLayer(`alt-route-casing-${idx}`)) map.removeLayer(`alt-route-casing-${idx}`);
-                if (map.getLayer(`alt-route-solid-${idx}`)) map.removeLayer(`alt-route-solid-${idx}`);
-                if (map.getSource(`alt-route-source-${idx}`)) map.removeSource(`alt-route-source-${idx}`);
-            });
         } catch (e) {
             // Ignorar errores de capas ausentes
         }
@@ -1167,7 +1178,8 @@ const RoutePlanner = {
             "trekking": "Trekking",
             "mtb": "MTB",
             "gravel": "Gravel",
-            "fastbike": "Carretera"
+            "fastbike": "Carretera",
+            "manual-straight": "Punto a punto (Recto)"
         };
 
         statusTextEl.innerText = profileNames[this.profile] || "Planificador";
@@ -1347,13 +1359,25 @@ const RoutePlanner = {
             return;
         }
 
+        const profileOptions = [
+            { value: "hiking-mountain", label: "Senderismo" },
+            { value: "trekking", label: "Trekking" },
+            { value: "mtb", label: "MTB" },
+            { value: "gravel", label: "Gravel" },
+            { value: "fastbike", label: "Carretera" },
+            { value: "manual-straight", label: "Punto a punto (Recto)" }
+        ];
+
         this.segments.forEach((seg, index) => {
             const itemRow = document.createElement("div");
             itemRow.style.cssText = `
-                display: flex; align-items: center; justify-content: space-between;
+                display: flex; flex-direction: column; gap: 8px;
                 background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 10px; padding: 8px 10px; gap: 8px; width: 100%; box-sizing: border-box;
+                border-radius: 10px; padding: 10px; width: 100%; box-sizing: border-box;
             `;
+
+            const topRow = document.createElement("div");
+            topRow.style.cssText = `display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;`;
 
             const badge = document.createElement("div");
             badge.style.cssText = `
@@ -1392,9 +1416,50 @@ const RoutePlanner = {
                 }
             });
 
-            itemRow.appendChild(badge);
-            itemRow.appendChild(nameInput);
-            itemRow.appendChild(colorInput);
+            topRow.appendChild(badge);
+            topRow.appendChild(nameInput);
+            topRow.appendChild(colorInput);
+
+            const bottomRow = document.createElement("div");
+            bottomRow.style.cssText = `display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;`;
+
+            const profileLabel = document.createElement("span");
+            profileLabel.style.cssText = "font-size: 0.75rem; color: #aaa;";
+            profileLabel.innerText = "Perfil del tramo:";
+
+            const profileSelect = document.createElement("select");
+            profileSelect.style.cssText = `
+                background: rgba(18,18,20,0.9); color: #00e5ff; border: 1px solid rgba(0,229,255,0.3);
+                border-radius: 6px; padding: 2px 6px; font-size: 0.75rem; outline: none; cursor: pointer;
+            `;
+            
+            profileOptions.forEach(opt => {
+                const optEl = document.createElement("option");
+                optEl.value = opt.value;
+                optEl.innerText = opt.label;
+                if (seg.profile === opt.value) {
+                    optEl.selected = true;
+                }
+                profileSelect.appendChild(optEl);
+            });
+
+            ['click', 'focus', 'touchstart', 'pointerdown'].forEach(evt => {
+                profileSelect.addEventListener(evt, (e) => e.stopPropagation());
+            });
+
+            profileSelect.addEventListener("change", (e) => {
+                this.segments[index].profile = e.target.value;
+                this.showToast(`Tramo ${index + 1} actualizado`);
+                if (this.points.length >= 2) {
+                    this.calcularRutaBRouter();
+                }
+            });
+
+            bottomRow.appendChild(profileLabel);
+            bottomRow.appendChild(profileSelect);
+
+            itemRow.appendChild(topRow);
+            itemRow.appendChild(bottomRow);
             container.appendChild(itemRow);
         });
     },

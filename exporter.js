@@ -1,5 +1,5 @@
 // ==========================================
-// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico y GPX compatible iOS/Android)
+// EXPORTER.JS - Gestor Avanzado de Exportación (KML con nombres y colores por tramo, y GPX compatible iOS/Android)
 // ==========================================
 
 const RouteExporter = {
@@ -66,13 +66,22 @@ const RouteExporter = {
         document.getElementById("side-panel-planner-options")?.classList.remove("active");
     },
 
+    // Convierte un color HEX (#RRGGBB) a formato KML AABBGGRR (con opacidad total FF)
+    hexToKmlColor(hex) {
+        if (!hex || !hex.startsWith('#') || hex.length < 7) return 'ff00e5ff'; // Color por defecto cian
+        const r = hex.substring(1, 3);
+        const g = hex.substring(3, 5);
+        const b = hex.substring(5, 7);
+        return `ff${b}${g}${r}`; // KML usa AABBGGRR
+    },
+
     downloadKmlHierarchical(filename, planner) {
         let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
         kml += `<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:om="http://www.oruxmaps.com/oruxmapsextensions/1/0" xmlns:gx="http://www.google.com/kml/ext/2.2">\n`;
         kml += `<Document>\n`;
         kml += `  <name><![CDATA[${filename.replace('.kml', '')}]]></name>\n`;
 
-        // Carpeta 1: Waypoints de la ruta (Solo si existen para evitar nodos vacíos en iOS)
+        // Carpeta 1: Waypoints de la ruta
         if (planner.points && planner.points.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Waypoints de Ruta]]></name>\n`;
@@ -102,20 +111,84 @@ const RouteExporter = {
             kml += `  </Folder>\n`;
         }
 
-        // Carpeta 2: Traza de la Ruta (Solo si hay coordenadas válidas)
+        // Carpeta 2: Traza de la Ruta desglosada por Segmentos (con nombres y colores individuales)
         if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Traza de Ruta]]></name>\n`;
-            kml += `    <Placemark>\n`;
-            kml += `      <name><![CDATA[Ruta Activa]]></name>\n`;
-            kml += `      <LineString>\n`;
-            kml += `        <tessellate>1</tessellate>\n`;
-            kml += `        <coordinates>\n`;
-            kml += `          `;
-            kml += planner.currentRouteData.coordinates.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
-            kml += `\n        </coordinates>\n`;
-            kml += `      </LineString>\n`;
-            kml += `    </Placemark>\n`;
+
+            const fullCoords = planner.currentRouteData.coordinates;
+            const segments = planner.segments || [];
+
+            if (segments.length > 0 && planner.points.length >= 2) {
+                let coordIndex = 0;
+
+                segments.forEach((seg, sIdx) => {
+                    const nextPoint = planner.points[sIdx + 1];
+                    if (!nextPoint) return;
+
+                    const subCoords = [];
+                    while (coordIndex < fullCoords.length) {
+                        const pt = fullCoords[coordIndex];
+                        subCoords.push(pt);
+                        
+                        const distToNext = planner.haversine(pt[1], pt[0], nextPoint.coords[1], nextPoint.coords[0]);
+                        coordIndex++;
+                        
+                        if (distToNext < 40 && sIdx < segments.length - 1) {
+                            break;
+                        }
+                    }
+                    
+                    if (sIdx === segments.length - 1) {
+                        while (coordIndex < fullCoords.length) {
+                            subCoords.push(fullCoords[coordIndex]);
+                            coordIndex++;
+                        }
+                    }
+
+                    if (subCoords.length < 2 && fullCoords.length >= 2) {
+                        subCoords.push(fullCoords[fullCoords.length - 1]);
+                    }
+
+                    const segName = seg.name || `Tramo ${sIdx + 1}`;
+                    const styleId = `seg_style_${sIdx}`;
+                    const kmlColor = this.hexToKmlColor(seg.color || '#00e5ff');
+
+                    // Definir estilo de color para el segmento
+                    kml += `    <Style id="${styleId}">\n`;
+                    kml += `      <LineStyle>\n`;
+                    kml += `        <color>${kmlColor}</color>\n`;
+                    kml += `        <width>4</width>\n`;
+                    kml += `      </LineStyle>\n`;
+                    kml += `    </Style>\n`;
+
+                    // Placemark del segmento
+                    kml += `    <Placemark>\n`;
+                    kml += `      <name><![CDATA[${segName}]]></name>\n`;
+                    kml += `      <styleUrl>#${styleId}</styleUrl>\n`;
+                    kml += `      <LineString>\n`;
+                    kml += `        <tessellate>1</tessellate>\n`;
+                    kml += `        <coordinates>\n`;
+                    kml += `          `;
+                    kml += subCoords.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
+                    kml += `\n        </coordinates>\n`;
+                    kml += `      </LineString>\n`;
+                    kml += `    </Placemark>\n`;
+                });
+            } else {
+                // Si no hay segmentos definidos, exporta la ruta completa genérica
+                kml += `    <Placemark>\n`;
+                kml += `      <name><![CDATA[Ruta Activa]]></name>\n`;
+                kml += `      <LineString>\n`;
+                kml += `        <tessellate>1</tessellate>\n`;
+                kml += `        <coordinates>\n`;
+                kml += `          `;
+                kml += fullCoords.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
+                kml += `\n        </coordinates>\n`;
+                kml += `      </LineString>\n`;
+                kml += `    </Placemark>\n`;
+            }
+
             kml += `  </Folder>\n`;
         }
 
@@ -166,9 +239,8 @@ const RouteExporter = {
 
         gpx += `</gpx>`;
 
-        // En iOS a veces application/gpx+xml da problemas de tipo MIME al abrir directamente, 
-        // text/xml o application/xml asegura compatibilidad total de guardado/apertura en iOS.
-        this.triggerBlobDownload(gpx, filename, 'application/xml');
+        // Se usa 'text/xml' para garantizar compatibilidad absoluta de guardado y apertura limpia en iOS y Android sin extensiones extrañas (.xml)
+        this.triggerBlobDownload(gpx, filename, 'text/xml');
     },
 
     triggerBlobDownload(content, filename, contentType) {
