@@ -496,7 +496,7 @@ const RoutePlanner = {
         this.updateDynamicCursorLine();
     },
 
-    removePoint(index) {
+       removePoint(index) {
         if (this.points.length > 0 && index >= 0) {
             this.points.splice(index, 1);
             this.syncSegmentsArray();
@@ -515,11 +515,23 @@ const RoutePlanner = {
                 this.updateStats("--", "--", "--", "--");
                 this.hideGraph();
                 this.updateAltButtonVisibility();
+
+                // 🧹 LIMPIEZA EXPLICITA DE MARCADORES DE MÁX/MÍN Y TRAMOS
+                if (this._minMaxMarkers && Array.isArray(this._minMaxMarkers)) {
+                    this._minMaxMarkers.forEach(m => m.remove());
+                    this._minMaxMarkers = [];
+                }
+                if (this._segmentMarkers && Array.isArray(this._segmentMarkers)) {
+                    this._segmentMarkers.forEach(m => m.remove());
+                    this._segmentMarkers = [];
+                }
+
                 this.showToast("Punto eliminado.");
             }
             this.updateDynamicCursorLine();
         }
     },
+
 
     movePoint(index, direction) {
         const newIndex = index + direction;
@@ -545,28 +557,10 @@ const RoutePlanner = {
         }
     },
 
-    calculateRealisticTime(distMeters, ascentMeters, descentMeters, profile) {
-        const baseSpeeds = {
-            "hiking-mountain": 1.15,
-            "trekking": 3.5,
-            "mtb": 3.0,
-            "gravel": 4.2,
-            "fastbike": 5.5,
-            "manual-straight": 4.0
-        };
-
-        const baseSpeed = baseSpeeds[profile] || 1.15;
-        const isCycling = profile !== "hiking-mountain" && profile !== "manual-straight";
-        
-        const ascentPenaltyFactor = isCycling ? 12 : 25; 
-        const descentPenaltyFactor = isCycling ? 4 : 8;
-
-        let totalSeconds = distMeters / baseSpeed;
-        totalSeconds += (ascentMeters * ascentPenaltyFactor);
-        totalSeconds += (descentMeters * descentPenaltyFactor);
-
+    // Convierte segundos totales en formato legible (ej: "2h 15m" o "45m")
+    formatBRouterTime(totalSeconds) {
+        if (!totalSeconds || isNaN(totalSeconds)) return "1m";
         const mins = Math.round(totalSeconds / 60);
-
         if (mins >= 60) {
             const hours = Math.floor(mins / 60);
             const remainingMins = mins % 60;
@@ -605,9 +599,13 @@ const RoutePlanner = {
                         straightCoords.push([lng, lat, ele]);
                     }
 
+                    // Estimación para tramos manuales rectos (a ~14.4 km/h)
+                    const manualSeconds = distanceMeters / 4.0;
+
                     segmentFetchPromises.push(
                         Promise.resolve({
                             coordinates: straightCoords,
+                            travelTime: manualSeconds,
                             profile: segProfile
                         })
                     );
@@ -618,12 +616,21 @@ const RoutePlanner = {
                     segmentFetchPromises.push(
                         fetch(url)
                             .then(res => res.json())
-                            .then(data => ({
-                                coordinates: data?.features?.[0]?.geometry?.coordinates || [p1, p2],
-                                profile: segProfile
-                            }))
+                            .then(data => {
+                                const feature = data?.features?.[0];
+                                const coords = feature?.geometry?.coordinates || [p1, p2];
+                                // BRouter devuelve el tiempo en segundos dentro de properties['total-time'] o properties.time
+                                const travelTime = feature?.properties?.['total-time'] || feature?.properties?.time || 0;
+                                
+                                return {
+                                    coordinates: coords,
+                                    travelTime: travelTime,
+                                    profile: segProfile
+                                };
+                            })
                             .catch(() => ({
                                 coordinates: [p1, p2],
+                                travelTime: 0,
                                 profile: segProfile
                             }))
                     );
@@ -636,9 +643,11 @@ const RoutePlanner = {
             let totalDistM = 0;
             let totalAscent = 0;
             let totalDescent = 0;
+            let totalSeconds = 0;
 
             segmentResults.forEach((segRes, idx) => {
                 const coords = segRes.coordinates;
+                totalSeconds += segRes.travelTime;
 
                 if (idx > 0 && combinedCoordinates.length > 0) {
                     combinedCoordinates.push(...coords.slice(1));
@@ -655,7 +664,8 @@ const RoutePlanner = {
             });
 
             const distKm = (totalDistM / 1000).toFixed(2);
-            const timeStr = this.calculateRealisticTime(totalDistM, Math.round(totalAscent), Math.round(totalDescent), this.profile);
+            // Usamos el tiempo directo de BRouter formateado
+            const timeStr = this.formatBRouterTime(totalSeconds);
 
             this.routesList = [{
                 index: 0,
