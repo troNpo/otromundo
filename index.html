@@ -52,18 +52,58 @@
     </button>
 
     <!-- ================= PANELES LATERALES (DRAWER) ================= -->
-    <!-- Panel Lateral: Selección de Mapas -->
+   <!-- Panel Lateral: Selección de Mapas -->
     <div id="side-panel-maps" class="side-drawer">
         <div class="side-drawer-header">
             <h3>Seleccionar Mapa Base</h3>
             <button id="btn-close-maps-drawer" class="drawer-close-btn" title="Cerrar">✕</button>
         </div>
-        <div class="side-drawer-body">
-            <div class="map-options-list">
+        <div class="side-drawer-body" style="display: flex; flex-direction: column; gap: 16px; padding: 16px;">
+            <!-- Mapas Base -->
+            <div class="map-options-list" style="display: flex; flex-direction: column; gap: 8px;">
                 <label><input type="radio" name="basemap" value="styles/osm.json" checked> OpenStreetMap</label>
                 <label><input type="radio" name="basemap" value="styles/ignraster.json"> IGN Raster</label>
                 <label><input type="radio" name="basemap" value="styles/opentopomaps.json"> OpenTopoMap</label>
                 <label><input type="radio" name="basemap" value="styles/esri.json"> Esri Satélite</label>
+            </div>
+
+            <!-- Capas Complementarias (Waymarked Trails) -->
+            <div class="map-layers-section" style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+                <div style="font-size: 0.85rem; color: var(--primary-cyan); font-weight: bold; margin-bottom: 10px;">CAPAS COMPLEMENTARIAS</div>
+                
+                <!-- Senderos (Hiking) -->
+                <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+                    <label style="font-size: 0.82rem; color: #fff; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="toggle-layer-hiking" style="accent-color: var(--primary-cyan);"> Senderos (Hiking)
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 8px; padding-left: 20px;">
+                        <span style="font-size: 0.7rem; color: #aaa;">Opacidad:</span>
+                        <input type="range" id="range-opacity-hiking" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: var(--primary-cyan); cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- Rutas Bici (Cycling) -->
+                <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+                    <label style="font-size: 0.82rem; color: #fff; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="toggle-layer-cycling" style="accent-color: var(--primary-cyan);"> Rutas Bici (Cycling)
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 8px; padding-left: 20px;">
+                        <span style="font-size: 0.7rem; color: #aaa;">Opacidad:</span>
+                        <input type="range" id="range-opacity-cycling" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: var(--primary-cyan); cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- MTB (Bicicleta Montaña) -->
+                <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;">
+                    <label style="font-size: 0.82rem; color: #fff; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="toggle-layer-mtb" style="accent-color: var(--primary-cyan);"> MTB (Bicicleta Montaña)
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 8px; padding-left: 20px;">
+                        <span style="font-size: 0.7rem; color: #aaa;">Opacidad:</span>
+                        <input type="range" id="range-opacity-mtb" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: var(--primary-cyan); cursor: pointer;">
+                    </div>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -364,11 +404,15 @@
 
     <!-- Scripts Esenciales -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <script src="map-overlays.js"></script>
     <script src="geocoder.js"></script>
     <script src="exporter.js"></script>
     <script src="guide-data.js"></script>
     <script src="planner-attributions-data.js"></script>
     <script src="app-planner.js"></script>
+    
+    
+
     
     <script>
         if ('serviceWorker' in navigator) {
