@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + DESTINOS Y PUNTOS DE PASO + GUÍA RÁPIDA JSON
+// APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + DESTINOS Y PUNTOS DE PASO + GUÍA RÁPIDA + ATRIBUCIONES
 // ==========================================
 
 const savedStyle = localStorage.getItem('otromundo_style') || 'styles/osm.json';
@@ -29,6 +29,7 @@ const RoutePlanner = {
     currentRouteData: null,
     isGraphOpen: false,
     isLeftHanded: false,
+    isTouchAddEnabled: false, // Estado inicial: Bloqueado por defecto para evitar puntos fantasma
     activeTab: 'points',    // 'points' o 'segments'
     segments: [],           // Almacena [{ name: "Tramo 1", color: "#00e5ff" }, ...]
     isDraggingMarker: false, // Bandera para evitar clics fantasma al soltar un marcador arrastrado
@@ -39,8 +40,9 @@ const RoutePlanner = {
     init() {
         this.setupEvents();
         this.activateMapInteractions();
-        this.setupGuideModalEvents(); // Inicializa los eventos del Manual Rápido
-        this.updateDefaultProfileStatus(); // Establece el perfil inicial en el banner superior
+        this.setupGuideModalEvents();       // Inicializa los eventos del Manual Rápido
+        this.setupAttributionsModalEvents(); // Inicializa los eventos del Modal de Atribuciones
+        this.updateDefaultProfileStatus();  // Establece el perfil inicial en el banner superior
         
         setTimeout(() => {
             if (map) map.resize();
@@ -49,7 +51,6 @@ const RoutePlanner = {
         if (map) {
             map.on('style.load', () => {
                 setTimeout(() => {
-                    // Forzamos la recarga de la imagen de flecha antes de repintar
                     if (map.hasImage('route-svg-arrow')) {
                         map.removeImage('route-svg-arrow');
                     }
@@ -62,7 +63,6 @@ const RoutePlanner = {
                 }, 200);
             });
 
-            // Actualizar línea guía y etiqueta al mover el mapa
             map.on('move', () => {
                 this.updateDynamicCursorLine();
             });
@@ -121,7 +121,7 @@ const RoutePlanner = {
         btnOptions?.addEventListener("click", () => optionsDrawer?.classList.add("active"));
         closeOptions?.addEventListener("click", () => optionsDrawer?.classList.remove("active"));
 
-        // 4. Listado de Puntos y Segmentos (Panel Lateral dedicado)
+        // 4. Listado de Puntos y Segmentos
         const btnList = document.getElementById("btn-planner-list");
         const pointsDrawer = document.getElementById("side-panel-points-list");
         const closePoints = document.getElementById("btn-close-points-drawer");
@@ -132,7 +132,6 @@ const RoutePlanner = {
         });
         closePoints?.addEventListener("click", () => pointsDrawer?.classList.remove("active"));
 
-        // Pestañas del Panel (Puntos / Segmentos)
         const tabPointsBtn = document.getElementById("tab-btn-points");
         const tabSegmentsBtn = document.getElementById("tab-btn-segments");
 
@@ -184,6 +183,26 @@ const RoutePlanner = {
 
         document.getElementById("btn-planner-zoomin")?.addEventListener("click", () => map.zoomIn());
         document.getElementById("btn-planner-zoomout")?.addEventListener("click", () => map.zoomOut());
+
+        // 6. Botón de Bloqueo / Desbloqueo Táctil
+        const btnTouchLock = document.getElementById("planner-btn-touch-lock");
+        const lockIcon = document.getElementById("planner-lock-icon");
+
+        btnTouchLock?.addEventListener("click", () => {
+            this.isTouchAddEnabled = !this.isTouchAddEnabled;
+
+            if (this.isTouchAddEnabled) {
+                if (lockIcon) lockIcon.src = "ui-icons/fi-rr-lock-open-alt.svg";
+                btnTouchLock.style.background = "rgba(18, 18, 20, 0.9)";
+                btnTouchLock.style.borderColor = "#00e5ff";
+                this.showToast("Pantalla desbloqueada: toques activados");
+            } else {
+                if (lockIcon) lockIcon.src = "ui-icons/fi-rr-lock.svg";
+                btnTouchLock.style.background = "rgba(18, 18, 20, 0.9)";
+                btnTouchLock.style.borderColor = "#00e5ff";
+                this.showToast("Pantalla bloqueada para navegación");
+            }
+        });
     },
 
     setupGuideModalEvents() {
@@ -194,6 +213,27 @@ const RoutePlanner = {
 
         card?.addEventListener("click", () => {
             this.loadGuideContent();
+            if (modal) modal.style.display = "flex";
+            if (optionsDrawer) optionsDrawer.classList.remove("active");
+        });
+
+        closeBtn?.addEventListener("click", () => {
+            if (modal) modal.style.display = "none";
+        });
+
+        modal?.addEventListener("click", (e) => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+    },
+
+    setupAttributionsModalEvents() {
+        const modal = document.getElementById("planner-attributions-modal");
+        const openBtn = document.getElementById("btn-open-attributions");
+        const closeBtn = document.getElementById("btn-close-attributions-modal");
+        const optionsDrawer = document.getElementById("side-panel-planner-options");
+
+        openBtn?.addEventListener("click", () => {
+            this.loadAttributionsContent();
             if (modal) modal.style.display = "flex";
             if (optionsDrawer) optionsDrawer.classList.remove("active");
         });
@@ -261,9 +301,58 @@ const RoutePlanner = {
         contentContainer.dataset.loaded = "true";
     },
 
+    loadAttributionsContent() {
+        const contentContainer = document.getElementById("attributions-modal-content");
+        const titleEl = document.getElementById("attributions-modal-title");
+        if (!contentContainer) return;
+
+        if (contentContainer.dataset.loaded === "true") return;
+
+        const data = window.PLANNER_ATTRIBUTIONS_DATA;
+        if (!data) {
+            contentContainer.innerHTML = `<div style="text-align: center; color: #ff5252; padding: 20px;">No se encontraron los datos de atribución.</div>`;
+            return;
+        }
+
+        if (titleEl && data.title) {
+            titleEl.innerText = data.title;
+        }
+
+        contentContainer.innerHTML = "";
+        data.sections.forEach(sec => {
+            const item = document.createElement("div");
+            item.style.cssText = `
+                display: flex; gap: 14px; align-items: flex-start;
+                background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 10px; padding: 12px;
+            `;
+
+            let linkHtml = "";
+            if (sec.link && sec.linkText) {
+                linkHtml = `<div style="margin-top: 6px;"><a href="${sec.link}" target="_blank" rel="noopener noreferrer" style="color: #00e5ff; font-size: 0.78rem; text-decoration: underline;">${sec.linkText}</a></div>`;
+            }
+
+            item.innerHTML = `
+                <div style="background: rgba(0,229,255,0.1); border-radius: 8px; padding: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <img src="${sec.icon}" width="20" height="20" style="filter: brightness(0) saturate(100%) invert(77%) sepia(93%) saturate(1352%) hue-rotate(130deg);" alt="${sec.title}">
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: bold; color: #00e5ff; margin-bottom: 4px; font-size: 0.9rem;">${sec.title}</div>
+                    <div style="color: #ccc; font-size: 0.82rem; line-height: 1.4;">${sec.desc}</div>
+                    ${linkHtml}
+                </div>
+            `;
+            contentContainer.appendChild(item);
+        });
+
+        contentContainer.dataset.loaded = "true";
+    },
+
     activateMapInteractions() {
+        // Clic rápido bloqueado si el candado está cerrado
         map.on('click', (e) => {
             if (this.isDraggingMarker) return;
+            if (!this.isTouchAddEnabled) return;
 
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none") return;
@@ -280,7 +369,10 @@ const RoutePlanner = {
         let touchTimer = null;
         let startTouchCoord = null;
 
+        // Pulsación prolongada bloqueada si el candado está cerrado
         mapContainer.addEventListener('touchstart', (e) => {
+            if (!this.isTouchAddEnabled) return;
+
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none" || e.touches.length !== 1) return;
 
@@ -432,14 +524,13 @@ const RoutePlanner = {
         }
     },
 
-    // LÓGICA DE TIEMPO ESTIMADO (ETA) REALISTA
     calculateRealisticTime(distMeters, ascentMeters, descentMeters, profile) {
         const baseSpeeds = {
-            "hiking-mountain": 1.15, // ~4.1 km/h (Senderismo)
-            "trekking": 3.5,         // ~12.6 km/h (Trekking / Cicloturismo)
-            "mtb": 3.0,              // ~10.8 km/h (BTT / Montaña)
-            "gravel": 4.2,           // ~15.1 km/h (Gravel)
-            "fastbike": 5.5          // ~19.8 km/h (Carretera)
+            "hiking-mountain": 1.15,
+            "trekking": 3.5,
+            "mtb": 3.0,
+            "gravel": 4.2,
+            "fastbike": 5.5
         };
 
         const baseSpeed = baseSpeeds[profile] || 1.15;
@@ -533,7 +624,7 @@ const RoutePlanner = {
         this.paintAllRoutes();
         this.renderMarkers();
         this.updateSegmentLabels();
-        this.renderMinMaxMarkers(); // Muestra puntos de cota máx y mín sobre el mapa
+        this.renderMinMaxMarkers();
 
         if (this.isGraphOpen) {
             this.renderElevationGraph(activeRoute.coordinates);
@@ -567,7 +658,6 @@ const RoutePlanner = {
         document.getElementById("planner-stat-descent").innerText = `-${desc} m`;
     },
 
-    // LÍNEA GUÍA NEGRA DISCONTINUA (2.5px) Y ETIQUETA COLGADA BAJO EL CENTRO
     updateDynamicCursorLine() {
         const sourceId = 'cursor-helper-source';
         const lineLayerId = 'cursor-helper-layer';
@@ -588,7 +678,6 @@ const RoutePlanner = {
         const center = map.getCenter();
         const centerCoord = [center.lng, center.lat];
 
-        // Calcular distancia dinámica entre el último punto y el centro del mapa
         const distM = this.haversine(lastPoint[1], lastPoint[0], center.lat, center.lng);
         const distStr = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2).replace('.', ',')} km`;
 
@@ -600,7 +689,6 @@ const RoutePlanner = {
             }
         };
 
-        // 1. Dibujar/actualizar la línea negra discontinua (ancho 2.5px)
         if (!map.getSource(sourceId)) {
             map.addSource(sourceId, { type: 'geojson', data: geojson });
             map.addLayer({
@@ -608,8 +696,8 @@ const RoutePlanner = {
                 type: 'line',
                 source: sourceId,
                 paint: {
-                    'line-color': '#000000',    // Negro formal
-                    'line-width': 2.5,          // Ancho destacado
+                    'line-color': '#000000',
+                    'line-width': 2.5,
                     'line-dasharray': [3, 3],
                     'line-opacity': 0.85
                 }
@@ -618,18 +706,12 @@ const RoutePlanner = {
             map.getSource(sourceId).setData(geojson);
         }
 
-        // 2. Posicionar la etiqueta usando el anclaje 'top' y un offset vertical para que cuelgue debajo
         if (!this._cursorMarker) {
             const el = document.createElement('div');
             el.style.cssText = `
-                background: transparent;
-                color: #ffffff;
-                font-size: 11px;
-                font-family: sans-serif;
-                font-weight: bold;
-                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
-                white-space: nowrap;
-                pointer-events: none;
+                background: transparent; color: #ffffff; font-size: 11px; font-family: sans-serif;
+                font-weight: bold; text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap; pointer-events: none;
             `;
             el.innerText = distStr;
 
@@ -643,7 +725,6 @@ const RoutePlanner = {
         }
     },
 
-    // ETIQUETAS DE MEDIDA PARA CADA TRAMO DE LA RUTA PRINCIPAL
     updateSegmentLabels() {
         if (this._segmentMarkers && Array.isArray(this._segmentMarkers)) {
             this._segmentMarkers.forEach(m => m.remove());
@@ -703,15 +784,9 @@ const RoutePlanner = {
 
             const el = document.createElement('div');
             el.style.cssText = `
-                background: transparent;
-                color: #ffffff;
-                font-size: 10px;
-                font-family: sans-serif;
-                font-weight: bold;
-                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
-                white-space: nowrap;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
+                background: transparent; color: #ffffff; font-size: 10px; font-family: sans-serif;
+                font-weight: bold; text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap; pointer-events: none; transform: translate(-50%, -50%);
             `;
             el.innerText = distStr;
 
@@ -723,7 +798,6 @@ const RoutePlanner = {
         }
     },
 
-    // MARCADORES AUTOMÁTICOS DE COTA MÁXIMA Y MÍNIMA DENTRO DE UN TRIÁNGULO ESTILIZADO
     renderMinMaxMarkers() {
         if (this._minMaxMarkers && Array.isArray(this._minMaxMarkers)) {
             this._minMaxMarkers.forEach(m => m.remove());
@@ -745,8 +819,8 @@ const RoutePlanner = {
         });
 
         const targets = [
-            { pt: maxPt, type: 'max', color: '#00e5ff', prefix: '▲ ' }, // Cyan para Máximo
-            { pt: minPt, type: 'min', color: '#ff7043', prefix: '▼ ' }  // Naranja cálido para Mínimo
+            { pt: maxPt, type: 'max', color: '#00e5ff', prefix: '▲ ' },
+            { pt: minPt, type: 'min', color: '#ff7043', prefix: '▼ ' }
         ];
 
         targets.forEach(item => {
@@ -754,34 +828,20 @@ const RoutePlanner = {
 
             const eleStr = `${item.prefix}${Math.round(item.pt[2])} m`;
 
-            // Contenedor principal
             const container = document.createElement('div');
             container.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
+                display: flex; flex-direction: column; align-items: center; pointer-events: none; transform: translate(-50%, -50%);
             `;
 
-            // Insignia triangular a juego con los puntos de ruta (Fondo oscuro, borde de color)
             const badge = document.createElement('div');
             badge.style.cssText = `
-                background-color: #121212;
-                color: ${item.color};
-                border: 2px solid ${item.color};
-                border-radius: 8px;
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                background-color: #121212; color: ${item.color}; border: 2px solid ${item.color};
+                border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
                 box-shadow: 0 2px 6px rgba(0,0,0,0.6);
             `;
 
-            // Icono de montaña dentro del triángulo
             const iconImg = document.createElement('img');
-            iconImg.src = './ui-icons/fi-rr-mountains.svg';
+            iconImg.src = 'ui-icons/fi-rr-mountains.svg';
             iconImg.width = 16;
             iconImg.height = 16;
             iconImg.style.filter = item.type === 'max'
@@ -790,17 +850,11 @@ const RoutePlanner = {
 
             badge.appendChild(iconImg);
 
-            // Etiqueta de altura situada abajo con texto plano y sombra
             const label = document.createElement('div');
             label.style.cssText = `
-                background: transparent;
-                color: ${item.color};
-                font-size: 10px;
-                font-family: sans-serif;
-                font-weight: bold;
-                text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
-                white-space: nowrap;
-                margin-top: 3px;
+                background: transparent; color: ${item.color}; font-size: 10px; font-family: sans-serif;
+                font-weight: bold; text-shadow: -1px -1px 0 #121212, 1px -1px 0 #121212, -1px 1px 0 #121212, 1px 1px 0 #121212, 0 0 3px #121212;
+                white-space: nowrap; margin-top: 3px;
             `;
             label.innerText = eleStr;
 
@@ -814,7 +868,6 @@ const RoutePlanner = {
             this._minMaxMarkers.push(marker);
         });
     },
-
 
     paintAllRoutes() {
         if (!map) return;
@@ -1014,7 +1067,7 @@ const RoutePlanner = {
                 if (map.getSource(`alt-route-source-${idx}`)) map.removeSource(`alt-route-source-${idx}`);
             });
         } catch (e) {
-            // Evita interrupciones
+            // Ignorar errores de capas ausentes
         }
     },
 
@@ -1032,7 +1085,6 @@ const RoutePlanner = {
         this.hideGraph();
         this.updateAltButtonVisibility();
         
-        // Limpiar la línea guía, marcadores HTML y puntos Max/Min
         const sourceId = 'cursor-helper-source';
         const layerId = 'cursor-helper-layer';
         if (map && map.getSource(sourceId)) {
@@ -1059,10 +1111,14 @@ const RoutePlanner = {
         this.isGraphOpen = !this.isGraphOpen;
         const graphContainer = document.getElementById("planner-graph-container");
         const zoomControls = document.getElementById("planner-zoom-controls");
+        const touchLockBtn = document.getElementById("planner-btn-touch-lock");
         const btnGraph = document.getElementById("btn-planner-graph");
 
         if (graphContainer) graphContainer.style.display = this.isGraphOpen ? "flex" : "none";
-        if (zoomControls) zoomControls.style.bottom = this.isGraphOpen ? "320px" : "140px";
+        
+        const targetBottom = this.isGraphOpen ? "320px" : "140px";
+        if (zoomControls) zoomControls.style.bottom = targetBottom;
+        if (touchLockBtn) touchLockBtn.style.bottom = targetBottom;
 
         if (btnGraph) {
             btnGraph.style.background = this.isGraphOpen ? "var(--primary-cyan)" : "rgba(18, 18, 20, 0.9)";
@@ -1079,8 +1135,12 @@ const RoutePlanner = {
         this.isGraphOpen = false;
         const graphContainer = document.getElementById("planner-graph-container");
         if (graphContainer) graphContainer.style.display = "none";
+        
         const zoomControls = document.getElementById("planner-zoom-controls");
+        const touchLockBtn = document.getElementById("planner-btn-touch-lock");
+        
         if (zoomControls) zoomControls.style.bottom = "140px";
+        if (touchLockBtn) touchLockBtn.style.bottom = "140px";
     },
 
     showToast(message) {
@@ -1247,7 +1307,7 @@ const RoutePlanner = {
 
             const btnFocus = document.createElement("button");
             btnFocus.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;";
-            btnFocus.innerHTML = `<img src="./ui-icons/fi-rr-location-crosshairs.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Ir">`;
+            btnFocus.innerHTML = `<img src="ui-icons/fi-rr-location-crosshairs.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="Ir">`;
             btnFocus.addEventListener("click", (e) => {
                 e.stopPropagation();
                 if (map) map.flyTo({ center: point.coords, zoom: 15 });
@@ -1255,7 +1315,7 @@ const RoutePlanner = {
 
             const btnDelete = document.createElement("button");
             btnDelete.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;";
-            btnDelete.innerHTML = `<img src="./ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg);" alt="Borrar">`;
+            btnDelete.innerHTML = `<img src="ui-icons/fi-rr-trash.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(43%) sepia(93%) saturate(1352%) hue-rotate(334deg);" alt="Borrar">`;
             btnDelete.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this.removePoint(index);
