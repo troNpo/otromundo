@@ -222,6 +222,54 @@
                         </div>
                     </div>
                 </details>
+<!-- Tarjeta: Convertir Ruta Externa -->
+<div class="route-option-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 12px; overflow: hidden;">
+    <!-- Cabecera del Acordeón -->
+    <button class="accordion-header" onclick="this.parentElement.classList.toggle('open')" style="width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; padding: 12px 14px; color: #fff; cursor: pointer; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: bold;">
+            <img src="ui-icons/fi-rr-tools.svg" alt="" style="width: 16px; height: 16px;">
+            Convertir ruta externa
+        </div>
+        <span class="accordion-arrow" style="font-size: 0.75rem; color: #aaa; transition: transform 0.2s;">▼</span>
+    </button>
+    
+    <!-- Contenido del Acordeón -->
+    <div class="accordion-body" style="display: none; padding: 0 14px 14px 14px; font-size: 0.8rem; color: #bbb;">
+        <p style="margin: 0 0 10px 0; line-height: 1.4;">
+            Sube un archivo GPX o KML, elige el perfil deseado y la app creará una ruta interactiva editable optimizada automáticamente.
+        </p>
+        
+        <!-- Selector de Perfil (Idéntico al panel principal) -->
+        <div style="margin-bottom: 10px;">
+            <label for="import-profile-select" style="display: block; font-size: 0.72rem; margin-bottom: 3px; color: #ccc; font-weight: bold;">Perfil de enrutamiento:</label>
+            <select id="import-profile-select" style="width: 100%; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 6px; border-radius: 6px; font-size: 0.78rem; outline: none;">
+                <option value="hiking-mountain">Senderismo</option>
+                <option value="trekking">Trekking</option>
+                <option value="mtb">MTB</option>
+                <option value="gravel">Gravel</option>
+                <option value="fastbike">Carretera</option>
+                <option value="manual-straight">Punto a punto (Recto)</option>
+            </select>
+        </div>
+        
+        <!-- Botón / Input para subir archivo -->
+        <label for="import-gpx-input" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--primary-cyan, #00d2ff); color: #111; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;">
+            <img src="ui-icons/fi-rr-file-import.svg" alt="" style="width: 16px; height: 16px; filter: brightness(0);">
+            Seleccionar archivo (GPX / KML)
+        </label>
+        <input type="file" id="import-gpx-input" accept=".gpx,.kml" style="display: none;">
+    </div>
+</div>
+
+<style>
+    .route-option-card.open .accordion-body {
+        display: block !important;
+    }
+    
+    .route-option-card.open .accordion-arrow {
+        transform: rotate(180deg);
+    }
+</style>
 
                 <!-- Control Modo Zurdos -->
                 <div id="opt-btn-lefty" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 12px; cursor: pointer;">
@@ -402,15 +450,16 @@
         </div>
     </div>
 
-    <!-- Scripts Esenciales -->
+     <!-- Scripts Esenciales -->
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <script src="map-overlays.js"></script>
     <script src="geocoder.js"></script>
     <script src="exporter.js"></script>
+    <script src="track-importer.js"></script> <!-- <--- Añadir aquí -->
     <script src="guide-data.js"></script>
     <script src="planner-attributions-data.js"></script>
     <script src="app-planner.js"></script>
-    
+
     
 
     
