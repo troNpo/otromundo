@@ -1,24 +1,29 @@
 // ==========================================
 // APLICACIÓN UNIFICADA: PLANIFICADOR + GRÁFICA + LISTA LATERAL + MAPAS + PERFILES + ZURDOS + REORDENAMIENTO + DESTINOS Y PUNTOS DE PASO + GUÍA RÁPIDA + ATRIBUCIONES
 // ==========================================
-​const MAPTILER_KEY = "{{API_KEY}}";
+​// En local usará 'maptiler_local_key' si existe en localStorage; en GitHub usarán la inyectada por GitHub Actions
+const MAPTILER_KEY = localStorage.getItem('maptiler_local_key') || "{{API_KEY}}";
 ​function getStyleUrlOrConfig(stylePath) {
-if (stylePath.includes('OtroCicloMundo') || stylePath.includes('maptiler')) {
+if (!stylePath) return Promise.resolve('styles/osm.json');
+​if (stylePath.includes('OtroCicloMundo') || stylePath.includes('maptiler')) {
 return fetch(stylePath)
-.then(res => res.json())
+.then(res => {
+if (!res.ok) throw new Error(HTTP ${res.status});
+return res.json();
+})
 .then(styleJson => {
 const jsonStr = JSON.stringify(styleJson).replace(/{{API_KEY}}/g, MAPTILER_KEY);
 return JSON.parse(jsonStr);
 })
 .catch(err => {
-console.error("Error al procesar el estilo MapTiler, usando fallback OSM:", err);
+console.warn("No se pudo cargar el estilo MapTiler (clave inválida o fallo de red). Usando OpenStreetMap:", err);
 return 'styles/osm.json';
 });
 }
 return Promise.resolve(stylePath);
 }
-​const savedStylePath = localStorage.getItem('otromundo_style') || 'styles/osm.json';
-​let map;
+​let savedStylePath = localStorage.getItem('otromundo_style') || 'styles/osm.json';
+​let map = null;
 ​const RoutePlanner = {
 profile: "hiking-mountain",
 maxAlternatives: 0,
@@ -38,6 +43,7 @@ _cursorMarker: null,
 _segmentMarkers: [],
 _minMaxMarkers: [],
 ​async init() {
+try {
 this.syncSavedMapUI();
 ​const initialStyle = await getStyleUrlOrConfig(savedStylePath);
 ​map = new maplibregl.Map({
@@ -62,8 +68,7 @@ this.updateDefaultProfileStatus();
 ​setTimeout(() => {
 if (map) map.resize();
 }, 150);
-​if (map) {
-map.on('style.load', () => {
+​map.on('style.load', () => {
 setTimeout(() => {
 if (map.hasImage('route-svg-arrow')) {
 map.removeImage('route-svg-arrow');
@@ -82,6 +87,8 @@ this.updateDynamicCursorLine();
 map.on('moveend', () => {
 this.updateDynamicCursorLine();
 });
+​} catch (err) {
+console.error("Error crítico al inicializar el mapa:", err);
 }
 },
 ​syncSavedMapUI() {
@@ -101,7 +108,7 @@ closeMaps?.addEventListener("click", () => mapsDrawer?.classList.remove("active"
 radio.addEventListener("change", (e) => {
 const selectedPath = e.target.value;
 getStyleUrlOrConfig(selectedPath).then(styleConfig => {
-map.setStyle(styleConfig);
+if (map) map.setStyle(styleConfig);
 });
 localStorage.setItem('otromundo_style', selectedPath);
 mapsDrawer?.classList.remove("active");
@@ -1358,4 +1365,6 @@ ${labelsX}
 }
 };
 ​window.RoutePlanner = RoutePlanner;
-document.addEventListener("DOMContentLoaded", () => RoutePlanner.init());
+​document.addEventListener("DOMContentLoaded", () => {
+RoutePlanner.init();
+});
