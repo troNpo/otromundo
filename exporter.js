@@ -239,8 +239,8 @@ const RouteExporter = {
 
         gpx += `</gpx>`;
 
-        // Se usa 'text/xml' para garantizar compatibilidad absoluta de guardado y apertura limpia en iOS y Android sin extensiones extrañas (.xml)
-        this.triggerBlobDownload(gpx, filename, 'text/xml');
+        // Se utiliza 'application/gpx+xml' para asegurar que el navegador respete la extensión .gpx
+        this.triggerBlobDownload(gpx, filename, 'application/gpx+xml');
     },
 
     triggerBlobDownload(content, filename, contentType) {
@@ -249,7 +249,6 @@ const RouteExporter = {
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
-        // Soporte específico para evitar bloqueos en WebKit (iOS Safari)
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
