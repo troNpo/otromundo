@@ -31,15 +31,20 @@
                 <span id="banner-status-text" style="font-size: 0.72rem; color: var(--primary-cyan); text-overflow: ellipsis; overflow: hidden; font-family: sans-serif; font-weight: bold;">Senderismo</span>
             </div>
             
+                        <!-- Buscador Integrado Móvil (Oculto por defecto) -->
             <div id="banner-search-container" class="banner-item search-item">
                 <button id="btn-banner-search" class="search-toggle-btn" title="Buscar ubicación">
                     <img src="ui-icons/fi-rr-search.svg" alt="Buscar" class="search-icon-img" />
                 </button>
-                <input type="text" id="input-banner-search" class="banner-search-input hidden" placeholder="Buscar lugar..." autocomplete="off" />
+                <div id="search-input-wrapper" class="search-input-wrapper hidden" style="display: flex; align-items: center; flex: 1; min-width: 0;">
+                    <input type="text" id="input-banner-search" class="banner-search-input" placeholder="Buscar lugar..." autocomplete="off" style="width: 100%; border: none; background: transparent; color: #fff; outline: none; font-size: 0.82rem; padding: 2px 4px;" />
+                </div>
                 <div id="visor-search-dropdown" class="search-dropdown hidden"></div>
             </div>
+
         </div>
     </div>
+
 
     <!-- Cursor Central Fijo -->
     <div id="map-center-cursor" class="map-cursor-container">
@@ -473,4 +478,4 @@
         }
     </script>
 </body>
-</html>
+                           </html>
