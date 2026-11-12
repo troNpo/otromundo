@@ -1,0 +1,45 @@
+name: Deploy PWA to GitHub Pages
+on:
+push:
+branches:
+- main
+workflow_dispatch:
+permissions:
+contents: read
+pages: write
+id-token: write
+concurrency:
+group: "pages"
+cancel-in-progress: false
+jobs:
+deploy:
+environment:
+name: github-pages
+url: ${{ steps.deployment.outputs.page_url }}
+runs-on: ubuntu-latest
+steps:
+- name: Checkout código
+uses: actions/checkout@v4
+- name: Inyectar MapTiler API Key
+env:
+MAPTILER_KEY: ${{ secrets.MAPTILER_API_KEY }}
+run: |
+if [ -z "$MAPTILER_KEY" ]; then
+echo "⚠️ ADVERTENCIA: El secreto MAPTILER_API_KEY está vacío o no configurado en GitHub."
+fi
+if [ -f "styles/otromundo.json" ]; then
+sed -i "s/{{API_KEY}}/$MAPTILER_KEY/g" styles/otromundo.json
+echo "✅ API Key procesada en styles/otromundo.json"
+else
+echo "❌ Error: No se encontró styles/otromundo.json"
+exit 1
+fi
+- name: Configurar Pages
+uses: actions/configure-pages@v5
+- name: Subir artefacto de Pages
+uses: actions/upload-pages-artifact@v3
+with:
+path: '.'
+- name: Desplegar a GitHub Pages
+id: deployment
+uses: actions/deploy-pages@v4
