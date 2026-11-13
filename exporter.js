@@ -1,5 +1,5 @@
 // ==========================================
-// EXPORTER.JS - Gestor Avanzado de Exportación (KML con nombres y colores por tramo, y GPX compatible iOS/Android)
+// EXPORTER.JS - Gestor Avanzado de Exportación (KML jerárquico y GPX compatible con tramos mixtos)
 // ==========================================
 
 const RouteExporter = {
@@ -8,7 +8,6 @@ const RouteExporter = {
     },
 
     setupEvents() {
-        // Sincronizar extensión al cambiar radio KML / GPX
         document.querySelectorAll('input[name="export-format"]').forEach(radio => {
             radio.addEventListener("change", (e) => {
                 const input = document.getElementById("export-filename-input");
@@ -19,7 +18,6 @@ const RouteExporter = {
             });
         });
 
-        // Botón principal de descarga
         const btnDownload = document.getElementById("opt-btn-download-file");
         if (btnDownload) {
             btnDownload.addEventListener("click", (e) => {
@@ -29,7 +27,6 @@ const RouteExporter = {
             });
         }
 
-        // Rotar flecha del acordeón al abrir/cerrar
         const detailsEl = document.getElementById("export-accordion");
         detailsEl?.addEventListener("toggle", () => {
             const arrow = document.getElementById("export-accordion-arrow");
@@ -62,17 +59,15 @@ const RouteExporter = {
             this.downloadGpx(filename, planner);
         }
 
-        // Cerrar panel lateral tras descargar
         document.getElementById("side-panel-planner-options")?.classList.remove("active");
     },
 
-    // Convierte un color HEX (#RRGGBB) a formato KML AABBGGRR (con opacidad total FF)
     hexToKmlColor(hex) {
-        if (!hex || !hex.startsWith('#') || hex.length < 7) return 'ff00e5ff'; // Color por defecto cian
+        if (!hex || !hex.startsWith('#') || hex.length < 7) return 'ff00e5ff';
         const r = hex.substring(1, 3);
         const g = hex.substring(3, 5);
         const b = hex.substring(5, 7);
-        return `ff${b}${g}${r}`; // KML usa AABBGGRR
+        return `ff${b}${g}${r}`;
     },
 
     downloadKmlHierarchical(filename, planner) {
@@ -81,28 +76,14 @@ const RouteExporter = {
         kml += `<Document>\n`;
         kml += `  <name><![CDATA[${filename.replace('.kml', '')}]]></name>\n`;
 
-        // Carpeta 1: Waypoints de la ruta
+        // Carpeta 1: Waypoints
         if (planner.points && planner.points.length > 0) {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Waypoints de Ruta]]></name>\n`;
             planner.points.forEach((p, idx) => {
                 const puntoName = p.name || (`Punto ${idx + 1}`);
-
-                let descHtml = `Waypoint #${idx + 1}<br/>\nname: ${puntoName}`;
-                if (p.coords[2] !== undefined) {
-                    descHtml += `<br/>\nelevación: ${Math.round(p.coords[2])} m`;
-                }
-                if (p.extraInfo) {
-                    Object.keys(p.extraInfo).forEach(key => {
-                        descHtml += `<br/>\n${key}: ${p.extraInfo[key]}`;
-                    });
-                } else if (p.description) {
-                    descHtml += `<br/>\n${p.description}`;
-                }
-
                 kml += `    <Placemark>\n`;
                 kml += `      <name><![CDATA[${puntoName}]]></name>\n`;
-                kml += `      <description><![CDATA[${descHtml}\n]]></description>\n`;
                 kml += `      <Point>\n`;
                 kml += `        <coordinates>${p.coords[0]},${p.coords[1]},${p.coords[2] || 0}</coordinates>\n`;
                 kml += `      </Point>\n`;
@@ -111,83 +92,44 @@ const RouteExporter = {
             kml += `  </Folder>\n`;
         }
 
-        // Carpeta 2: Traza de la Ruta desglosada por Segmentos (con nombres y colores individuales)
-        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
+        // Carpeta 2: Traza mixta desglosada por Segmentos
+        if (planner.segments && planner.segments.length > 0 && planner.points.length >= 2) {
             kml += `  <Folder>\n`;
-            kml += `    <name><![CDATA[Traza de Ruta]]></name>\n`;
+            kml += `    <name><![CDATA[Traza de Ruta (Mixta)]]></name>\n`;
 
-            const fullCoords = planner.currentRouteData.coordinates;
-            const segments = planner.segments || [];
+            planner.segments.forEach((seg, sIdx) => {
+                const pStart = planner.points[sIdx]?.coords;
+                const pEnd = planner.points[sIdx + 1]?.coords;
+                if (!pStart || !pEnd) return;
 
-            if (segments.length > 0 && planner.points.length >= 2) {
-                let coordIndex = 0;
+                const isManual = seg.profile === "manual-straight";
+                const subCoords = isManual 
+                    ? [pStart, pEnd] 
+                    : (seg.coordinates && seg.coordinates.length >= 2 ? seg.coordinates : [pStart, pEnd]);
 
-                segments.forEach((seg, sIdx) => {
-                    const nextPoint = planner.points[sIdx + 1];
-                    if (!nextPoint) return;
+                const segName = seg.name || `Tramo ${sIdx + 1} (${isManual ? 'Punto a punto' : 'BRouter'})`;
+                const styleId = `seg_style_${sIdx}`;
+                const kmlColor = this.hexToKmlColor(seg.color || '#00e5ff');
 
-                    const subCoords = [];
-                    while (coordIndex < fullCoords.length) {
-                        const pt = fullCoords[coordIndex];
-                        subCoords.push(pt);
-                        
-                        const distToNext = planner.haversine(pt[1], pt[0], nextPoint.coords[1], nextPoint.coords[0]);
-                        coordIndex++;
-                        
-                        if (distToNext < 40 && sIdx < segments.length - 1) {
-                            break;
-                        }
-                    }
-                    
-                    if (sIdx === segments.length - 1) {
-                        while (coordIndex < fullCoords.length) {
-                            subCoords.push(fullCoords[coordIndex]);
-                            coordIndex++;
-                        }
-                    }
+                kml += `    <Style id="${styleId}">\n`;
+                kml += `      <LineStyle>\n`;
+                kml += `        <color>${kmlColor}</color>\n`;
+                kml += `        <width>4</width>\n`;
+                kml += `      </LineStyle>\n`;
+                kml += `    </Style>\n`;
 
-                    if (subCoords.length < 2 && fullCoords.length >= 2) {
-                        subCoords.push(fullCoords[fullCoords.length - 1]);
-                    }
-
-                    const segName = seg.name || `Tramo ${sIdx + 1}`;
-                    const styleId = `seg_style_${sIdx}`;
-                    const kmlColor = this.hexToKmlColor(seg.color || '#00e5ff');
-
-                    // Definir estilo de color para el segmento
-                    kml += `    <Style id="${styleId}">\n`;
-                    kml += `      <LineStyle>\n`;
-                    kml += `        <color>${kmlColor}</color>\n`;
-                    kml += `        <width>4</width>\n`;
-                    kml += `      </LineStyle>\n`;
-                    kml += `    </Style>\n`;
-
-                    // Placemark del segmento
-                    kml += `    <Placemark>\n`;
-                    kml += `      <name><![CDATA[${segName}]]></name>\n`;
-                    kml += `      <styleUrl>#${styleId}</styleUrl>\n`;
-                    kml += `      <LineString>\n`;
-                    kml += `        <tessellate>1</tessellate>\n`;
-                    kml += `        <coordinates>\n`;
-                    kml += `          `;
-                    kml += subCoords.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
-                    kml += `\n        </coordinates>\n`;
-                    kml += `      </LineString>\n`;
-                    kml += `    </Placemark>\n`;
-                });
-            } else {
-                // Si no hay segmentos definidos, exporta la ruta completa genérica
                 kml += `    <Placemark>\n`;
-                kml += `      <name><![CDATA[Ruta Activa]]></name>\n`;
+                kml += `      <name><![CDATA[${segName}]]></name>\n`;
+                kml += `      <styleUrl>#${styleId}</styleUrl>\n`;
                 kml += `      <LineString>\n`;
                 kml += `        <tessellate>1</tessellate>\n`;
                 kml += `        <coordinates>\n`;
                 kml += `          `;
-                kml += fullCoords.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
+                kml += subCoords.map(c => `${c[0]},${c[1]},${c[2] || 0}`).join(" ");
                 kml += `\n        </coordinates>\n`;
                 kml += `      </LineString>\n`;
                 kml += `    </Placemark>\n`;
-            }
+            });
 
             kml += `  </Folder>\n`;
         }
@@ -206,41 +148,47 @@ const RouteExporter = {
         gpx += `    <time>${new Date().toISOString()}</time>\n`;
         gpx += `  </metadata>\n`;
 
-        // Waypoints (puntos de ruta)
+        // Waypoints
         if (planner.points && planner.points.length > 0) {
             planner.points.forEach((p, idx) => {
                 gpx += `  <wpt lat="${p.coords[1]}" lon="${p.coords[0]}">\n`;
-                if (p.coords[2] !== undefined) {
-                    gpx += `    <ele>${p.coords[2]}</ele>\n`;
-                }
+                if (p.coords[2] !== undefined) gpx += `    <ele>${p.coords[2]}</ele>\n`;
                 gpx += `    <name><![CDATA[${p.name || ('Punto ' + (idx + 1))}]]></name>\n`;
-                if (p.description) {
-                    gpx += `    <desc><![CDATA[${p.description}]]></desc>\n`;
-                }
                 gpx += `  </wpt>\n`;
             });
         }
 
-        // Track (traza de la ruta)
-        if (planner.currentRouteData && planner.currentRouteData.coordinates && planner.currentRouteData.coordinates.length > 0) {
+        // Track unificado combinando todos los segmentos (BRouter y manuales)
+        if (planner.segments && planner.segments.length > 0 && planner.points.length >= 2) {
             gpx += `  <trk>\n`;
-            gpx += `    <name><![CDATA[Ruta Otromundo]]></name>\n`;
+            gpx += `    <name><![CDATA[Ruta Mixta Otromundo]]></name>\n`;
             gpx += `    <trkseg>\n`;
-            planner.currentRouteData.coordinates.forEach(c => {
-                gpx += `      <trkpt lat="${c[1]}" lon="${c[0]}">\n`;
-                if (c[2] !== undefined) {
-                    gpx += `        <ele>${c[2]}</ele>\n`;
-                }
-                gpx += `      </trkpt>\n`;
+
+            planner.segments.forEach((seg, sIdx) => {
+                const pStart = planner.points[sIdx]?.coords;
+                const pEnd = planner.points[sIdx + 1]?.coords;
+                if (!pStart || !pEnd) return;
+
+                const isManual = seg.profile === "manual-straight";
+                const subCoords = isManual 
+                    ? [pStart, pEnd] 
+                    : (seg.coordinates && seg.coordinates.length >= 2 ? seg.coordinates : [pStart, pEnd]);
+
+                subCoords.forEach((c, cIdx) => {
+                    if (sIdx > 0 && cIdx === 0) return; // Evitar duplicar vértices en uniones
+
+                    gpx += `      <trkpt lat="${c[1]}" lon="${c[0]}">\n`;
+                    if (c[2] !== undefined) gpx += `        <ele>${c[2]}</ele>\n`;
+                    gpx += `      </trkpt>\n`;
+                });
             });
+
             gpx += `    </trkseg>\n`;
             gpx += `  </trk>\n`;
         }
 
         gpx += `</gpx>`;
-
-        // Se utiliza 'application/gpx+xml' para asegurar que el navegador respete la extensión .gpx
-        this.triggerBlobDownload(gpx, filename, 'application/gpx+xml');
+        this.triggerBlobDownload(gpx, filename, 'text/xml');
     },
 
     triggerBlobDownload(content, filename, contentType) {
