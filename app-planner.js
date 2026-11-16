@@ -9,6 +9,7 @@ const map = new maplibregl.Map({
     style: savedStyle,
     center: savedCenter,
     zoom: savedZoom,
+    maxPitch: 85,
     attributionControl: false
 });
 window.map = map;
@@ -82,6 +83,15 @@ const RoutePlanner = {
                 }, 200);
             });
 
+            // Reproyectar marcadores sobre la superficie cuando termine de cargar el relieve DEM 3D
+            map.on('terrain', () => {
+                if (this.markers && this.markers.length > 0) {
+                    this.markers.forEach((m, i) => {
+                        if (this.points[i]) m.setLngLat(this.points[i].coords);
+                    });
+                }
+            });
+
             map.on('move', () => {
                 this.updateDynamicCursorLine();
             });
@@ -132,39 +142,63 @@ const RoutePlanner = {
             });
         });
 
+        // ==========================================
+        // PANEL DE PERFILES DE ENRUTAMIENTO (CON VALIDACIÓN ✓)
+        // ==========================================
         const btnProfiles = document.getElementById("planner-btn-profiles");
         const profilesDrawer = document.getElementById("side-panel-profiles");
         const closeProfiles = document.getElementById("btn-close-profiles-drawer");
-
-        btnProfiles?.addEventListener("click", () => profilesDrawer?.classList.add("active"));
-        closeProfiles?.addEventListener("click", () => profilesDrawer?.classList.remove("active"));
-
-        document.querySelectorAll('input[name="brouter-profile"]').forEach(radio => {
-            radio.addEventListener("change", (e) => {
-                const newProfile = e.target.value;
-
-                if (this.applyOnlyToFuture) {
-                    this.profile = newProfile;
-                    this.updateDefaultProfileStatus();
-                    this.showToast(`Próximo tramo: ${newProfile}`);
-                } else {
-                    this.profile = newProfile;
-                    this.updateDefaultProfileStatus();
-                    this.segments.forEach(seg => {
-                        seg.profile = this.profile;
-                    });
-                    if (this.points.length >= 2) this.calcularRutaBRouter();
-                }
-
-                profilesDrawer?.classList.remove("active");
-            });
+        const validateProfiles = document.getElementById("btn-validate-profiles-drawer");
+        const warningBox = document.getElementById("profile-overwrite-warning");
+        
+        const updateProfileWarningVisibility = () => {
+            if (!warningBox) return;
+            warningBox.style.display = this.applyOnlyToFuture ? "none" : "block";
+        };
+        
+        btnProfiles?.addEventListener("click", () => {
+            const currentRadio = document.querySelector(`input[name="brouter-profile"][value="${this.profile}"]`);
+            if (currentRadio) currentRadio.checked = true;
+            updateProfileWarningVisibility();
+            profilesDrawer?.classList.add("active");
         });
-
+        
+        closeProfiles?.addEventListener("click", () => {
+            const currentRadio = document.querySelector(`input[name="brouter-profile"][value="${this.profile}"]`);
+            if (currentRadio) currentRadio.checked = true;
+            profilesDrawer?.classList.remove("active");
+        });
+        
+        validateProfiles?.addEventListener("click", () => {
+            const selectedRadio = document.querySelector('input[name="brouter-profile"]:checked');
+            const newProfile = selectedRadio ? selectedRadio.value : this.profile;
+            
+            this.profile = newProfile;
+            this.updateDefaultProfileStatus();
+            
+            if (this.applyOnlyToFuture) {
+                this.showToast(`Próximo tramo: ${newProfile}`);
+            } else {
+                this.segments.forEach(seg => {
+                    seg.profile = this.profile;
+                });
+                if (this.points.length >= 2) {
+                    this.showToast("Recalculando ruta con nuevo perfil...");
+                    this.calcularRutaBRouter();
+                } else {
+                    this.showToast(`Perfil activo: ${newProfile}`);
+                }
+            }
+            
+            profilesDrawer?.classList.remove("active");
+        });
+        
         const optFuture = document.getElementById("opt-btn-apply-future");
         const toggleFuture = document.getElementById("toggle-apply-future-mode");
         optFuture?.addEventListener("click", () => {
             this.applyOnlyToFuture = !this.applyOnlyToFuture;
             if (toggleFuture) toggleFuture.checked = this.applyOnlyToFuture;
+            updateProfileWarningVisibility();
             this.showToast(this.applyOnlyToFuture ? "Perfil futuro activado" : "Perfil global activado");
         });
 
@@ -321,59 +355,59 @@ const RoutePlanner = {
         });
     },
 
-       setupChangelogModalEvents() {
-            const modal = document.getElementById("planner-changelog-modal");
-            const openBtn = document.getElementById("btn-open-changelog");
-            const closeBtn = document.getElementById("btn-close-changelog-modal");
-            const optionsDrawer = document.getElementById("side-panel-planner-options");
-            
-            openBtn?.addEventListener("click", () => {
-                this.loadChangelogContent();
-                if (modal) modal.style.display = "flex";
-                if (optionsDrawer) optionsDrawer.classList.remove("active");
-            });
-            
-            closeBtn?.addEventListener("click", () => {
-                if (modal) modal.style.display = "none";
-            });
-            
-            modal?.addEventListener("click", (e) => {
-                if (e.target === modal) modal.style.display = "none";
-            });
-        },
+    setupChangelogModalEvents() {
+        const modal = document.getElementById("planner-changelog-modal");
+        const openBtn = document.getElementById("btn-open-changelog");
+        const closeBtn = document.getElementById("btn-close-changelog-modal");
+        const optionsDrawer = document.getElementById("side-panel-planner-options");
         
-        loadChangelogContent() {
-            const contentContainer = document.getElementById("changelog-modal-content");
-            const titleEl = document.getElementById("changelog-modal-title");
-            if (!contentContainer) return;
+        openBtn?.addEventListener("click", () => {
+            this.loadChangelogContent();
+            if (modal) modal.style.display = "flex";
+            if (optionsDrawer) optionsDrawer.classList.remove("active");
+        });
+        
+        closeBtn?.addEventListener("click", () => {
+            if (modal) modal.style.display = "none";
+        });
+        
+        modal?.addEventListener("click", (e) => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+    },
+    
+    loadChangelogContent() {
+        const contentContainer = document.getElementById("changelog-modal-content");
+        const titleEl = document.getElementById("changelog-modal-title");
+        if (!contentContainer) return;
+        
+        const data = window.PLANNER_CHANGELOG_DATA;
+        if (!data) return;
+        
+        if (titleEl && data.title) titleEl.innerText = `${data.title} (${data.version})`;
+        
+        contentContainer.innerHTML = "";
+        data.sections.forEach(sec => {
+            const item = document.createElement("div");
             
-            const data = window.PLANNER_CHANGELOG_DATA;
-            if (!data) return;
-            
-            if (titleEl && data.title) titleEl.innerText = `${data.title} (${data.version})`;
-            
-            contentContainer.innerHTML = "";
-            data.sections.forEach(sec => {
-                const item = document.createElement("div");
-                
-                if (sec.isHeader) {
-                    item.style.cssText = `
+            if (sec.isHeader) {
+                item.style.cssText = `
                     font-weight: bold; color: #00e5ff; font-size: 0.95rem; 
                     margin-top: 14px; margin-bottom: -2px; padding-bottom: 6px;
                     border-bottom: 1px solid rgba(0,229,255,0.3); font-family: sans-serif;
                     display: flex; align-items: center; gap: 8px;
                 `;
-                    item.innerHTML = `
+                item.innerHTML = `
                     <img src="${sec.icon}" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%);" alt="${sec.title}">
                     <span>${sec.title}</span>
                 `;
-                } else {
-                    item.style.cssText = `
+            } else {
+                item.style.cssText = `
                     display: flex; gap: 14px; align-items: flex-start;
                     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
                     border-radius: 10px; padding: 12px;
                 `;
-                    item.innerHTML = `
+                item.innerHTML = `
                     <div style="background: rgba(0,229,255,0.1); border-radius: 8px; padding: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <img src="${sec.icon}" width="20" height="20" style="filter: brightness(0) saturate(100%) invert(77%);" alt="${sec.title}">
                     </div>
@@ -382,25 +416,25 @@ const RoutePlanner = {
                         <div style="color: #ccc; font-size: 0.82rem; line-height: 1.4;">${sec.desc}</div>
                     </div>
                 `;
-                }
-                contentContainer.appendChild(item);
-            });
-        },
-        
-        checkAndShowChangelog() {
-            const data = window.PLANNER_CHANGELOG_DATA;
-            if (!data) return;
-            
-            const lastSeenVersion = localStorage.getItem('otromundo_last_seen_version');
-            if (lastSeenVersion !== data.version) {
-                this.loadChangelogContent();
-                const modal = document.getElementById("planner-changelog-modal");
-                if (modal) {
-                    modal.style.display = "flex";
-                    localStorage.setItem('otromundo_last_seen_version', data.version);
-                }
             }
-        },
+            contentContainer.appendChild(item);
+        });
+    },
+    
+    checkAndShowChangelog() {
+        const data = window.PLANNER_CHANGELOG_DATA;
+        if (!data) return;
+        
+        const lastSeenVersion = localStorage.getItem('otromundo_last_seen_version');
+        if (lastSeenVersion !== data.version) {
+            this.loadChangelogContent();
+            const modal = document.getElementById("planner-changelog-modal");
+            if (modal) {
+                modal.style.display = "flex";
+                localStorage.setItem('otromundo_last_seen_version', data.version);
+            }
+        }
+    },
 
     setupAndroidBackButton() {
         let lastBackPressTime = 0;
@@ -514,51 +548,92 @@ const RoutePlanner = {
 
     activateMapInteractions() {
         if (!map || typeof map.on !== 'function') return;
-
+        
+        const isDesktopPointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+        const mapContainer = map.getContainer();
+        
+        if (isDesktopPointer && mapContainer) {
+            mapContainer.style.cursor = 'crosshair';
+        }
+        
+        let lastMouseLngLat = null;
+        map.on('mousemove', (e) => {
+            lastMouseLngLat = e.lngLat;
+        });
+        mapContainer.addEventListener('mouseleave', () => {
+            lastMouseLngLat = null;
+        });
+        
         map.on('click', (e) => {
             if (this.circularManager && this.circularManager.isSelectingStart) {
                 this.circularManager.handleMapClick(e.lngLat);
                 return;
             }
-
+            
             if (this.isDraggingMarker) return;
-            if (!this.isTouchAddEnabled) return;
-
+            
+            const canAddPoint = isDesktopPointer ? true : this.isTouchAddEnabled;
+            if (!canAddPoint) return;
+            
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none") return;
+            
             this.addPoint([e.lngLat.lng, e.lngLat.lat], "Punto");
         });
-
+        
         map.on('contextmenu', (e) => {
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none") return;
             this.insertIntermediatePoint(e.lngLat);
         });
-
-        const mapContainer = map.getContainer();
+        
+        document.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement?.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+            
+            const panel = document.getElementById("route-planner-bottom-panel");
+            if (!panel || panel.style.display === "none") return;
+            
+            if (e.code === 'Space') {
+                e.preventDefault();
+                const targetCoords = lastMouseLngLat ?
+                    [lastMouseLngLat.lng, lastMouseLngLat.lat] :
+                    [map.getCenter().lng, map.getCenter().lat];
+                
+                if (this.circularManager && this.circularManager.isSelectingStart) {
+                    this.circularManager.handleMapClick({ lng: targetCoords[0], lat: targetCoords[1] });
+                } else {
+                    this.addPoint(targetCoords, "Punto");
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (this.points.length > 0) this.removePoint(this.points.length - 1);
+            }
+        });
+        
         let touchTimer = null;
         let startTouchCoord = null;
-
+        
         mapContainer.addEventListener('touchstart', (e) => {
             if (!this.isTouchAddEnabled) return;
             const panel = document.getElementById("route-planner-bottom-panel");
             if (!panel || panel.style.display === "none" || e.touches.length !== 1) return;
-
+            
             const touch = e.touches[0];
             startTouchCoord = { x: touch.clientX, y: touch.clientY };
-
+            
             clearTimeout(touchTimer);
             touchTimer = setTimeout(() => {
                 const rect = mapContainer.getBoundingClientRect();
                 const point = [startTouchCoord.x - rect.left, startTouchCoord.y - rect.top];
                 const lngLat = map.unproject(point);
-
+                
                 if (navigator.vibrate) navigator.vibrate(50);
                 this.insertIntermediatePoint(lngLat);
                 startTouchCoord = null;
             }, 600);
         }, { passive: true });
-
+        
         mapContainer.addEventListener('touchmove', (e) => {
             if (!startTouchCoord || e.touches.length !== 1) return;
             const touch = e.touches[0];
@@ -569,7 +644,7 @@ const RoutePlanner = {
                 startTouchCoord = null;
             }
         }, { passive: true });
-
+        
         mapContainer.addEventListener('touchend', () => {
             clearTimeout(touchTimer);
             startTouchCoord = null;
@@ -1454,7 +1529,7 @@ const RoutePlanner = {
         if (!map) return;
         this.markers.forEach(m => m.remove());
         this.markers = [];
-
+        
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -1463,33 +1538,35 @@ const RoutePlanner = {
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
                 font-size: 13px; font-family: sans-serif; cursor: grab;
-                position: absolute; transform: translate(-50%, -50%) translateZ(0);
                 will-change: transform; pointer-events: auto;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.65);
             `;
             el.innerText = index + 1;
-
-            const marker = new maplibregl.Marker({ 
-                element: el, 
+            
+            const marker = new maplibregl.Marker({
+                element: el,
                 draggable: true,
-                offset: [0, 0]
+                anchor: 'center',
+                pitchAlignment: 'viewport',
+                rotationAlignment: 'viewport'
             })
                 .setLngLat(point.coords)
                 .addTo(map);
-
+            
             marker.on('dragstart', () => {
                 this.isDraggingMarker = true;
-                el.style.transform = "translate(-50%, -50%) scale(1.35) translateZ(0)";
+                el.style.borderWidth = "3px";
                 this.showToast(`Moviendo punto ${index + 1}...`);
             });
-
+            
             marker.on('drag', () => {
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 this.updateDynamicCursorLine();
             });
-
+            
             marker.on('dragend', () => {
-                el.style.transform = "translate(-50%, -50%) scale(1) translateZ(0)";
+                el.style.borderWidth = "2px";
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 
@@ -1506,13 +1583,13 @@ const RoutePlanner = {
                     this.hideGraph();
                     this.updateAltButtonVisibility();
                 }
-
+                
                 this.updateDynamicCursorLine();
                 setTimeout(() => {
                     this.isDraggingMarker = false;
                 }, 300);
             });
-
+            
             this.markers.push(marker);
         });
     },

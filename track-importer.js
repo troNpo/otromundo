@@ -4,7 +4,19 @@
 
 const TrackImporter = {
     init() {
+        this.removeManualStraightOption();
         this.setupFileInputListener();
+    },
+
+    // Elimina la opción "Punto a punto (manual-straight)" del desplegable de importación
+    removeManualStraightOption() {
+        const profileSelect = document.getElementById('import-profile-select');
+        if (!profileSelect) return;
+
+        const manualOption = profileSelect.querySelector('option[value="manual-straight"]');
+        if (manualOption) {
+            manualOption.remove();
+        }
     },
 
     setupFileInputListener() {
@@ -48,9 +60,12 @@ const TrackImporter = {
             const simplifiedPoints = this.simplifyTrack(rawCoordinates, targetPoints);
             console.log(`Puntos optimizados mediante Douglas-Peucker: ${simplifiedPoints.length} puntos clave.`);
 
-            // Leer el perfil seleccionado en la tarjeta de importación
+            // Leer el perfil seleccionado en la tarjeta de importación (evitando manual-straight)
             const profileSelect = document.getElementById('import-profile-select');
-            const selectedProfile = profileSelect ? profileSelect.value : 'hiking-mountain';
+            let selectedProfile = profileSelect ? profileSelect.value : 'hiking-mountain';
+            if (selectedProfile === 'manual-straight') {
+                selectedProfile = 'hiking-mountain';
+            }
 
             // Inyectar directamente en el Planificador interactivo
             await this.injectIntoPlanner(simplifiedPoints, selectedProfile);

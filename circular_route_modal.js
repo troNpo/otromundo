@@ -1,6 +1,6 @@
 // ==========================================
 // MÓDULO DE RUTA CIRCULAR Y RADAR INTERACTIVO
-// (Versión limpia y estable de 5 puntos: Inicio + 4 perimetrales)
+// (Con calibración automática de distancia real por sinuosidad)
 // ==========================================
 class CircularRouteManager {
     constructor(planner) {
@@ -211,35 +211,96 @@ class CircularRouteManager {
         return [ (destLng * 180) / Math.PI, (destLat * 180) / Math.PI ];
     }
 
-    async generateCircularRoute() {
-        if (!this.activePoint) return;
-        
-        this.syncProfileWithApp(this.currentProfile);
-        this.planner.showToast("Calculando ruta circular con BRouter...");
-
-        const startLng = this.activePoint.lng !== undefined ? this.activePoint.lng : this.activePoint[0];
-        const startLat = this.activePoint.lat !== undefined ? this.activePoint.lat : this.activePoint[1];
-        
-        const circleRadiusKm = this.currentDist / (2 * Math.PI);
-
-        const centerCoords = this.computeDestinationPoint(startLng, startLat, circleRadiusKm, this.currentAngle);
+    // Genera los 4 puntos perimetrales para un radio dado en km
+    buildLoopWaypoints(startLng, startLat, radiusKm) {
+        const centerCoords = this.computeDestinationPoint(startLng, startLat, radiusKm, this.currentAngle);
         const initialAngleFromCenter = (this.currentAngle + 180) % 360;
 
         const waypoints = [];
-        const numWaypoints = 4; // 4 puntos perimetrales originales
+        const numWaypoints = 4;
         const stepAngle = 360 / (numWaypoints + 1);
 
         for (let i = 1; i <= numWaypoints; i++) {
             const currentWaypointAngle = (initialAngleFromCenter + (i * stepAngle)) % 360;
-            const wpCoords = this.computeDestinationPoint(centerCoords[0], centerCoords[1], circleRadiusKm, currentWaypointAngle);
+            const wpCoords = this.computeDestinationPoint(centerCoords[0], centerCoords[1], radiusKm, currentWaypointAngle);
             waypoints.push(wpCoords);
         }
+        return waypoints;
+    }
 
+    // Consulta rápida a BRouter para medir la distancia real del bucle propuesto
+    async measureLoopDistanceKm(startPt, waypoints, profile) {
+        const allPts = [startPt, ...waypoints, startPt];
+        const lonlatsStr = allPts.map(p => `${p[0].toFixed(6)},${p[1].toFixed(6)}`).join('|');
+        const url = `https://brouter.de/brouter?lonlats=${lonlatsStr}&profile=${profile}&alternativeidx=0&format=geojson`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const feature = data?.features?.[0];
+            if (!feature) return null;
+
+            const props = feature.properties || {};
+            let totalDistM = parseFloat(props['track-length'] || props.distance || 0);
+
+            if (totalDistM === 0 && feature.geometry?.coordinates) {
+                const coords = feature.geometry.coordinates;
+                for (let i = 0; i < coords.length - 1; i++) {
+                    totalDistM += this.planner.haversine(coords[i][1], coords[i][0], coords[i + 1][1], coords[i + 1][0]);
+                }
+            }
+            return totalDistM / 1000;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async generateCircularRoute() {
+        if (!this.activePoint) return;
+        
+        this.syncProfileWithApp(this.currentProfile);
+        this.planner.showToast("Calibrando ruta circular...");
+
+        const startLng = this.activePoint.lng !== undefined ? this.activePoint.lng : this.activePoint[0];
+        const startLat = this.activePoint.lat !== undefined ? this.activePoint.lat : this.activePoint[1];
+        const startPt = [startLng, startLat];
+
+        // 1. Factor de sinuosidad inicial según el perfil (caminos reales vs línea recta)
+        const tortuosityFactors = {
+            'hiking-mountain': 1.50,
+            'trekking': 1.42,
+            'mtb': 1.40,
+            'gravel': 1.32,
+            'fastbike': 1.25
+        };
+        const initialFactor = tortuosityFactors[this.currentProfile] || 1.40;
+        
+        // Radio inicial compensado por sinuosidad
+        let radiusKm = (this.currentDist / (2 * Math.PI)) / initialFactor;
+        let waypoints = this.buildLoopWaypoints(startLng, startLat, radiusKm);
+
+        // 2. Calibración iterativa (hasta 2 ajustes) para que la distancia real no sobrepase ni se quede corta
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const actualDistKm = await this.measureLoopDistanceKm(startPt, waypoints, this.currentProfile);
+            if (!actualDistKm || actualDistKm <= 0) break;
+
+            const ratio = actualDistKm / this.currentDist;
+            // Si está dentro de un margen aceptable (-10% a +8% respecto al máximo deseado), damos por bueno el cálculo
+            if (ratio >= 0.90 && ratio <= 1.08) {
+                break;
+            }
+
+            // Ajustar el radio proporcionalmente (ligeramente conservador al 96% para no pasarse del límite)
+            radiusKm = radiusKm * (this.currentDist / actualDistKm) * 0.96;
+            waypoints = this.buildLoopWaypoints(startLng, startLat, radiusKm);
+        }
+
+        // 3. Aplicar los puntos calibrados al planificador
         this.planner.clearAllPoints();
         this.planner.profile = this.currentProfile;
         this.planner.updateDefaultProfileStatus();
 
-        const startPt = [startLng, startLat];
         this.planner.addPoint(startPt, "Inicio");
         
         waypoints.forEach((wp, idx) => {
