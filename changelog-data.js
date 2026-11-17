@@ -1,5 +1,5 @@
 window.PLANNER_CHANGELOG_DATA = {
-    "version": "V1.2.3",
+    "version": "V1.2.2",
     "title": "Novedades en OtroMundo",
     "sections": [
         {
