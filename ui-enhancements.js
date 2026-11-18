@@ -1,5 +1,5 @@
 // ==========================================
-// UI-ENHANCEMENTS.JS - Diana inteligente en PC, Botón Finalizar (Estado Dual Corporativo) y Control 2D/3D independiente
+// UI-ENHANCEMENTS.JS - Diana inteligente en PC (visible en móvil), Botón Finalizar y Control 2D/3D
 // ==========================================
 
 const UIEnhancementsManager = {
@@ -13,7 +13,7 @@ const UIEnhancementsManager = {
   },
   
   // ==========================================
-  // 1. OCULTAR DIANA CENTRAL SI SE DETECTA RATÓN
+  // 1. OCULTAR DIANA CENTRAL SOLO EN PC (VISIBLE EN MÓVIL)
   // ==========================================
   setupCrosshairMouseDetection() {
     const isFinePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
@@ -26,8 +26,8 @@ const UIEnhancementsManager = {
       if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
       if (!this.isMouseDetected) {
         this.isMouseDetected = true;
-        this.applyCrosshairVisibility();
       }
+      this.applyCrosshairVisibility();
     }, { passive: true });
     
     window.addEventListener("touchstart", () => {
@@ -36,21 +36,72 @@ const UIEnhancementsManager = {
         this.applyCrosshairVisibility();
       }
     }, { passive: true });
+
+    const observer = new MutationObserver(() => {
+      if (this.isMouseDetected && isFinePointer) {
+        this.applyCrosshairVisibility();
+      }
+    });
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
   },
   
   applyCrosshairVisibility() {
+    const isFinePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+    // Si estamos en móvil/táctil, nos aseguramos de que la diana NUNCA se oculte
+    const shouldHide = this.isMouseDetected && isFinePointer;
+
     const selectors = [
       "#center-crosshair",
       ".center-crosshair",
       "#planner-crosshair",
       ".map-crosshair",
-      "#crosshair"
+      "#crosshair",
+      "#map-center-target",
+      ".map-center-target",
+      "[id*='crosshair']",
+      "[class*='crosshair']",
+      "[id*='reticle']",
+      "[class*='reticle']",
+      "[id*='diana']",
+      "[class*='diana']"
     ];
     
+    const foundElements = new Set();
     selectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(el => {
-        el.style.display = this.isMouseDetected ? "none" : "";
+      try {
+        document.querySelectorAll(sel).forEach(el => foundElements.add(el));
+      } catch (e) {}
+    });
+
+    if (foundElements.size === 0) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      document.querySelectorAll("div, svg, img").forEach(el => {
+        if (el.id === "map" || el.closest("#map")) return;
+        const style = window.getComputedStyle(el);
+        if ((style.position === "fixed" || style.position === "absolute") && style.pointerEvents === "none") {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 10 && rect.width < 90 && rect.height > 10 && rect.height < 90) {
+            const elCenterX = rect.left + rect.width / 2;
+            const elCenterY = rect.top + rect.height / 2;
+            if (Math.abs(elCenterX - centerX) < 12 && Math.abs(elCenterY - centerY) < 12) {
+              foundElements.add(el);
+            }
+          }
+        }
       });
+    }
+
+    foundElements.forEach(el => {
+      if (shouldHide) {
+        el.style.setProperty("display", "none", "important");
+        el.style.setProperty("opacity", "0", "important");
+      } else {
+        el.style.removeProperty("display");
+        el.style.removeProperty("opacity");
+      }
     });
   },
   
@@ -66,7 +117,6 @@ const UIEnhancementsManager = {
     btnFinish.className = "planner-float-btn";
     btnFinish.title = "Finalizar edición de ruta";
     
-    // Estado Edición Activa (Estilo corporativo estándar: fondo oscuro #121214, borde cian #00e5ff, icono cian)
     btnFinish.style.cssText = `
             position: fixed;
             bottom: 196px;
@@ -91,8 +141,23 @@ const UIEnhancementsManager = {
     
     btnFinish.innerHTML = checkIconHtml;
     document.body.appendChild(btnFinish);
+
+    const updateMarkersLockState = (locked) => {
+      const planner = window.RoutePlanner;
+      if (!planner || !Array.isArray(planner.markers)) return;
+
+      planner.markers.forEach(marker => {
+        if (typeof marker.setDraggable === "function") {
+          marker.setDraggable(!locked);
+        }
+        const el = marker.getElement?.();
+        if (el) {
+          el.style.cursor = locked ? "default" : "grab";
+          el.style.pointerEvents = locked ? "none" : "auto";
+        }
+      });
+    };
     
-    // Bloquear inserción de nuevos puntos o puntos intermedios mientras la ruta está finalizada
     const hookPlannerMethods = setInterval(() => {
       const planner = window.RoutePlanner;
       if (planner && typeof planner.addPoint === "function" && !planner._finishHooked) {
@@ -117,6 +182,17 @@ const UIEnhancementsManager = {
             return originalInsertPoint(...args);
           };
         }
+
+        if (typeof planner.renderMarkers === "function") {
+          const originalRenderMarkers = planner.renderMarkers.bind(planner);
+          planner.renderMarkers = (...args) => {
+            const res = originalRenderMarkers(...args);
+            if (this.isRouteFinalized) {
+              updateMarkersLockState(true);
+            }
+            return res;
+          };
+        }
       }
     }, 200);
     
@@ -125,13 +201,14 @@ const UIEnhancementsManager = {
       const lockBtn = document.getElementById("planner-btn-touch-lock");
       
       if (this.isRouteFinalized) {
-        // Estado Finalizado (Colores corporativos invertidos: fondo cian #00e5ff, icono negro, borde oscuro)
         btnFinish.style.background = "#00e5ff";
         btnFinish.style.borderColor = "#121214";
         btnFinish.style.boxShadow = "0 4px 16px rgba(0, 229, 255, 0.5)";
         btnFinish.title = "Ruta finalizada (Pulsa para volver a editar)";
         btnFinish.innerHTML = pencilIconHtml;
         
+        updateMarkersLockState(true);
+
         if (lockBtn) lockBtn.style.visibility = "hidden";
         if (planner?._cursorMarker) {
           planner._cursorMarker.remove();
@@ -141,12 +218,13 @@ const UIEnhancementsManager = {
           window.map.setLayoutProperty("cursor-helper-layer", "visibility", "none");
         }
       } else {
-        // Estado Edición Activa (Colores corporativos base: fondo oscuro #121214, borde cian #00e5ff, icono cian)
         btnFinish.style.background = "rgba(18, 18, 20, 0.9)";
         btnFinish.style.borderColor = "#00e5ff";
         btnFinish.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.5)";
         btnFinish.title = "Finalizar ruta";
         btnFinish.innerHTML = checkIconHtml;
+
+        updateMarkersLockState(false);
         
         if (lockBtn) lockBtn.style.visibility = "visible";
         if (window.map && window.map.getLayer("cursor-helper-layer")) {
@@ -168,7 +246,6 @@ const UIEnhancementsManager = {
       }
     });
     
-    // Sincronizar posición y visibilidad respecto al candado
     const syncFinishButtonState = () => {
       const planner = window.RoutePlanner;
       const lockBtn = document.getElementById("planner-btn-touch-lock");
@@ -205,7 +282,6 @@ const UIEnhancementsManager = {
       if (!mapObj || typeof mapObj.on !== "function") return;
       clearInterval(waitForMap);
       
-      // A) Interceptar el clic en la brújula nativa de MapLibre para resetear SOLO el norte (bearing: 0) sin tocar el pitch 3D
       document.addEventListener("click", (e) => {
         const compassBtn = e.target.closest(".maplibregl-ctrl-compass");
         if (compassBtn) {
@@ -219,7 +295,6 @@ const UIEnhancementsManager = {
         }
       }, true);
       
-      // B) Crear el botón flotante 2D / 3D alineado en el eje superior izquierdo (debajo del botón de info)
       if (document.getElementById("otromundo-btn-2d3d")) return;
       
       const btn2D3D = document.createElement("button");

@@ -7,20 +7,20 @@
 
     function patchCursorLine() {
         const planner = window.RoutePlanner;
-        if (!planner || typeof planner.updateDynamicCursorLine !== "function") return;
+        const mapInstance = window.map;
+        if (!planner || !mapInstance || typeof planner.updateDynamicCursorLine !== "function") return;
 
-        // Sobrescribimos el método de la línea dinámica para que use la posición del ratón en lugar del centro
         planner.updateDynamicCursorLine = function() {
             const sourceId = 'cursor-helper-source';
             const lineLayerId = 'cursor-helper-layer';
 
             if (!window.map) return;
-            const mapObj = window.map;
+            const currentMap = window.map;
 
             if (!this.points || this.points.length === 0) {
-                if (mapObj.getSource(sourceId)) {
-                    if (mapObj.getLayer(lineLayerId)) mapObj.removeLayer(lineLayerId);
-                    mapObj.removeSource(sourceId);
+                if (currentMap.getSource(sourceId)) {
+                    if (currentMap.getLayer(lineLayerId)) currentMap.removeLayer(lineLayerId);
+                    currentMap.removeSource(sourceId);
                 }
                 if (this._cursorMarker) {
                     this._cursorMarker.remove();
@@ -30,10 +30,9 @@
             }
 
             const lastPoint = this.points[this.points.length - 1].coords;
-            // Usamos la última posición registrada del ratón si existe, si no, el centro del mapa
             const targetCoord = this.lastMouseLngLat ? 
                 [this.lastMouseLngLat.lng, this.lastMouseLngLat.lat] : 
-                [mapObj.getCenter().lng, mapObj.getCenter().lat];
+                [currentMap.getCenter().lng, currentMap.getCenter().lat];
 
             const distM = this.haversine(lastPoint[1], lastPoint[0], targetCoord[1], targetCoord[0]);
             const distStr = distM < 1000 ? `${Math.round(distM)} m` : `${(distM / 1000).toFixed(2).replace('.', ',')} km`;
@@ -46,9 +45,9 @@
                 }
             };
 
-            if (!mapObj.getSource(sourceId)) {
-                mapObj.addSource(sourceId, { type: 'geojson', data: geojson });
-                mapObj.addLayer({
+            if (!currentMap.getSource(sourceId)) {
+                currentMap.addSource(sourceId, { type: 'geojson', data: geojson });
+                currentMap.addLayer({
                     id: lineLayerId,
                     type: 'line',
                     source: sourceId,
@@ -60,7 +59,7 @@
                     }
                 });
             } else {
-                mapObj.getSource(sourceId).setData(geojson);
+                currentMap.getSource(sourceId).setData(geojson);
             }
 
             if (!this._cursorMarker) {
@@ -74,7 +73,7 @@
 
                 this._cursorMarker = new maplibregl.Marker({ element: el, anchor: 'top', offset: [0, 20] })
                     .setLngLat(targetCoord)
-                    .addTo(mapObj);
+                    .addTo(currentMap);
             } else {
                 this._cursorMarker.setLngLat(targetCoord);
                 const el = this._cursorMarker.getElement();
@@ -82,11 +81,10 @@
             }
         };
 
-        // Asegurarnos de capturar el movimiento del ratón en el mapa
-        const mapContainer = mapObj.getContainer();
+        const mapContainer = mapInstance.getContainer();
         if (mapContainer && !planner._mouseListenerAdded) {
             planner._mouseListenerAdded = true;
-            mapObj.on('mousemove', (e) => {
+            mapInstance.on('mousemove', (e) => {
                 planner.lastMouseLngLat = e.lngLat;
                 planner.updateDynamicCursorLine();
             });
@@ -97,7 +95,6 @@
         }
     }
 
-    // Comprobamos cada poco hasta que el planificador esté listo
     const checkInterval = setInterval(() => {
         if (window.RoutePlanner && window.map) {
             clearInterval(checkInterval);

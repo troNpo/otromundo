@@ -1,22 +1,171 @@
 // ==========================================
-// TRACK-IMPORTER.JS - Importador con Douglas-Peucker Fijo y RoutePlanner
+// TRACK-IMPORTER.JS - Importador Dual: Adaptar con BRouter o Cargar Track Original Editable
 // ==========================================
 
 const TrackImporter = {
     init() {
-        this.removeManualStraightOption();
+        this.setupImportModeOptions();
         this.setupFileInputListener();
+        this.hookPlannerForOriginalSegments();
     },
 
-    // Elimina la opción "Punto a punto (manual-straight)" del desplegable de importación
-    removeManualStraightOption() {
+    // Configura las opciones del desplegable de importación
+    setupImportModeOptions() {
         const profileSelect = document.getElementById('import-profile-select');
         if (!profileSelect) return;
 
+        // Eliminamos la opción antigua "manual-straight" si existiera
         const manualOption = profileSelect.querySelector('option[value="manual-straight"]');
         if (manualOption) {
             manualOption.remove();
         }
+
+        // Añadimos la opción "Track Original (Sin recalcular / Editable)" arriba del todo si no existe
+        if (!profileSelect.querySelector('option[value="original-track"]')) {
+            const originalOption = document.createElement('option');
+            originalOption.value = 'original-track';
+            originalOption.textContent = 'Track Original (Sin recalcular)';
+            profileSelect.insertBefore(originalOption, profileSelect.firstChild);
+            profileSelect.value = 'original-track';
+        }
+    },
+
+    // Intercepta el cálculo de BRouter para preservar intactos los segmentos marcados como 'original-track'
+    hookPlannerForOriginalSegments() {
+        const waitForPlanner = setInterval(() => {
+            const planner = window.RoutePlanner;
+            if (!planner || typeof planner.calcularRutaBRouter !== 'function' || planner._originalTrackHooked) return;
+            planner._originalTrackHooked = true;
+            clearInterval(waitForPlanner);
+
+            const originalCalc = planner.calcularRutaBRouter.bind(planner);
+
+            planner.calcularRutaBRouter = async function(...args) {
+                const hasOriginalSegments = Array.isArray(this.segments) && this.segments.some(s => s.profile === 'original-track');
+                if (!hasOriginalSegments) {
+                    return originalCalc(...args);
+                }
+
+                if (this.points.length < 2) return;
+                this.syncSegmentsArray();
+
+                try {
+                    const segmentPromises = [];
+
+                    for (let i = 0; i < this.points.length - 1; i++) {
+                        const p1 = this.points[i].coords;
+                        const p2 = this.points[i + 1].coords;
+                        const seg = this.segments[i];
+                        const segProfile = seg?.profile || this.profile;
+
+                        // Si el tramo es un track original importado y conserva sus puntos sin haber sido movido
+                        if (segProfile === 'original-track' && Array.isArray(seg.coordinates) && seg.coordinates.length >= 2) {
+                            const firstC = seg.coordinates[0];
+                            const lastC = seg.coordinates[seg.coordinates.length - 1];
+                            const startMoved = this.haversine(p1[1], p1[0], firstC[1], firstC[0]) > 25;
+                            const endMoved = this.haversine(p2[1], p2[0], lastC[1], lastC[0]) > 25;
+
+                            if (!startMoved && !endMoved) {
+                                segmentPromises.push(Promise.resolve({
+                                    coordinates: seg.coordinates,
+                                    travelTime: 0,
+                                    profile: 'original-track'
+                                }));
+                                continue;
+                            } else {
+                                // Si el usuario arrastró uno de los extremos o insertó un punto intermedio,
+                                // recalculamos solo este tramo afectado usando el perfil activo del planificador
+                                seg.profile = this.profile;
+                            }
+                        }
+
+                        const effectiveProfile = (seg.profile && seg.profile !== 'original-track') ? seg.profile : this.profile;
+
+                        if (effectiveProfile === 'manual-straight') {
+                            const straightCoords = [];
+                            const distanceMeters = this.haversine(p1[1], p1[0], p2[1], p2[0]);
+                            const steps = Math.max(2, Math.floor(distanceMeters / 100));
+                            for (let s = 0; s <= steps; s++) {
+                                const t = s / steps;
+                                const lng = p1[0] + (p2[0] - p1[0]) * t;
+                                const lat = p1[1] + (p2[1] - p1[1]) * t;
+                                const ele1 = p1[2] !== undefined ? p1[2] : 0;
+                                const ele2 = p2[2] !== undefined ? p2[2] : 0;
+                                straightCoords.push([lng, lat, ele1 + (ele2 - ele1) * t]);
+                            }
+                            segmentPromises.push(Promise.resolve({
+                                coordinates: straightCoords,
+                                travelTime: distanceMeters / (5.0 * 1000 / 3600),
+                                profile: effectiveProfile
+                            }));
+                        } else {
+                            const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${effectiveProfile}&alternativeidx=0&format=geojson`;
+                            segmentPromises.push(
+                                fetch(url)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        const feature = data?.features?.[0];
+                                        const coords = feature?.geometry?.coordinates || [p1, p2];
+                                        const props = feature?.properties || {};
+                                        const travelTime = parseFloat(props['total-time'] || props.time || props.traveltime || 0);
+                                        return { coordinates: coords, travelTime, profile: effectiveProfile };
+                                    })
+                                    .catch(() => ({ coordinates: [p1, p2], travelTime: 0, profile: effectiveProfile }))
+                            );
+                        }
+                    }
+
+                    const segmentResults = await Promise.all(segmentPromises);
+
+                    let combinedCoordinates = [];
+                    let totalDistM = 0;
+                    let totalAscent = 0;
+                    let totalDescent = 0;
+                    let totalSeconds = 0;
+
+                    segmentResults.forEach((segRes, idx) => {
+                        const coords = segRes.coordinates;
+                        totalSeconds += (segRes.travelTime || 0);
+
+                        if (this.segments[idx]) {
+                            this.segments[idx].coordinates = coords;
+                        }
+
+                        if (idx > 0 && combinedCoordinates.length > 0) {
+                            combinedCoordinates.push(...coords.slice(1));
+                        } else {
+                            combinedCoordinates.push(...coords);
+                        }
+
+                        for (let j = 0; j < coords.length - 1; j++) {
+                            const c1 = coords[j], c2 = coords[j + 1];
+                            const dSeg = this.haversine(c1[1], c1[0], c2[1], c2[0]);
+                            totalDistM += dSeg;
+                            const diff = (c2[2] || 0) - (c1[2] || 0);
+                            if (diff > 0) totalAscent += diff; else totalDescent += Math.abs(diff);
+                        }
+                    });
+
+                    const distKm = (totalDistM / 1000).toFixed(2);
+                    const timeStr = this.formatBRouterTime(totalSeconds, totalDistM, this.profile);
+
+                    this.routesList = [{
+                        index: 0,
+                        coordinates: combinedCoordinates,
+                        distKm,
+                        timeStr,
+                        ascent: Math.round(totalAscent),
+                        descent: Math.round(totalDescent)
+                    }];
+
+                    this.currentRouteIndex = 0;
+                    this.activateRouteVariant(0);
+                    this.updateAltButtonVisibility();
+                } catch (e) {
+                    console.error("Error al actualizar ruta con tramos originales:", e);
+                }
+            };
+        }, 150);
     },
 
     setupFileInputListener() {
@@ -46,33 +195,90 @@ const TrackImporter = {
                 return;
             }
 
-            if (rawCoordinates.length === 0) {
-                alert("No se han encontrado coordenadas en el archivo seleccionado.");
+            if (rawCoordinates.length < 2) {
+                alert("No se han encontrado suficientes coordenadas en el archivo seleccionado.");
                 return;
             }
 
-            console.log(`Track cargado: ${rawCoordinates.length} puntos brutos.`);
-
-            // Valor fijo óptimo de puntos clave para mantener la lista y el mapa limpios
-            const targetPoints = 10;
-
-            // Simplificación inteligente Douglas-Peucker
-            const simplifiedPoints = this.simplifyTrack(rawCoordinates, targetPoints);
-            console.log(`Puntos optimizados mediante Douglas-Peucker: ${simplifiedPoints.length} puntos clave.`);
-
-            // Leer el perfil seleccionado en la tarjeta de importación (evitando manual-straight)
             const profileSelect = document.getElementById('import-profile-select');
-            let selectedProfile = profileSelect ? profileSelect.value : 'hiking-mountain';
-            if (selectedProfile === 'manual-straight') {
-                selectedProfile = 'hiking-mountain';
-            }
+            const selectedMode = profileSelect ? profileSelect.value : 'original-track';
 
-            // Inyectar directamente en el Planificador interactivo
-            await this.injectIntoPlanner(simplifiedPoints, selectedProfile);
+            if (selectedMode === 'original-track') {
+                await this.injectOriginalTrackEditable(rawCoordinates);
+            } else {
+                const targetPoints = 10;
+                const simplifiedPoints = this.simplifyTrack(rawCoordinates, targetPoints);
+                await this.injectIntoPlanner(simplifiedPoints, selectedMode);
+            }
 
         } catch (err) {
             console.error("Error al procesar el archivo de ruta:", err);
             alert("Hubo un error al leer el archivo.");
+        }
+    },
+
+    // Carga el track original exacto (sin modificar su geometría) y crea nodos editables sobre él
+    async injectOriginalTrackEditable(rawCoordinates) {
+        if (typeof window.RoutePlanner === 'undefined') return;
+        const planner = window.RoutePlanner;
+
+        planner.clearAllPoints();
+
+        // Convertimos todas las coordenadas al formato [lon, lat, ele]
+        const fullCoords = rawCoordinates.map(pt =>
+            pt.ele !== null && !isNaN(pt.ele) ? [pt.lon, pt.lat, pt.ele] : [pt.lon, pt.lat, 0]
+        );
+
+        // Seleccionamos hasta 8 nodos de control distribuidos a lo largo del track para poder arrastrar/editar tramos
+        const maxControlNodes = Math.min(8, fullCoords.length);
+        const controlIndices = [0];
+
+        if (maxControlNodes > 2) {
+            const step = (fullCoords.length - 1) / (maxControlNodes - 1);
+            for (let k = 1; k < maxControlNodes - 1; k++) {
+                controlIndices.push(Math.round(k * step));
+            }
+        }
+        controlIndices.push(fullCoords.length - 1);
+
+        // Creamos los puntos marcadores y los sub-tramos exactos entre cada par de marcadores
+        planner.points = [];
+        planner.segments = [];
+
+        for (let i = 0; i < controlIndices.length; i++) {
+            const ptIdx = controlIndices[i];
+            let name = "Paso";
+            if (i === 0) name = "Inicio";
+            else if (i === controlIndices.length - 1) name = "Fin";
+
+            planner.points.push({
+                coords: fullCoords[ptIdx],
+                name
+            });
+
+            if (i < controlIndices.length - 1) {
+                const nextPtIdx = controlIndices[i + 1];
+                const sliceCoords = fullCoords.slice(ptIdx, nextPtIdx + 1);
+                planner.segments.push({
+                    name: `Tramo Original ${i + 1}`,
+                    color: '#00e5ff',
+                    profile: 'original-track',
+                    coordinates: sliceCoords
+                });
+            }
+        }
+
+        planner.renderMarkers();
+        planner.renderActiveDrawerTab();
+        await planner.calcularRutaBRouter();
+
+        // Cerrar panel lateral de opciones si estaba abierto
+        document.getElementById("side-panel-planner-options")?.classList.remove("active");
+        planner.showToast("Track original cargado (listo para editar)");
+
+        if (typeof map !== 'undefined' && fullCoords.length > 0) {
+            const bounds = fullCoords.reduce((b, c) => b.extend([c[0], c[1]]), new maplibregl.LngLatBounds([fullCoords[0][0], fullCoords[0][1]], [fullCoords[0][0], fullCoords[0][1]]));
+            map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
         }
     },
 
@@ -81,7 +287,7 @@ const TrackImporter = {
         const xmlDoc = parser.parseFromString(gpxText, "text/xml");
         const points = [];
         
-        const trkpts = xmlDoc.querySelectorAll('trkpt, rtept, wpt');
+        const trkpts = xmlDoc.querySelectorAll('trkpt, rtept');
         trkpts.forEach(pt => {
             const lat = parseFloat(pt.getAttribute('lat'));
             const lon = parseFloat(pt.getAttribute('lon'));
@@ -119,7 +325,6 @@ const TrackImporter = {
         return points;
     },
 
-    // --- ALGORITMO RAMER-DOUGLAS-PEUCKER ---
     getPerpendicularDistance(p, p1, p2) {
         let x = p.lon, y = p.lat;
         let x1 = p1.lon, y1 = p1.lat;
@@ -205,26 +410,19 @@ const TrackImporter = {
     },
 
     async injectIntoPlanner(waypoints, profile) {
-        if (typeof window.RoutePlanner === 'undefined') {
-            console.error("RoutePlanner no está disponible.");
-            return;
-        }
+        if (typeof window.RoutePlanner === 'undefined') return;
 
         const planner = window.RoutePlanner;
-
         planner.clearAllPoints();
 
-        // 1. Establecer el perfil global activo en el planificador
         planner.profile = profile;
         planner.updateDefaultProfileStatus();
 
-        // 2. Sincronizar visualmente los radio buttons del panel de perfiles
         const radioToSelect = document.querySelector(`input[name="brouter-profile"][value="${profile}"]`);
         if (radioToSelect) {
             radioToSelect.checked = true;
         }
 
-        // 3. Inyectar waypoints
         planner.points = waypoints.map((pt, index) => {
             let name = "Paso";
             if (index === 0) name = "Inicio";
@@ -234,7 +432,6 @@ const TrackImporter = {
             return { coords, name };
         });
 
-        // 4. Sincronizar tramos para que todos adopten este perfil
         planner.syncSegmentsArray();
         planner.segments.forEach(seg => {
             seg.profile = profile;
@@ -248,6 +445,8 @@ const TrackImporter = {
             await planner.calcularRutaBRouter();
         }
 
+        document.getElementById("side-panel-planner-options")?.classList.remove("active");
+
         if (typeof map !== 'undefined' && waypoints.length > 0) {
             const bounds = waypoints.reduce((b, pt) => {
                 return b.extend([pt.lon, pt.lat]);
@@ -255,8 +454,6 @@ const TrackImporter = {
 
             map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
         }
-
-        console.log(`¡Ruta externa convertida con el perfil [${profile}]!`);
     }
 };
 
