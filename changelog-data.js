@@ -1,40 +1,20 @@
-window.PLANNER_CHANGELOG_DATA = {
-    "version": "V1.3.",
+    window.PLANNER_CHANGELOG_DATA = {
+    "version": "V1.3.1",
     "title": "Novedades en OtroMundo",
     "sections": [
         {
             "isHeader": true,
-            "title": "V1.3 (18/11/26) - Novedades",
+            "title": "V1.3.1 (20/11/26) - Versión Demo / Test",
             "icon": "ui-icons/fi-rr-star.svg"
         },
         {
-            "title": "Capa de Curvas de Nivel Topográficas",
-            "desc": "Añadida capa vectorial de relieve en tiempo real impulsada por Mapterhorn DEM, con desplegable de configuración para equidistancia, selector de color, opacidad y etiquetas numéricas de altitud con contraste automático.",
-            "icon": "ui-icons/fi-rr-mountains.svg"
-        },
-        {
-            "title": "Importación Dual de Tracks (Fiel y Editable)",
-            "desc": "Nuevo modo de importación 'Track Original (Sin recalcular)' para subir archivos GPX o KML conservando su geometría exacta y altimetría, manteniendo la capacidad de editarlos y prolongarlos interactivamente.",
-            "icon": "ui-icons/fi-rr-route.svg"
+            "title": "Puntos de Interés (POIs) Personalizados (Demo / Test)",
+            "desc": "Nueva herramienta en fase de pruebas para añadir, editar, mover y categorizar POIs (Agua, Cimas, Refugios, Miradores, Precauciones) sin alterar el trazado de la ruta. Incluye pestaña dedicada en la lista lateral y exportación integrada en GPX y KML (con iconos personalizados).",
+            "icon": "ui-icons/fi-rr-map-marker-plus.svg"
         },
         {
             "isHeader": true,
-            "title": "V1.3 - Mejoras UI",
-            "icon": "ui-icons/fi-rr-tools.svg"
-        },
-        {
-            "title": "Bloqueo y corrección en edición de puntos",
-            "desc": "Solucionado el error que permitía arrastrar puntos intermedios o de ruta al explorar el mapa cuando la edición estaba finalizada. Al pulsar el botón finalizar se congelan y bloquean por completo.",
-            "icon": "ui-icons/fi-rr-lock.svg"
-        },
-        {
-            "title": "Línea de medida directa al cursor",
-            "desc": "Optimización del cursor y la línea discontinua de distancia en PC para seguir de forma fluida el puntero del ratón.",
-            "icon": "ui-icons/fi-rr-computer.svg"
-        },
-        {
-            "isHeader": true,
-            "title": "V1.2.2 (17/11/26) - Mejoras UI",
+            "title": "V1.3 (18/11/26) - Novedades",
             "icon": "ui-icons/fi-rr-star.svg"
         },
         {
@@ -44,12 +24,12 @@ window.PLANNER_CHANGELOG_DATA = {
         },
         {
             "title": "Control 2D / 3D independiente y Brújula Norte",
-            "desc": "Añadido un botón flotante dedicado para alternar suavemente entre vista cenital (2D) e inclinada (3D).",
+            "desc": "Añadido un botón flotante dedicado para alternar suavemente entre vista cenital (2D) e inclinada (3D), y la brújula ahora resetea exclusivamente el rumbo hacia el Norte sin alterar la inclinación.",
             "icon": "ui-icons/fi-rr-mountains.svg"
         },
         {
             "title": "Optimización de cursor en PC",
-            "desc": "Ocultación automática de la retícula central cuando se utiliza ratón, manteniendo la diana visible en dispositivos móviles.",
+            "desc": "Ocultación automática de la retícula central cuando se utiliza ratón, dejando el cursor de precisión como único indicador visual.",
             "icon": "ui-icons/fi-rr-computer.svg"
         },
         {
@@ -73,6 +53,11 @@ window.PLANNER_CHANGELOG_DATA = {
             "icon": "ui-icons/fi-rr-rotate-right.svg"
         },
         {
+            "title": "Importador de tracks optimizado",
+            "desc": "Eliminada la opción de trazado recto manual al convertir archivos GPX o KML externos para garantizar una adaptación fiel sobre senderos y caminos.",
+            "icon": "ui-icons/fi-rr-route.svg"
+        },
+        {
             "title": "Control total de inclinación 3D",
             "desc": "Eliminado el tope de inclinación del mapa para disfrutar de vistas panorámicas a ras de suelo sin restricciones.",
             "icon": "ui-icons/fi-rr-mountains.svg"
@@ -81,6 +66,11 @@ window.PLANNER_CHANGELOG_DATA = {
             "title": "Validación de Perfiles de Enrutamiento",
             "desc": "Nuevo panel de perfiles optimizado con validación explícita mediante botón de confirmación y aviso contextual para recálculo global o futuro.",
             "icon": "ui-icons/fi-rr-user-roadmap.svg"
+        },
+        {
+            "title": "Mejoras de uso en PC",
+            "desc": "El clic izquierdo añade puntos directamente al final en orden secuencial sin depender del candado táctil, y se añade soporte para la barra espaciadora.",
+            "icon": "ui-icons/fi-rr-computer.svg"
         },
         {
             "isHeader": true,
