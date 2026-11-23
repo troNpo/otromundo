@@ -1,12 +1,126 @@
 // ==========================================
 // TRACK-IMPORTER.JS - Importador Dual: Adaptar con BRouter o Cargar Track Original Editable
+// Incluye capa de referencia semitransparente violeta (#b55cff) bajo el track importado
 // ==========================================
 
 const TrackImporter = {
+    referenceSourceId: "otromundo-imported-track-ref-source",
+    referenceLayerId: "otromundo-imported-track-ref-layer",
+    referenceCoords: null,
+
     init() {
         this.setupImportModeOptions();
         this.setupFileInputListener();
         this.hookPlannerForOriginalSegments();
+        this.hookPlannerClearAndStyleEvents();
+    },
+
+    // Dibuja o actualiza la capa semitransparente violeta de referencia bajo la ruta
+    renderReferenceLayer(coords) {
+        if (Array.isArray(coords) && coords.length >= 2) {
+            this.referenceCoords = coords.map(c => [Number(c[0]), Number(c[1])]);
+        }
+
+        const mapObj = window.map;
+        if (!mapObj || typeof mapObj.getSource !== "function" || !Array.isArray(this.referenceCoords) || this.referenceCoords.length < 2) {
+            return;
+        }
+
+        const geojsonData = {
+            type: "Feature",
+            properties: {
+                role: "imported-track-reference"
+            },
+            geometry: {
+                type: "LineString",
+                coordinates: this.referenceCoords
+            }
+        };
+
+        try {
+            const existingSource = mapObj.getSource(this.referenceSourceId);
+            if (existingSource && typeof existingSource.setData === "function") {
+                existingSource.setData(geojsonData);
+            } else {
+                mapObj.addSource(this.referenceSourceId, {
+                    type: "geojson",
+                    data: geojsonData
+                });
+            }
+
+            if (!mapObj.getLayer(this.referenceLayerId)) {
+                // Buscamos la primera capa de ruta o símbolo para colocar la referencia violeta justo debajo
+                const layers = mapObj.getStyle?.()?.layers || [];
+                const routeLayer = layers.find(l =>
+                    typeof l.id === "string" &&
+                    (l.id.includes("route") || l.id.includes("track") || l.id.includes("planner")) &&
+                    l.id !== this.referenceLayerId
+                );
+                const beforeId = routeLayer ? routeLayer.id : undefined;
+
+                mapObj.addLayer({
+                    id: this.referenceLayerId,
+                    type: "line",
+                    source: this.referenceSourceId,
+                    layout: {
+                        "line-join": "round",
+                        "line-cap": "round"
+                    },
+                    paint: {
+                        "line-color": "#b55cff",
+                        "line-width": 5.5,
+                        "line-opacity": 0.42
+                    }
+                }, beforeId);
+            }
+        } catch (err) {
+            console.warn("No se pudo dibujar la capa de referencia violeta:", err);
+        }
+    },
+
+    // Elimina la capa violeta de referencia
+    clearReferenceLayer() {
+        this.referenceCoords = null;
+        const mapObj = window.map;
+        if (!mapObj) return;
+
+        try {
+            if (mapObj.getLayer?.(this.referenceLayerId)) {
+                mapObj.removeLayer(this.referenceLayerId);
+            }
+            if (mapObj.getSource?.(this.referenceSourceId)) {
+                mapObj.removeSource(this.referenceSourceId);
+            }
+        } catch (err) {}
+    },
+
+    // Mantiene la capa violeta al cambiar de mapa base y la limpia al borrar todo el trazado
+    hookPlannerClearAndStyleEvents() {
+        const waitForMap = setInterval(() => {
+            const mapObj = window.map;
+            if (!mapObj || typeof mapObj.on !== "function" || mapObj._refLayerStyleHooked) return;
+            mapObj._refLayerStyleHooked = true;
+            clearInterval(waitForMap);
+
+            mapObj.on("style.load", () => {
+                if (Array.isArray(this.referenceCoords) && this.referenceCoords.length >= 2) {
+                    setTimeout(() => this.renderReferenceLayer(), 180);
+                }
+            });
+        }, 150);
+
+        const waitForPlanner = setInterval(() => {
+            const planner = window.RoutePlanner;
+            if (!planner || typeof planner.clearAllPoints !== "function" || planner._refClearHooked) return;
+            planner._refClearHooked = true;
+            clearInterval(waitForPlanner);
+
+            const origClear = planner.clearAllPoints.bind(planner);
+            planner.clearAllPoints = (...args) => {
+                this.clearReferenceLayer();
+                return origClear(...args);
+            };
+        }, 150);
     },
 
     // Configura las opciones del desplegable de importación
@@ -200,15 +314,18 @@ const TrackImporter = {
                 return;
             }
 
+            // Guardamos la referencia del track original completo antes de simplificar o adaptar
+            const refCoords = rawCoordinates.map(pt => [pt.lon, pt.lat]);
+
             const profileSelect = document.getElementById('import-profile-select');
             const selectedMode = profileSelect ? profileSelect.value : 'original-track';
 
             if (selectedMode === 'original-track') {
-                await this.injectOriginalTrackEditable(rawCoordinates);
+                await this.injectOriginalTrackEditable(rawCoordinates, refCoords);
             } else {
                 const targetPoints = 10;
                 const simplifiedPoints = this.simplifyTrack(rawCoordinates, targetPoints);
-                await this.injectIntoPlanner(simplifiedPoints, selectedMode);
+                await this.injectIntoPlanner(simplifiedPoints, selectedMode, refCoords);
             }
 
         } catch (err) {
@@ -218,11 +335,14 @@ const TrackImporter = {
     },
 
     // Carga el track original exacto (sin modificar su geometría) y crea nodos editables sobre él
-    async injectOriginalTrackEditable(rawCoordinates) {
+    async injectOriginalTrackEditable(rawCoordinates, refCoords = null) {
         if (typeof window.RoutePlanner === 'undefined') return;
         const planner = window.RoutePlanner;
 
         planner.clearAllPoints();
+        if (Array.isArray(refCoords) && refCoords.length >= 2) {
+            this.renderReferenceLayer(refCoords);
+        }
 
         // Convertimos todas las coordenadas al formato [lon, lat, ele]
         const fullCoords = rawCoordinates.map(pt =>
@@ -271,10 +391,13 @@ const TrackImporter = {
         planner.renderMarkers();
         planner.renderActiveDrawerTab();
         await planner.calcularRutaBRouter();
+        if (Array.isArray(refCoords) && refCoords.length >= 2) {
+            this.renderReferenceLayer(refCoords);
+        }
 
         // Cerrar panel lateral de opciones si estaba abierto
         document.getElementById("side-panel-planner-options")?.classList.remove("active");
-        planner.showToast("Track original cargado (listo para editar)");
+        planner.showToast("Track original cargado (referencia violeta activa)");
 
         if (typeof map !== 'undefined' && fullCoords.length > 0) {
             const bounds = fullCoords.reduce((b, c) => b.extend([c[0], c[1]]), new maplibregl.LngLatBounds([fullCoords[0][0], fullCoords[0][1]], [fullCoords[0][0], fullCoords[0][1]]));
@@ -409,11 +532,14 @@ const TrackImporter = {
         return simplified;
     },
 
-    async injectIntoPlanner(waypoints, profile) {
+    async injectIntoPlanner(waypoints, profile, refCoords = null) {
         if (typeof window.RoutePlanner === 'undefined') return;
 
         const planner = window.RoutePlanner;
         planner.clearAllPoints();
+        if (Array.isArray(refCoords) && refCoords.length >= 2) {
+            this.renderReferenceLayer(refCoords);
+        }
 
         planner.profile = profile;
         planner.updateDefaultProfileStatus();
@@ -443,6 +569,9 @@ const TrackImporter = {
         if (planner.points.length >= 2) {
             planner.showToast("Adaptando ruta externa...");
             await planner.calcularRutaBRouter();
+            if (Array.isArray(refCoords) && refCoords.length >= 2) {
+                this.renderReferenceLayer(refCoords);
+            }
         }
 
         document.getElementById("side-panel-planner-options")?.classList.remove("active");

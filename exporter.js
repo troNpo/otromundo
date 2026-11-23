@@ -48,7 +48,7 @@ const RouteExporter = {
 
         setTimeout(() => {
             toast.remove();
-        }, 3000);
+        }, 3200);
     },
 
     injectOruxOpenButton() {
@@ -77,28 +77,28 @@ const RouteExporter = {
         const btnOrux = document.createElement("button");
         btnOrux.id = "opt-btn-open-orux";
         btnOrux.type = "button";
-        btnOrux.title = "Abrir directamente en OruxMaps (orux-track://)";
+        btnOrux.title = "Compartir archivo de ruta (OruxMaps, mensajería, Archivos...)";
         btnOrux.style.cssText = `
             flex: 1.2;
             min-width: 0;
-            background: #000000;
-            color: #ff3b30;
-            border: 1.5px solid #ff3b30;
+            background: rgba(0, 229, 255, 0.14);
+            color: #00e5ff;
+            border: 1.5px solid #00e5ff;
             border-radius: 10px;
             padding: 10px 8px;
             font-weight: bold;
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.25);
+            box-shadow: 0 4px 12px rgba(0, 229, 255, 0.18);
         `;
 
         btnOrux.innerHTML = `
-            <img src="ui-icons/logo_rojo.png" width="18" height="18" style="object-fit: contain; flex-shrink: 0;" alt="OruxMaps">
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Abrir en OruxMaps</span>
+            <img src="ui-icons/fi-rr-share.svg" width="16" height="16" style="filter: brightness(0) saturate(100%) invert(77%) sepia(87%) saturate(1637%) hue-rotate(155deg); object-fit: contain; flex-shrink: 0;" alt="Compartir">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Compartir</span>
         `;
 
         rowWrapper.appendChild(btnOrux);
@@ -178,61 +178,43 @@ const RouteExporter = {
             return;
         }
 
-        await this.openDirectInOruxMaps(content, filename, format, mimeType);
+        await this.shareTrackFile(content, filename, mimeType);
     },
 
-    async openDirectInOruxMaps(content, filename, format, mimeType) {
-        const btnOrux = document.getElementById("opt-btn-open-orux");
-        const originalHTML = btnOrux ? btnOrux.innerHTML : "";
+    async shareTrackFile(content, filename, mimeType) {
+        const btnShare = document.getElementById("opt-btn-open-orux");
+        const originalHTML = btnShare ? btnShare.innerHTML : "";
 
-        if (btnOrux) {
-            btnOrux.disabled = true;
-            btnOrux.innerHTML = `<span>Enviando...</span>`;
+        if (btnShare) {
+            btnShare.disabled = true;
+            btnShare.innerHTML = `<span>Preparando...</span>`;
         }
-        this.showExportNotice(`Preparando ${filename} para OruxMaps...`);
 
         try {
-            const response = await fetch("https://paste.rs/", {
-                method: "POST",
-                body: content
-            });
-
-            if (!response.ok) throw new Error("Fallo al preparar el enlace temporal");
-
-            const basePasteUrl = (await response.text()).trim().replace(/\/+$/, "");
-            if (!basePasteUrl.startsWith("http")) {
-                throw new Error("URL temporal no válida");
+            const fileObj = new File([content], filename, { type: mimeType });
+            if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+                document.getElementById("side-panel-planner-options")?.classList.remove("active");
+                await navigator.share({
+                    files: [fileObj],
+                    title: filename
+                });
+                return;
             }
-
-            const directFileUrl = `${basePasteUrl}.${format}`;
-            const oruxTrackDeepLink = directFileUrl.replace(/^https?:\/\//i, "orux-track://");
-
-            document.getElementById("side-panel-planner-options")?.classList.remove("active");
-            window.location.href = oruxTrackDeepLink;
-
         } catch (err) {
-            console.warn("No se pudo generar el enlace orux-track://, intentando compartir archivo nativo:", err);
-            try {
-                const fileObj = new File([content], filename, { type: mimeType });
-                if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
-                    document.getElementById("side-panel-planner-options")?.classList.remove("active");
-                    await navigator.share({
-                        files: [fileObj],
-                        title: filename
-                    });
-                    return;
-                }
-            } catch (shareErr) {}
-
-            this.showExportNotice("Descargando archivo para abrir en OruxMaps...");
-            document.getElementById("side-panel-planner-options")?.classList.remove("active");
-            this.triggerBlobDownload(content, filename, mimeType);
+            if (err && err.name === "AbortError") {
+                return;
+            }
+            console.warn("No se pudo abrir la hoja de compartir nativa:", err);
         } finally {
-            if (btnOrux) {
-                btnOrux.disabled = false;
-                btnOrux.innerHTML = originalHTML;
+            if (btnShare) {
+                btnShare.disabled = false;
+                btnShare.innerHTML = originalHTML;
             }
         }
+
+        this.showExportNotice(`Descargando ${filename}...`);
+        document.getElementById("side-panel-planner-options")?.classList.remove("active");
+        this.triggerBlobDownload(content, filename, mimeType);
     },
 
     hexToKmlColor(hex) {

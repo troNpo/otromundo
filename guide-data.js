@@ -22,6 +22,21 @@ window.PLANNER_GUIDE_DATA = {
       "desc": "Mantén pulsado 0,6s sobre el mapa en móvil o haz clic derecho en PC para insertar un punto intermedio en el tramo más cercano."
     },
     {
+      "icon": "ui-icons/fi-rr-check.svg",
+      "title": "Finalizar / Reanudar Edición",
+      "desc": "Cuando tengas tu ruta lista, usa el botón flotante de Finalizar para congelar la edición, bloquear nuevos puntos y mover los marcadores y explorar el mapa sin alterarlo; púlsalo de nuevo (icono de lápiz) para reanudar."
+    },
+    {
+      "icon": "ui-icons/fi-rr-mountains.svg",
+      "title": "Control 2D / 3D y Brújula Norte",
+      "desc": "Usa el botón flotante 2D / 3D para alternar entre vista cenital e inclinada, y pulsa la brújula para orientar el mapa al Norte manteniendo la inclinación actual."
+    },
+    {
+      "icon": "ui-icons/fi-rr-map-marker-plus.svg",
+      "title": "Puntos de Interés (POIs)",
+      "desc": "Activa el botón flotante de POI para colocar puntos de interés (fuentes, cimas, refugios, miradores, precauciones...) sin modificar el trazado de la ruta, elegir icono del catálogo y moverlos desde su ficha de edición."
+    },
+    {
       "icon": "ui-icons/fi-rr-square-minus.svg",
       "title": "Deshacer Último Punto",
       "desc": "Elimina el último marcador añadido usando el botón deshacer o el atajo Ctrl + Z en PC."
@@ -33,8 +48,8 @@ window.PLANNER_GUIDE_DATA = {
     },
     {
       "icon": "ui-icons/fi-rr-map.svg",
-      "title": "Seleccionar Mapa Base",
-      "desc": "Elige entre OtroMundo Vectorial, OpenStreetMap, IGN España, OpenTopoMap o Esri Satélite (compatible con inclinación 3D libre hasta 85°)."
+      "title": "Seleccionar Mapa Base y Leyenda",
+      "desc": "Elige entre OtroMundo Vectorial (con acceso a su Leyenda detallada de senderos, carreteras y símbolos), OpenStreetMap, IGN España, OpenTopoMap o Esri Satélite."
     },
     {
       "icon": "ui-icons/fi-rr-location-crosshairs.svg",
@@ -53,8 +68,8 @@ window.PLANNER_GUIDE_DATA = {
     },
     {
       "icon": "ui-icons/fi-rr-list-timeline.svg",
-      "title": "Gestión de Puntos y Segmentos",
-      "desc": "Accede a la lista lateral para renombrar marcadores, reordenar su secuencia, cambiar el perfil individual de un tramo o asignar colores personalizados."
+      "title": "Gestión de Puntos, Tramos y POIs",
+      "desc": "Accede a la lista lateral para gestionar tus Puntos, Tramos y POIs: renombrar marcadores, reordenar su secuencia, cambiar el perfil individual de un tramo, asignar colores o controlar la visibilidad de etiquetas de POIs."
     },
     {
       "isHeader": true,
@@ -78,8 +93,8 @@ window.PLANNER_GUIDE_DATA = {
     },
     {
       "icon": "ui-icons/fi-rr-file-download.svg",
-      "title": "Descargar Ruta",
-      "desc": "Exporta tu trazado completo o mixto en archivos GPX o KML listos para usar en tu GPS o móvil."
+      "title": "Descargar o Compartir Ruta",
+      "desc": "Exporta tu trazado (y tus POIs) en formatos GPX o KML mediante descarga directa o compartiendo el archivo desde el menú del dispositivo."
     },
     {
       "icon": "ui-icons/fi-rr-user-roadmap.svg",

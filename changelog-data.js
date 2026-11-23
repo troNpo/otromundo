@@ -1,7 +1,37 @@
-    window.PLANNER_CHANGELOG_DATA = {
-    "version": "V1.3.1",
+window.PLANNER_CHANGELOG_DATA = {
+    "version": "V1.3.2.",
     "title": "Novedades en OtroMundo",
     "sections": [
+        {
+            "isHeader": true,
+            "title": "V1.3.2 (23/11/26) - Novedades",
+            "icon": "ui-icons/fi-rr-star.svg"
+        },
+        {
+            "title": "Capa de referencia violeta al importar tracks",
+            "desc": "Al importar un track GPX o KML, se dibuja por debajo una capa semitransparente violeta con el trazado original como referencia visual mientras adaptas o editas la ruta.",
+            "icon": "ui-icons/fi-rr-route.svg"
+        },
+        {
+            "title": "Gestor de POIs mejorado y más ágil",
+            "desc": "Modo de colocación continuo para crear puntos sin salir de la herramienta, catálogo completo de iconos topográficos con buscador en español, etiquetas tipográficas sin cápsula visibles al pasar la diana o el ratón (o siempre activas) y movimiento controlado únicamente desde la ficha del POI.",
+            "icon": "ui-icons/fi-rr-map-marker-plus.svg"
+        },
+        {
+            "isHeader": true,
+            "title": "V1.3.2 - Mejoras",
+            "icon": "ui-icons/fi-rr-tools.svg"
+        },
+        {
+            "title": "Compartir archivos de ruta además de descargar",
+            "desc": "Se añade la opción de compartir directamente los tracks exportados (KML o GPX) desde el menú nativo del dispositivo junto a la descarga tradicional del archivo.",
+            "icon": "ui-icons/fi-rr-share.svg"
+        },
+        {
+            "title": "Modo de edición más limpio y preciso",
+            "desc": "Ajustes en el bloqueo de puntos y marcadores al finalizar una ruta, mejor distribución de altura en el panel de Puntos, Segmentos y POIs, y visibilidad inmediata de los marcadores al cargar el mapa.",
+            "icon": "ui-icons/fi-rr-pencil.svg"
+        },
         {
             "isHeader": true,
             "title": "V1.3.1 (20/11/26) - Versión Demo / Test",
