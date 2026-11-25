@@ -24,10 +24,19 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Inyectar MapTiler API Key
+      - name: Inyectar API Keys en estilos
         run: |
           if [ -f "styles/otromundo.json" ]; then
-            sed -i 's/{{API_KEY}}/${{ secrets.MAPTILER_API_KEY }}/g' styles/otromundo.json
+            sed -i "s|{{API_KEY}}|${{ secrets.MAPTILER_API_KEY }}|g" styles/otromundo.json
+          fi
+          if [ -f "styles/otromundotopo.json" ]; then
+            sed -i "s|{{TOPO_API_KEY}}|${{ secrets.MAPTILER_TOPO_API_KEY }}|g" styles/otromundotopo.json
+          fi
+          if [ -f "styles/thunderforest-outdoors.json" ]; then
+            sed -i "s|{{THUNDERFOREST_API_KEY}}|${{ secrets.THUNDERFOREST_API_KEY }}|g" styles/thunderforest-outdoors.json
+          fi
+          if [ -f "styles/thunderforest-opencyclemap.json" ]; then
+            sed -i "s|{{THUNDERFOREST_API_KEY}}|${{ secrets.THUNDERFOREST_API_KEY }}|g" styles/thunderforest-opencyclemap.json
           fi
 
       - name: Configurar Pages
