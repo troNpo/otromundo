@@ -37,15 +37,8 @@
       "paint": {
         "raster-opacity": 1
       }
-    },
-
-    {
-      "id": "hillshade",
-      "type": "hillshade",
-      "source": "terrarium-dem",
-      "paint": {
-        "hillshade-exaggeration": 0
-      }
     }
+
+   
   ]
 }

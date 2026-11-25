@@ -1,12 +1,15 @@
 // ==========================================
 // TRACK-IMPORTER.JS - Importador Dual: Adaptar con BRouter o Cargar Track Original Editable
 // Incluye capa de referencia semitransparente violeta (#b55cff) bajo el track importado
+// y marcadores nativos de MapLibre GL con popup al estilo geocoder.js para waypoints (<wpt> / KML <Point>)
 // ==========================================
 
 const TrackImporter = {
     referenceSourceId: "otromundo-imported-track-ref-source",
     referenceLayerId: "otromundo-imported-track-ref-layer",
     referenceCoords: null,
+    importedWaypoints: [],
+    waypointItems: [],
 
     init() {
         this.setupImportModeOptions();
@@ -15,13 +18,178 @@ const TrackImporter = {
         this.hookPlannerClearAndStyleEvents();
     },
 
+    getMap() {
+        if (typeof map !== "undefined" && map) return map;
+        if (window.map) return window.map;
+        return null;
+    },
+
+    // Elimina los marcadores nativos y popups de waypoints importados
+    clearWaypointMarkers() {
+        if (Array.isArray(this.waypointItems)) {
+            this.waypointItems.forEach(item => {
+                try {
+                    if (item.popup) item.popup.remove();
+                    if (item.marker) item.marker.remove();
+                } catch (err) {}
+            });
+        }
+        this.waypointItems = [];
+    },
+
+    // Limpia waypoints y marcadores nativos
+    clearImportedWaypoints() {
+        this.importedWaypoints = [];
+        this.clearWaypointMarkers();
+    },
+
+    // Crea el marcador nativo de MapLibre siguiendo la estética de geocoder.js
+    createNativeWaypointElement(wp) {
+        const el = document.createElement("div");
+        el.className = "waypoint-marker-pin";
+        el.title = wp.name || "Waypoint";
+        el.style.width = "20px";
+        el.style.height = "20px";
+        el.style.backgroundColor = "#ffab00";
+        el.style.border = "2px solid #ffffff";
+        el.style.borderRadius = "50%";
+        el.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
+        el.style.cursor = "pointer";
+        return el;
+    },
+
+    // Construye el contenido DOM del popup con la misma estructura de píldora que geocoder.js
+    buildWaypointPopupContent(wp, idx, onDelete) {
+        const title = wp.name || `Waypoint ${idx + 1}`;
+        const metaParts = [];
+        if (wp.ele !== null && wp.ele !== undefined && !isNaN(wp.ele)) {
+            metaParts.push(`${Math.round(wp.ele)} m`);
+        }
+        if (wp.desc) {
+            metaParts.push(wp.desc);
+        }
+        const fullLabel = metaParts.length ? `${title} (${metaParts.join(" · ")})` : title;
+
+        const popupContent = document.createElement("div");
+        popupContent.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(8px); color: #ffffff; padding: 6px 12px 6px 14px; border-radius: 9999px; font-family: sans-serif; font-size: 13px; max-width: 280px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.4);";
+
+        const textSpan = document.createElement("span");
+        textSpan.style.cssText = "overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: #ffab00;";
+        textSpan.textContent = fullLabel;
+        textSpan.title = fullLabel;
+
+        const trashBtn = document.createElement("button");
+        trashBtn.style.cssText = "background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 50%;";
+        trashBtn.innerHTML = `<img src="ui-icons/fi-rr-trash.svg" style="width: 16px; height: 16px; display: block;" alt="Borrar">`;
+        trashBtn.title = "Borrar marcador";
+
+        trashBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            if (typeof onDelete === "function") onDelete();
+        });
+
+        popupContent.appendChild(textSpan);
+        popupContent.appendChild(trashBtn);
+        return popupContent;
+    },
+
+    // Igual que checkPopupVisibilityByCenter() de geocoder.js para cada waypoint importado
+    checkPopupVisibilityByCenter() {
+        const mapObj = this.getMap();
+        if (!mapObj || !Array.isArray(this.waypointItems) || this.waypointItems.length === 0) return;
+
+        const mapCenter = mapObj.getCenter();
+        const threshold = 0.015 / Math.pow(2, mapObj.getZoom() - 10);
+
+        this.waypointItems.forEach(item => {
+            if (!item.marker || !item.popup || !item.coords) return;
+
+            const distance = Math.hypot(mapCenter.lng - item.coords[0], mapCenter.lat - item.coords[1]);
+            const isVisible = item.popup.isOpen();
+
+            if (distance > threshold && isVisible) {
+                item.marker.togglePopup();
+            } else if (distance <= threshold && !isVisible) {
+                item.marker.togglePopup();
+            }
+        });
+    },
+
+    // Renderiza los waypoints importados usando marcadores nativos de MapLibre GL
+    renderWaypointMarkers(waypoints = null) {
+        if (Array.isArray(waypoints)) {
+            this.importedWaypoints = waypoints;
+        }
+
+        this.clearWaypointMarkers();
+
+        const mapObj = this.getMap();
+        if (!mapObj || typeof maplibregl === "undefined" || typeof maplibregl.Marker !== "function") {
+            return;
+        }
+
+        if (!Array.isArray(this.importedWaypoints) || this.importedWaypoints.length === 0) {
+            return;
+        }
+
+        this.importedWaypoints.forEach((wp, idx) => {
+            if (typeof wp.lon !== "number" || typeof wp.lat !== "number" || isNaN(wp.lon) || isNaN(wp.lat)) {
+                return;
+            }
+
+            try {
+                const coords = [wp.lon, wp.lat];
+                const el = this.createNativeWaypointElement(wp);
+
+                const record = {
+                    coords,
+                    marker: null,
+                    popup: null
+                };
+
+                const deleteThisWaypoint = () => {
+                    if (record.popup) record.popup.remove();
+                    if (record.marker) record.marker.remove();
+                    this.importedWaypoints = this.importedWaypoints.filter(w => w !== wp);
+                    this.waypointItems = this.waypointItems.filter(it => it !== record);
+                };
+
+                const popupContent = this.buildWaypointPopupContent(wp, idx, deleteThisWaypoint);
+
+                record.popup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    offset: 25
+                }).setDOMContent(popupContent);
+
+                record.marker = new maplibregl.Marker(el)
+                    .setLngLat(coords)
+                    .setPopup(record.popup)
+                    .addTo(mapObj);
+
+                record.marker.togglePopup();
+
+                el.addEventListener("click", (ev) => {
+                    ev.stopPropagation();
+                    record.marker.togglePopup();
+                });
+
+                this.waypointItems.push(record);
+            } catch (err) {
+                console.warn("No se pudo crear el marcador nativo de waypoint:", err);
+            }
+        });
+
+        this.checkPopupVisibilityByCenter();
+    },
+
     // Dibuja o actualiza la capa semitransparente violeta de referencia bajo la ruta
     renderReferenceLayer(coords) {
         if (Array.isArray(coords) && coords.length >= 2) {
             this.referenceCoords = coords.map(c => [Number(c[0]), Number(c[1])]);
         }
 
-        const mapObj = window.map;
+        const mapObj = this.getMap();
         if (!mapObj || typeof mapObj.getSource !== "function" || !Array.isArray(this.referenceCoords) || this.referenceCoords.length < 2) {
             return;
         }
@@ -49,7 +217,6 @@ const TrackImporter = {
             }
 
             if (!mapObj.getLayer(this.referenceLayerId)) {
-                // Buscamos la primera capa de ruta o símbolo para colocar la referencia violeta justo debajo
                 const layers = mapObj.getStyle?.()?.layers || [];
                 const routeLayer = layers.find(l =>
                     typeof l.id === "string" &&
@@ -81,7 +248,7 @@ const TrackImporter = {
     // Elimina la capa violeta de referencia
     clearReferenceLayer() {
         this.referenceCoords = null;
-        const mapObj = window.map;
+        const mapObj = this.getMap();
         if (!mapObj) return;
 
         try {
@@ -94,17 +261,24 @@ const TrackImporter = {
         } catch (err) {}
     },
 
-    // Mantiene la capa violeta al cambiar de mapa base y la limpia al borrar todo el trazado
+    // Mantiene la capa violeta y los waypoints al cambiar de estilo, actualiza visibilidad en move y limpia al borrar
     hookPlannerClearAndStyleEvents() {
         const waitForMap = setInterval(() => {
-            const mapObj = window.map;
+            const mapObj = this.getMap();
             if (!mapObj || typeof mapObj.on !== "function" || mapObj._refLayerStyleHooked) return;
             mapObj._refLayerStyleHooked = true;
             clearInterval(waitForMap);
 
+            mapObj.on("move", () => {
+                this.checkPopupVisibilityByCenter();
+            });
+
             mapObj.on("style.load", () => {
                 if (Array.isArray(this.referenceCoords) && this.referenceCoords.length >= 2) {
                     setTimeout(() => this.renderReferenceLayer(), 180);
+                }
+                if (Array.isArray(this.importedWaypoints) && this.importedWaypoints.length > 0) {
+                    setTimeout(() => this.renderWaypointMarkers(), 180);
                 }
             });
         }, 150);
@@ -118,6 +292,7 @@ const TrackImporter = {
             const origClear = planner.clearAllPoints.bind(planner);
             planner.clearAllPoints = (...args) => {
                 this.clearReferenceLayer();
+                this.clearImportedWaypoints();
                 return origClear(...args);
             };
         }, 150);
@@ -128,13 +303,11 @@ const TrackImporter = {
         const profileSelect = document.getElementById('import-profile-select');
         if (!profileSelect) return;
 
-        // Eliminamos la opción antigua "manual-straight" si existiera
         const manualOption = profileSelect.querySelector('option[value="manual-straight"]');
         if (manualOption) {
             manualOption.remove();
         }
 
-        // Añadimos la opción "Track Original (Sin recalcular / Editable)" arriba del todo si no existe
         if (!profileSelect.querySelector('option[value="original-track"]')) {
             const originalOption = document.createElement('option');
             originalOption.value = 'original-track';
@@ -172,7 +345,6 @@ const TrackImporter = {
                         const seg = this.segments[i];
                         const segProfile = seg?.profile || this.profile;
 
-                        // Si el tramo es un track original importado y conserva sus puntos sin haber sido movido
                         if (segProfile === 'original-track' && Array.isArray(seg.coordinates) && seg.coordinates.length >= 2) {
                             const firstC = seg.coordinates[0];
                             const lastC = seg.coordinates[seg.coordinates.length - 1];
@@ -187,8 +359,6 @@ const TrackImporter = {
                                 }));
                                 continue;
                             } else {
-                                // Si el usuario arrastró uno de los extremos o insertó un punto intermedio,
-                                // recalculamos solo este tramo afectado usando el perfil activo del planificador
                                 seg.profile = this.profile;
                             }
                         }
@@ -298,34 +468,36 @@ const TrackImporter = {
             const text = await file.text();
             const extension = file.name.split('.').pop().toLowerCase();
 
-            let rawCoordinates = [];
+            let parsed = { coordinates: [], waypoints: [] };
 
             if (extension === 'gpx') {
-                rawCoordinates = this.parseGPX(text);
+                parsed = this.parseGPX(text);
             } else if (extension === 'kml') {
-                rawCoordinates = this.parseKML(text);
+                parsed = this.parseKML(text);
             } else {
                 alert("Por favor, selecciona un archivo formato .gpx o .kml válido.");
                 return;
             }
+
+            const rawCoordinates = parsed.coordinates || [];
+            const waypoints = parsed.waypoints || [];
 
             if (rawCoordinates.length < 2) {
                 alert("No se han encontrado suficientes coordenadas en el archivo seleccionado.");
                 return;
             }
 
-            // Guardamos la referencia del track original completo antes de simplificar o adaptar
             const refCoords = rawCoordinates.map(pt => [pt.lon, pt.lat]);
 
             const profileSelect = document.getElementById('import-profile-select');
             const selectedMode = profileSelect ? profileSelect.value : 'original-track';
 
             if (selectedMode === 'original-track') {
-                await this.injectOriginalTrackEditable(rawCoordinates, refCoords);
+                await this.injectOriginalTrackEditable(rawCoordinates, refCoords, waypoints);
             } else {
                 const targetPoints = 10;
                 const simplifiedPoints = this.simplifyTrack(rawCoordinates, targetPoints);
-                await this.injectIntoPlanner(simplifiedPoints, selectedMode, refCoords);
+                await this.injectIntoPlanner(simplifiedPoints, selectedMode, refCoords, waypoints);
             }
 
         } catch (err) {
@@ -335,7 +507,7 @@ const TrackImporter = {
     },
 
     // Carga el track original exacto (sin modificar su geometría) y crea nodos editables sobre él
-    async injectOriginalTrackEditable(rawCoordinates, refCoords = null) {
+    async injectOriginalTrackEditable(rawCoordinates, refCoords = null, waypoints = []) {
         if (typeof window.RoutePlanner === 'undefined') return;
         const planner = window.RoutePlanner;
 
@@ -343,13 +515,14 @@ const TrackImporter = {
         if (Array.isArray(refCoords) && refCoords.length >= 2) {
             this.renderReferenceLayer(refCoords);
         }
+        if (Array.isArray(waypoints) && waypoints.length > 0) {
+            this.renderWaypointMarkers(waypoints);
+        }
 
-        // Convertimos todas las coordenadas al formato [lon, lat, ele]
         const fullCoords = rawCoordinates.map(pt =>
             pt.ele !== null && !isNaN(pt.ele) ? [pt.lon, pt.lat, pt.ele] : [pt.lon, pt.lat, 0]
         );
 
-        // Seleccionamos hasta 8 nodos de control distribuidos a lo largo del track para poder arrastrar/editar tramos
         const maxControlNodes = Math.min(8, fullCoords.length);
         const controlIndices = [0];
 
@@ -361,7 +534,6 @@ const TrackImporter = {
         }
         controlIndices.push(fullCoords.length - 1);
 
-        // Creamos los puntos marcadores y los sub-tramos exactos entre cada par de marcadores
         planner.points = [];
         planner.segments = [];
 
@@ -394,42 +566,68 @@ const TrackImporter = {
         if (Array.isArray(refCoords) && refCoords.length >= 2) {
             this.renderReferenceLayer(refCoords);
         }
+        if (Array.isArray(waypoints) && waypoints.length > 0) {
+            this.renderWaypointMarkers(waypoints);
+        }
 
-        // Cerrar panel lateral de opciones si estaba abierto
         document.getElementById("side-panel-planner-options")?.classList.remove("active");
-        planner.showToast("Track original cargado (referencia violeta activa)");
+        const wpSuffix = waypoints.length > 0 ? ` (${waypoints.length} waypoint${waypoints.length > 1 ? 's' : ''})` : "";
+        planner.showToast(`Track original cargado${wpSuffix}`);
 
-        if (typeof map !== 'undefined' && fullCoords.length > 0) {
+        const mapObj = this.getMap();
+        if (mapObj && typeof mapObj.fitBounds === "function" && fullCoords.length > 0) {
             const bounds = fullCoords.reduce((b, c) => b.extend([c[0], c[1]]), new maplibregl.LngLatBounds([fullCoords[0][0], fullCoords[0][1]], [fullCoords[0][0], fullCoords[0][1]]));
-            map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
+            mapObj.fitBounds(bounds, { padding: 60, maxZoom: 15 });
         }
     },
 
     parseGPX(gpxText) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(gpxText, "text/xml");
-        const points = [];
-        
+        const coordinates = [];
+        const waypoints = [];
+
         const trkpts = xmlDoc.querySelectorAll('trkpt, rtept');
         trkpts.forEach(pt => {
             const lat = parseFloat(pt.getAttribute('lat'));
             const lon = parseFloat(pt.getAttribute('lon'));
             const ele = pt.querySelector('ele')?.textContent;
             if (!isNaN(lat) && !isNaN(lon)) {
-                points.push({ lat, lon, ele: ele ? parseFloat(ele) : null });
+                coordinates.push({ lat, lon, ele: ele ? parseFloat(ele) : null });
             }
         });
 
-        return points;
+        const wptElements = xmlDoc.querySelectorAll('wpt');
+        wptElements.forEach((wpt, index) => {
+            const lat = parseFloat(wpt.getAttribute('lat'));
+            const lon = parseFloat(wpt.getAttribute('lon'));
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            const eleText = wpt.querySelector('ele')?.textContent;
+            const ele = eleText !== undefined && eleText !== null && eleText.trim() !== "" ? parseFloat(eleText) : null;
+            const name = wpt.querySelector('name')?.textContent?.trim() || `Waypoint ${index + 1}`;
+            const desc = wpt.querySelector('desc')?.textContent?.trim() || "";
+
+            waypoints.push({
+                lat,
+                lon,
+                ele: ele !== null && !isNaN(ele) ? ele : null,
+                name,
+                desc
+            });
+        });
+
+        return { coordinates, waypoints };
     },
 
     parseKML(kmlText) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(kmlText, "text/xml");
-        const points = [];
-        
-        const coordsElements = xmlDoc.querySelectorAll('coordinates');
-        coordsElements.forEach(el => {
+        const coordinates = [];
+        const waypoints = [];
+
+        const lineCoordsElements = xmlDoc.querySelectorAll('LineString coordinates');
+        lineCoordsElements.forEach(el => {
             const text = el.textContent.trim();
             const tuples = text.split(/\s+/);
             tuples.forEach(tuple => {
@@ -439,13 +637,71 @@ const TrackImporter = {
                     const lat = parseFloat(parts[1]);
                     const ele = parts[2] ? parseFloat(parts[2]) : null;
                     if (!isNaN(lat) && !isNaN(lon)) {
-                        points.push({ lat, lon, ele });
+                        coordinates.push({ lat, lon, ele });
                     }
                 }
             });
         });
 
-        return points;
+        if (coordinates.length === 0) {
+            const allCoordsElements = xmlDoc.querySelectorAll('coordinates');
+            allCoordsElements.forEach(el => {
+                if (el.closest('Point')) return;
+                const text = el.textContent.trim();
+                const tuples = text.split(/\s+/);
+                tuples.forEach(tuple => {
+                    const parts = tuple.split(',');
+                    if (parts.length >= 2) {
+                        const lon = parseFloat(parts[0]);
+                        const lat = parseFloat(parts[1]);
+                        const ele = parts[2] ? parseFloat(parts[2]) : null;
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            coordinates.push({ lat, lon, ele });
+                        }
+                    }
+                });
+            });
+        }
+
+        const pointPlacemarks = xmlDoc.querySelectorAll('Placemark');
+        pointPlacemarks.forEach((pm, index) => {
+            if (pm.querySelector('LineString') || pm.querySelector('Polygon')) return;
+
+            const pointEl = pm.querySelector('Point coordinates');
+            if (!pointEl) return;
+
+            const parentFolderName = pm.closest('Folder')?.querySelector(':scope > name')?.textContent?.trim().toLowerCase() || "";
+            if (
+                parentFolderName.includes('traza') ||
+                parentFolderName.includes('track') ||
+                parentFolderName.includes('ruta') ||
+                parentFolderName.includes('route') ||
+                parentFolderName.includes('segment')
+            ) {
+                return;
+            }
+
+            const parts = pointEl.textContent.trim().split(',');
+            if (parts.length < 2) return;
+
+            const lon = parseFloat(parts[0]);
+            const lat = parseFloat(parts[1]);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            const rawName = pm.querySelector('name')?.textContent?.trim() || "";
+            const normalizedName = rawName.toLowerCase();
+            if (normalizedName === "inicio" || normalizedName === "fin" || normalizedName === "paso" || /^punto\s*\d*$/i.test(rawName)) {
+                return;
+            }
+
+            const ele = parts[2] && !isNaN(parseFloat(parts[2])) ? parseFloat(parts[2]) : null;
+            const name = rawName || `Waypoint ${index + 1}`;
+            const desc = pm.querySelector('description')?.textContent?.trim() || "";
+
+            waypoints.push({ lat, lon, ele, name, desc });
+        });
+
+        return { coordinates, waypoints };
     },
 
     getPerpendicularDistance(p, p1, p2) {
@@ -532,13 +788,16 @@ const TrackImporter = {
         return simplified;
     },
 
-    async injectIntoPlanner(waypoints, profile, refCoords = null) {
+    async injectIntoPlanner(waypoints, profile, refCoords = null, importedWaypoints = []) {
         if (typeof window.RoutePlanner === 'undefined') return;
 
         const planner = window.RoutePlanner;
         planner.clearAllPoints();
         if (Array.isArray(refCoords) && refCoords.length >= 2) {
             this.renderReferenceLayer(refCoords);
+        }
+        if (Array.isArray(importedWaypoints) && importedWaypoints.length > 0) {
+            this.renderWaypointMarkers(importedWaypoints);
         }
 
         planner.profile = profile;
@@ -572,16 +831,20 @@ const TrackImporter = {
             if (Array.isArray(refCoords) && refCoords.length >= 2) {
                 this.renderReferenceLayer(refCoords);
             }
+            if (Array.isArray(importedWaypoints) && importedWaypoints.length > 0) {
+                this.renderWaypointMarkers(importedWaypoints);
+            }
         }
 
         document.getElementById("side-panel-planner-options")?.classList.remove("active");
 
-        if (typeof map !== 'undefined' && waypoints.length > 0) {
+        const mapObj = this.getMap();
+        if (mapObj && typeof mapObj.fitBounds === "function" && waypoints.length > 0) {
             const bounds = waypoints.reduce((b, pt) => {
                 return b.extend([pt.lon, pt.lat]);
             }, new maplibregl.LngLatBounds([waypoints[0].lon, waypoints[0].lat], [waypoints[0].lon, waypoints[0].lat]));
 
-            map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
+            mapObj.fitBounds(bounds, { padding: 60, maxZoom: 15 });
         }
     }
 };

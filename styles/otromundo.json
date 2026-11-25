@@ -1674,6 +1674,7 @@
         ]
       }
     },
+    
     {
       "id": "Bicycle longdistance",
       "type": "line",
@@ -3852,6 +3853,123 @@
         "text-halo-blur": 0.5
       }
     },
+    {
+  "id": "Trail labels",
+  "type": "symbol",
+  "metadata": {},
+  "source": "outdoor",
+  "source-layer": "trail",
+  "minzoom": 16,
+  "filter": [
+    "all",
+    [
+      "==",
+      [
+        "geometry-type"
+      ],
+      "LineString"
+    ],
+    [
+      "all",
+      [
+        "match",
+        [
+          "get",
+          "color"
+        ],
+        [
+          "black",
+          "blue",
+          "brown",
+          "green",
+          "orange",
+          "purple",
+          "red",
+          "yellow"
+        ],
+        true,
+        false
+      ],
+      [
+        "match",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "hiking"
+        ],
+        true,
+        false
+      ]
+    ]
+  ],
+  "layout": {
+    "symbol-placement": "line",
+    "text-anchor": "center",
+    "text-field": [
+      "coalesce",
+      [
+        "get",
+        "name"
+      ],
+      [
+        "get",
+        "name:en"
+      ]
+    ],
+    "text-font": [
+      "Open Sans Semi Bold",
+      "Noto Sans Semi Bold"
+    ],
+    "text-letter-spacing": 0,
+    "text-size": [
+      "interpolate",
+      [
+        "linear"
+      ],
+      [
+        "zoom"
+      ],
+      14,
+      10,
+      16,
+      11
+    ],
+    "visibility": "visible"
+  },
+  "paint": {
+    "icon-opacity": 1,
+    "text-color": [
+      "match",
+      [
+        "get",
+        "color"
+      ],
+      "red",
+      "#9b001c",
+      "orange",
+      "#b84300",
+      "yellow",
+      "#8c6d00",
+      "green",
+      "#006633",
+      "blue",
+      "#004c99",
+      "purple",
+      "#6a0080",
+      "brown",
+      "#5d2e0c",
+      "black",
+      "#0a0a0a",
+      "#8a5a00"
+    ],
+    "text-halo-color": "rgba(255, 255, 255, 0.92)",
+    "text-halo-width": 2.5,
+    "text-opacity": 1
+  }
+},
+
     {
       "id": "Bicycle longdistance labels",
       "type": "symbol",

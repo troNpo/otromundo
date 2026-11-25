@@ -19,6 +19,12 @@ const RouteExporter = {
         return isAndroid || isIOS || isCoarsePointer;
     },
 
+    canShareFiles(fileObj) {
+        return typeof navigator.share === "function" &&
+            typeof navigator.canShare === "function" &&
+            navigator.canShare({ files: [fileObj] });
+    },
+
     showExportNotice(message, isError = false) {
         document.getElementById("exporter-floating-toast")?.remove();
 
@@ -52,8 +58,6 @@ const RouteExporter = {
     },
 
     injectOruxOpenButton() {
-        if (!this.isMobileOrTablet()) return;
-
         const btnDownload = document.getElementById("opt-btn-download-file");
         if (!btnDownload || document.getElementById("opt-btn-open-orux")) return;
 
@@ -77,7 +81,9 @@ const RouteExporter = {
         const btnOrux = document.createElement("button");
         btnOrux.id = "opt-btn-open-orux";
         btnOrux.type = "button";
-        btnOrux.title = "Compartir archivo de ruta (OruxMaps, mensajería, Archivos...)";
+        btnOrux.title = this.isMobileOrTablet()
+            ? "Compartir archivo de ruta (OruxMaps, mensajería, Archivos...)"
+            : "Compartir archivo de ruta (si el navegador lo admite) o descargar";
         btnOrux.style.cssText = `
             flex: 1.2;
             min-width: 0;
@@ -192,7 +198,7 @@ const RouteExporter = {
 
         try {
             const fileObj = new File([content], filename, { type: mimeType });
-            if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+            if (this.canShareFiles(fileObj)) {
                 document.getElementById("side-panel-planner-options")?.classList.remove("active");
                 await navigator.share({
                     files: [fileObj],

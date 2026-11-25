@@ -3,13 +3,19 @@
   
   var isExpanded = false;
   
-  var shortAttributions = {
+   var shortAttributions = {
     "styles/otromundo.json": "OtroMundo • © MapTiler © Esri • 3D Mapterhorn",
     "styles/osm.json": "OpenStreetMap • © OSM • 3D Mapterhorn",
+    "styles/otromundotopo.json": "OtroMundoTopo • © MapTiler • 3D Mapterhorn",
+"styles/osm.json": "OpenStreetMap • © OSM • 3D Mapterhorn",
     "styles/ignraster.json": "IGN España • © CNIG • 3D Mapterhorn",
     "styles/opentopomaps.json": "OpenTopoMap • © OSM • 3D Mapterhorn",
-    "styles/esri.json": "Esri Satélite • © Esri • 3D Mapterhorn"
+    "styles/esri.json": "Esri Satélite • © Esri • 3D Mapterhorn",
+
+    "styles/thunderforest-opencyclemap.json": "TF OpenCycleMap • © Thunderforest © OSM • 3D Mapterhorn"
+    // Añade aquí el resto de estilos JSON de Thunderforest que hayas creado
   };
+
   
   function getActiveAttributionText(stylePath) {
     var activeStyle = stylePath;

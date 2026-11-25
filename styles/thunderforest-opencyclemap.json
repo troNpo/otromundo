@@ -1,0 +1,38 @@
+{
+"version": 8,
+"name": "Thunderforest OpenCycleMap",
+"attribution": "© Thunderforest, © OpenStreetMap contributors",
+"terrain": {
+"source": "terrarium-dem"
+},
+"sources": {
+"terrarium-dem": {
+"type": "raster-dem",
+"tiles": [
+"https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
+],
+"tileSize": 512,
+"encoding": "terrarium"
+},
+"thunderforest-opencyclemap": {
+"type": "raster",
+"tiles": [
+"https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey={{THUNDERFOREST_API_KEY}}"
+],
+"tileSize": 256,
+"attribution": "Maps © <a href='https://www.thunderforest.com'>Thunderforest</a>, Data © <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>"
+}
+},
+"layers": [
+{
+"id": "thunderforest-opencyclemap-layer",
+"type": "raster",
+"source": "thunderforest-opencyclemap",
+"minzoom": 0,
+"maxzoom": 22,
+"paint": {
+"raster-opacity": 1
+}
+}
+]
+}

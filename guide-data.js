@@ -48,8 +48,8 @@ window.PLANNER_GUIDE_DATA = {
     },
     {
       "icon": "ui-icons/fi-rr-map.svg",
-      "title": "Seleccionar Mapa Base y Leyenda",
-      "desc": "Elige entre OtroMundo Vectorial (con acceso a su Leyenda detallada de senderos, carreteras y símbolos), OpenStreetMap, IGN España, OpenTopoMap o Esri Satélite."
+      "title": "Seleccionar Mapa Base, Capas DEM y Leyenda",
+      "desc": "Elige entre OtroMundo, OtroMundo Topo, OpenStreetMap, IGN Raster, OpenTopoMap o Esri Satélite (con acceso a su Leyenda detallada y capas complementarias), y activa capas en tiempo real de relieve (Hillshade), pendientes (°), orientación de laderas (8 rumbos o solana/umbría) y curvas de nivel."
     },
     {
       "icon": "ui-icons/fi-rr-location-crosshairs.svg",
@@ -89,7 +89,7 @@ window.PLANNER_GUIDE_DATA = {
     {
       "icon": "ui-icons/fi-rr-route.svg",
       "title": "Importar y Convertir Ruta Externa",
-      "desc": "Carga un archivo GPX o KML externo para simplificarlo en puntos clave y adaptarlo automáticamente al perfil de enrutamiento que elijas."
+      "desc": "Carga un archivo GPX o KML externo con capa de referencia violeta para conservar el track original editable o adaptarlo automáticamente al perfil de enrutamiento que elijas."
     },
     {
       "icon": "ui-icons/fi-rr-file-download.svg",
