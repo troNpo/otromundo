@@ -298,7 +298,7 @@ const RoutePlanner = {
         document.getElementById("btn-planner-zoomin")?.addEventListener("click", () => map?.zoomIn());
         document.getElementById("btn-planner-zoomout")?.addEventListener("click", () => map?.zoomOut());
 
-        const btnTouchLock = document.getElementById("planner-btn-touch-lock");
+               const btnTouchLock = document.getElementById("planner-btn-touch-lock");
         const lockIcon = document.getElementById("planner-lock-icon");
 
         btnTouchLock?.addEventListener("click", () => {
@@ -315,8 +315,11 @@ const RoutePlanner = {
                 btnTouchLock.style.borderColor = "#00e5ff";
                 this.showToast("Pantalla bloqueada para navegación");
             }
+
+            this.updateMarkersDraggableState();
         });
     },
+
 
     setupGuideModalEvents() {
         const card = document.getElementById("planner-quick-guide-card");
@@ -1630,11 +1633,31 @@ const RoutePlanner = {
         statusTextEl.style.color = "var(--primary-cyan)";
     },
 
+       isPointDraggingAllowed() {
+        const isDesktopPointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+        return isDesktopPointer ? true : Boolean(this.isTouchAddEnabled);
+    },
+
+    updateMarkersDraggableState() {
+        const canDrag = this.isPointDraggingAllowed();
+        (this.markers || []).forEach((marker) => {
+            if (marker && typeof marker.setDraggable === 'function') {
+                marker.setDraggable(canDrag);
+            }
+            const el = marker && typeof marker.getElement === 'function' ? marker.getElement() : null;
+            if (el) {
+                el.style.cursor = canDrag ? 'grab' : 'pointer';
+            }
+        });
+    },
+
     renderMarkers() {
         if (!map) return;
         this.markers.forEach(m => m.remove());
         this.markers = [];
-        
+
+        const canDrag = this.isPointDraggingAllowed();
+
         this.points.forEach((point, index) => {
             const el = document.createElement('div');
             el.className = 'planner-numbered-marker';
@@ -1642,39 +1665,41 @@ const RoutePlanner = {
                 background-color: #121212; color: #00e5ff; border: 2px solid #00e5ff;
                 border-radius: 50%; width: 30px; height: 30px; display: flex;
                 align-items: center; justify-content: center; font-weight: bold;
-                font-size: 13px; font-family: sans-serif; cursor: grab;
+                font-size: 13px; font-family: sans-serif; cursor: ${canDrag ? 'grab' : 'pointer'};
                 will-change: transform; pointer-events: auto;
                 box-shadow: 0 3px 8px rgba(0,0,0,0.65);
             `;
             el.innerText = index + 1;
-            
+
             const marker = new maplibregl.Marker({
                 element: el,
-                draggable: true,
+                draggable: canDrag,
                 anchor: 'center',
                 pitchAlignment: 'viewport',
                 rotationAlignment: 'viewport'
             })
                 .setLngLat(point.coords)
                 .addTo(map);
-            
+
             marker.on('dragstart', () => {
+                if (!this.isPointDraggingAllowed()) return;
                 this.isDraggingMarker = true;
                 el.style.borderWidth = "3px";
                 this.showToast(`Moviendo punto ${index + 1}...`);
             });
-            
+
             marker.on('drag', () => {
+                if (!this.isPointDraggingAllowed()) return;
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
                 this.updateDynamicCursorLine();
             });
-            
+
             marker.on('dragend', () => {
                 el.style.borderWidth = "2px";
                 const lngLat = marker.getLngLat();
                 this.points[index].coords = [lngLat.lng, lngLat.lat];
-                
+
                 if (this.points.length >= 2) {
                     this.showToast("Recalculando...");
                     this.calcularRutaBRouter();
@@ -1688,16 +1713,17 @@ const RoutePlanner = {
                     this.hideGraph();
                     this.updateAltButtonVisibility();
                 }
-                
+
                 this.updateDynamicCursorLine();
                 setTimeout(() => {
                     this.isDraggingMarker = false;
                 }, 300);
             });
-            
+
             this.markers.push(marker);
         });
     },
+
 
     renderPointsListDrawer() {
         const container = document.getElementById("planner-points-items-container");
