@@ -115,9 +115,9 @@ const RouteExporter = {
             radio.addEventListener("change", (e) => {
                 const input = document.getElementById("export-filename-input");
                 if (!input) return;
-                let val = input.value.trim();
+                const val = input.value.trim();
                 const baseName = val.includes('.') ? val.substring(0, val.lastIndexOf('.')) : val;
-                input.value = `${baseName}.${e.target.value}`;
+                input.value = `${baseName || 'otromundo_ruta'}.${e.target.value}`;
             });
         });
 
@@ -306,6 +306,25 @@ const RouteExporter = {
         return Array.isArray(raw) ? raw : [];
     },
 
+    mapSegmentHintIndex(localIdx, segIdx, segCoordsLength, combinedLengthSoFar) {
+        const parsedLocal = parseInt(localIdx, 10);
+        if (Number.isNaN(parsedLocal) || parsedLocal < 0) return 0;
+
+        if (segIdx === 0) {
+            return parsedLocal;
+        }
+
+        // En segmentos posteriores (segIdx > 0), el punto 0 coincide con el último punto ya agregado
+        // del tramo anterior (índice combinedLengthSoFar - 1).
+        const junctionIdx = Math.max(0, combinedLengthSoFar - 1);
+        if (parsedLocal === 0) {
+            return junctionIdx;
+        }
+
+        const clampedLocal = Math.min(parsedLocal, Math.max(0, segCoordsLength - 1));
+        return junctionIdx + clampedLocal;
+    },
+
     extractRouteTurnHints(planner) {
         const activeRoute = Array.isArray(planner.routesList)
             ? planner.routesList[planner.currentRouteIndex || 0]
@@ -316,23 +335,24 @@ const RouteExporter = {
 
         if ((!Array.isArray(hints) || hints.length === 0) && Array.isArray(planner.segments)) {
             const combined = [];
-            let offset = 0;
+            let combinedLengthSoFar = 0;
+
             planner.segments.forEach((seg, idx) => {
                 const segCoords = Array.isArray(seg.coordinates) ? seg.coordinates : [];
-                const startOffset = offset;
-                if (idx > 0 && offset > 0) {
-                    offset += Math.max(0, segCoords.length - 1);
-                } else {
-                    offset += segCoords.length;
-                }
                 const segHints = this.getHintsFromSource(seg);
+
                 if (segHints.length > 0) {
                     segHints.forEach(h => {
                         if (!Array.isArray(h) || h.length < 2) return;
-                        const localIdx = parseInt(h[0], 10);
-                        const adjIdx = idx === 0 ? localIdx : startOffset + Math.max(0, localIdx - 1);
+                        const adjIdx = this.mapSegmentHintIndex(h[0], idx, segCoords.length, combinedLengthSoFar);
                         combined.push([adjIdx, h[1], ...(h.slice(2))]);
                     });
+                }
+
+                if (segCoords.length > 0) {
+                    combinedLengthSoFar = idx === 0
+                        ? segCoords.length
+                        : combinedLengthSoFar + Math.max(0, segCoords.length - 1);
                 }
             });
             hints = combined;
@@ -345,20 +365,28 @@ const RouteExporter = {
         return hints
             .map((h) => {
                 if (!Array.isArray(h) || h.length < 2) return null;
-                const coordIdx = Math.max(0, Math.min(coords.length - 1, parseInt(h[0], 10) || 0));
+                const rawIdx = parseInt(h[0], 10);
+                if (Number.isNaN(rawIdx)) return null;
+
+                const coordIdx = Math.max(0, Math.min(coords.length - 1, rawIdx));
                 const pt = coords[coordIdx];
                 if (!pt || pt[0] === undefined || pt[1] === undefined) return null;
-                const info = this.getTurnCommandInfo(h[1]);
+
+                const cmd = parseInt(h[1], 10);
+                if (Number.isNaN(cmd)) return null;
+
+                const info = this.getTurnCommandInfo(cmd);
                 const distToNext = h[2] !== undefined && !isNaN(parseFloat(h[2])) ? Math.round(parseFloat(h[2])) : null;
                 const desc = distToNext !== null && distToNext > 0
                     ? `${info.text} (${distToNext} m)`
                     : info.text;
+
                 return {
                     coordIdx,
                     lon: pt[0],
                     lat: pt[1],
                     ele: pt[2],
-                    cmd: parseInt(h[1], 10),
+                    cmd,
                     name: info.text,
                     desc,
                     sym: info.sym,
@@ -398,23 +426,23 @@ const RouteExporter = {
             });
         }
 
-        // Definición de Estilos KML de los indicadores de giro (24 SVG en GitHub Pages)
-        let turnHints = [];
-        if (this.includeTurnIndicators()) {
-            turnHints = this.extractRouteTurnHints(planner);
-            if (turnHints.length > 0) {
-                const uniqueCmds = [...new Set(turnHints.map(t => t.cmd))];
-                uniqueCmds.forEach((cmd) => {
-                    kml += `  <Style id="turn_cmd_${cmd}">\n`;
-                    kml += `    <IconStyle>\n`;
-                    kml += `      <scale>0.9</scale>\n`;
-                    kml += `      <Icon>\n`;
-                    kml += `        <href>${this.getTurnIconUrl(cmd)}</href>\n`;
-                    kml += `      </Icon>\n`;
-                    kml += `    </IconStyle>\n`;
-                    kml += `  </Style>\n`;
-                });
-            }
+        // Extraer indicadores de giro una sola vez si el ajuste está activado
+        const turnHints = this.includeTurnIndicators() ? this.extractRouteTurnHints(planner) : [];
+        const definedTurnStyleCmds = new Set();
+
+        if (turnHints.length > 0) {
+            const uniqueCmds = [...new Set(turnHints.map(t => t.cmd))];
+            uniqueCmds.forEach((cmd) => {
+                definedTurnStyleCmds.add(cmd);
+                kml += `  <Style id="turn_cmd_${cmd}">\n`;
+                kml += `    <IconStyle>\n`;
+                kml += `      <scale>0.9</scale>\n`;
+                kml += `      <Icon>\n`;
+                kml += `        <href>${this.getTurnIconUrl(cmd)}</href>\n`;
+                kml += `      </Icon>\n`;
+                kml += `    </IconStyle>\n`;
+                kml += `  </Style>\n`;
+            });
         }
 
         // Carpeta 1: Waypoints de Ruta
@@ -438,10 +466,13 @@ const RouteExporter = {
             kml += `  <Folder>\n`;
             kml += `    <name><![CDATA[Indicadores de Dirección]]></name>\n`;
             turnHints.forEach((turn) => {
+                const styleTag = definedTurnStyleCmds.has(turn.cmd)
+                    ? `      <styleUrl>#turn_cmd_${turn.cmd}</styleUrl>\n`
+                    : ``;
                 kml += `    <Placemark>\n`;
                 kml += `      <name><![CDATA[${turn.name}]]></name>\n`;
                 kml += `      <description><![CDATA[${turn.desc}]]></description>\n`;
-                kml += `      <styleUrl>#turn_cmd_${turn.cmd}</styleUrl>\n`;
+                kml += styleTag;
                 kml += `      <ExtendedData>\n`;
                 kml += `        <Data name="ICON"><value>${turn.iconId}</value></Data>\n`;
                 kml += `        <Data name="ICON_SUBTYPE"><value>0</value></Data>\n`;

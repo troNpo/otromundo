@@ -862,7 +862,7 @@ const RoutePlanner = {
                 const altPromises = [];
 
                 for (let altIdx = 0; altIdx <= this.maxAlternatives; altIdx++) {
-                    const url = `https://brouter.de/brouter?lonlats=${lonlatsStr}&profile=${firstProfile}&alternativeidx=${altIdx}&turnInstructionMode=3&format=geojson`;
+                    const url = `https://brouter.de/brouter?lonlats=${lonlatsStr}&profile=${firstProfile}&alternativeidx=${altIdx}&turnInstructionMode=6&format=geojson`;
                     altPromises.push(
                         fetch(url)
                             .then(res => res.json())
@@ -958,7 +958,7 @@ const RoutePlanner = {
                         })
                     );
                 } else {
-                    const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${segProfile}&alternativeidx=0&turnInstructionMode=3&format=geojson`;
+                    const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${segProfile}&alternativeidx=0&turnInstructionMode=6&format=geojson`;
                     
                     segmentFetchPromises.push(
                         fetch(url)
