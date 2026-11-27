@@ -162,11 +162,29 @@ class RouteActionsManager {
         p.calcularRutaBRouter();
     }
 
-    removeIntermediateKeepGeometry() {
+       removeIntermediateKeepGeometry() {
         const p = this.planner;
         if (!p.points || p.points.length <= 2) {
             p.showToast("No hay puntos intermedios que eliminar");
             return;
+        }
+
+        const activeRoute = Array.isArray(p.routesList)
+            ? p.routesList[p.currentRouteIndex || 0]
+            : null;
+
+        const hintKeys = ["voiceHints", "voice_hints", "turnHints", "instructions"];
+        const preservedHints = {};
+
+        for (const key of hintKeys) {
+            const val =
+                p.currentRouteData?.[key] ||
+                activeRoute?.[key] ||
+                p.segments?.find(seg => Array.isArray(seg?.[key]) && seg[key].length > 0)?.[key];
+
+            if (Array.isArray(val) && val.length > 0) {
+                preservedHints[key] = val.map(h => (Array.isArray(h) ? [...h] : h));
+            }
         }
 
         const firstPoint = p.points[0];
@@ -175,7 +193,7 @@ class RouteActionsManager {
 
         const existingCoords =
             p.currentRouteData?.coordinates ||
-            p.routesList?.[p.currentRouteIndex]?.coordinates ||
+            activeRoute?.coordinates ||
             [];
 
         const baseColor = p.segments?.[0]?.color || "#00e5ff";
@@ -185,7 +203,8 @@ class RouteActionsManager {
             name: "Tramo 1",
             color: baseColor,
             profile: baseProfile,
-            coordinates: existingCoords
+            coordinates: existingCoords,
+            ...preservedHints
         }];
 
         if (existingCoords.length >= 2) {
@@ -213,10 +232,14 @@ class RouteActionsManager {
                 distKm,
                 timeStr,
                 ascent: asc,
-                descent: desc
+                descent: desc,
+                ...preservedHints
             }];
             p.currentRouteIndex = 0;
-            p.currentRouteData = { coordinates: existingCoords };
+            p.currentRouteData = {
+                coordinates: existingCoords,
+                ...preservedHints
+            };
             p.updateStats(distKm, timeStr, asc, desc);
             p.paintAllRoutes();
             p.updateSegmentLabels();
@@ -234,6 +257,7 @@ class RouteActionsManager {
         p.updateDynamicCursorLine();
         p.showToast("Puntos intermedios eliminados sin alterar el trazado");
     }
+
 
     renderActionsDrawer() {
         const container = document.getElementById("planner-points-items-container");
