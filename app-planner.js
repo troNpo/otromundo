@@ -37,9 +37,11 @@ const RoutePlanner = {
     segments: [],
     isDraggingMarker: false,
     _cursorMarker: null,
-    _segmentMarkers: [],
+       _segmentMarkers: [],
     _minMaxMarkers: [],
     circularManager: null,
+    actionsManager: null,
+
 
     init() {
         this.syncSavedMapUI();
@@ -52,7 +54,10 @@ const RoutePlanner = {
         this.updateDefaultProfileStatus();
         this.setupAndroidBackButton();
 
-        this.circularManager = new CircularRouteManager(this);
+               this.circularManager = new CircularRouteManager(this);
+        this.actionsManager = new RouteActionsManager(this);
+        this.actionsManager.init();
+
 
         setTimeout(() => {
             if (map && typeof map.resize === 'function') map.resize();
@@ -675,7 +680,8 @@ const RoutePlanner = {
 
         this.points.splice(insertIndex, 0, {
             coords: [lngLat.lng, lngLat.lat],
-            name: `Punto ${insertIndex + 1}`
+            name: "",
+            isCustomName: false
         });
 
         const inheritedProfile = (this.segments[insertIndex - 1] && this.segments[insertIndex - 1].profile) 
@@ -689,6 +695,7 @@ const RoutePlanner = {
         });
 
         this.syncSegmentsArray();
+        this.refreshAutoPointNames();
         this.renderMarkers();
         this.renderActiveDrawerTab();
 
@@ -714,10 +721,29 @@ const RoutePlanner = {
         }
     },
 
+    refreshAutoPointNames() {
+        if (!Array.isArray(this.points) || this.points.length === 0) return;
+
+        let stepCounter = 1;
+        this.points.forEach((pt, idx) => {
+            if (pt.isCustomName) return;
+
+            if (this.points.length === 1) {
+                pt.name = "Inicio";
+            } else if (idx === 0) {
+                pt.name = "Inicio";
+            } else if (idx === this.points.length - 1) {
+                pt.name = "Final";
+            } else {
+                pt.name = `Punto de paso ${stepCounter++}`;
+            }
+        });
+    },
+
     addPoint(lngLat, defaultName = "Punto") {
-        const idx = this.points.length + 1;
-        this.points.push({ coords: lngLat, name: `${defaultName} ${idx}` });
+        this.points.push({ coords: lngLat, name: "", isCustomName: false });
         this.syncSegmentsArray();
+        this.refreshAutoPointNames();
         
         this.renderMarkers();
         this.renderActiveDrawerTab();
@@ -735,6 +761,7 @@ const RoutePlanner = {
         if (this.points.length > 0 && index >= 0) {
             this.points.splice(index, 1);
             this.syncSegmentsArray();
+            this.refreshAutoPointNames();
             this.renderActiveDrawerTab();
 
             if (this.points.length >= 2) {
@@ -751,7 +778,8 @@ const RoutePlanner = {
                 this.hideGraph();
                 this.updateAltButtonVisibility();
 
-                if (this._minMaxMarkers) {
+                if (this._minMaxMarkers
+) {
                     this._minMaxMarkers.forEach(m => m.remove());
                     this._minMaxMarkers = [];
                 }
@@ -774,6 +802,7 @@ const RoutePlanner = {
         this.points[index] = this.points[newIndex];
         this.points[newIndex] = temp;
 
+        this.refreshAutoPointNames();
         this.renderMarkers();
         this.renderActiveDrawerTab();
         if (this.points.length >= 2) {
@@ -830,7 +859,7 @@ const RoutePlanner = {
                 const altPromises = [];
 
                 for (let altIdx = 0; altIdx <= this.maxAlternatives; altIdx++) {
-                    const url = `https://brouter.de/brouter?lonlats=${lonlatsStr}&profile=${firstProfile}&alternativeidx=${altIdx}&format=geojson`;
+                    const url = `https://brouter.de/brouter?lonlats=${lonlatsStr}&profile=${firstProfile}&alternativeidx=${altIdx}&turnInstructionMode=3&format=geojson`;
                     altPromises.push(
                         fetch(url)
                             .then(res => res.json())
@@ -871,9 +900,12 @@ const RoutePlanner = {
                     const distKm = (totalDistM / 1000).toFixed(2);
                     const timeStr = this.formatBRouterTime(totalSeconds, totalDistM, firstProfile);
 
+                    const voiceHints = Array.isArray(props.voicehints) ? props.voicehints : [];
+
                     validRoutes.push({
                         index: validRoutes.length,
                         coordinates: coords,
+                        voiceHints,
                         distKm,
                         timeStr,
                         ascent: Math.round(totalAscent),
@@ -923,7 +955,7 @@ const RoutePlanner = {
                         })
                     );
                 } else {
-                    const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${segProfile}&alternativeidx=0&format=geojson`;
+                    const url = `https://brouter.de/brouter?lonlats=${p1[0]},${p1[1]}|${p2[0]},${p2[1]}&profile=${segProfile}&alternativeidx=0&turnInstructionMode=3&format=geojson`;
                     
                     segmentFetchPromises.push(
                         fetch(url)
@@ -934,16 +966,20 @@ const RoutePlanner = {
                                 const props = feature?.properties || {};
                                 const travelTime = parseFloat(props['total-time'] || props.time || props.traveltime || 0);
                                 
+                                const voiceHints = Array.isArray(props.voicehints) ? props.voicehints : [];
+
                                 return {
                                     coordinates: coords,
                                     travelTime: travelTime,
-                                    profile: segProfile
+                                    profile: segProfile,
+                                    voiceHints
                                 };
                             })
                             .catch(() => ({
                                 coordinates: [p1, p2],
                                 travelTime: 0,
-                                profile: segProfile
+                                profile: segProfile,
+                                voiceHints: []
                             }))
                     );
                 }
@@ -957,18 +993,41 @@ const RoutePlanner = {
             let totalDescent = 0;
             let totalSeconds = 0;
 
+            let combinedVoiceHints = [];
+            let coordOffset = 0;
+
             segmentResults.forEach((segRes, idx) => {
                 const coords = segRes.coordinates;
                 totalSeconds += (segRes.travelTime || 0);
 
                 if (this.segments[idx]) {
                     this.segments[idx].coordinates = coords;
+                    this.segments[idx].voiceHints = Array.isArray(segRes.voiceHints) ? segRes.voiceHints : [];
                 }
 
+                const startOffsetForHints = coordOffset;
                 if (idx > 0 && combinedCoordinates.length > 0) {
-                    combinedCoordinates.push(...coords.slice(1));
+                    const sliced = coords.slice(1);
+                    combinedCoordinates.push(...sliced);
+                    coordOffset += sliced.length;
                 } else {
                     combinedCoordinates.push(...coords);
+                    coordOffset += coords.length;
+                }
+
+                if (Array.isArray(segRes.voiceHints) && segRes.voiceHints.length > 0) {
+                    segRes.voiceHints.forEach(hint => {
+                        if (!Array.isArray(hint) || hint.length < 2) return;
+                        const localIdx = parseInt(hint[0], 10);
+                        const adjustedIdx = idx === 0
+                            ? localIdx
+                            : startOffsetForHints + Math.max(0, localIdx - 1);
+                        combinedVoiceHints.push([
+                            adjustedIdx,
+                            hint[1],
+                            ...(hint.slice(2))
+                        ]);
+                    });
                 }
 
                 for (let j = 0; j < coords.length - 1; j++) {
@@ -986,6 +1045,7 @@ const RoutePlanner = {
             this.routesList = [{
                 index: 0,
                 coordinates: combinedCoordinates,
+                voiceHints: combinedVoiceHints,
                 distKm,
                 timeStr,
                 ascent: Math.round(totalAscent),
@@ -1012,7 +1072,10 @@ const RoutePlanner = {
         const activeRoute = this.routesList[index];
         if (!activeRoute) return;
 
-        this.currentRouteData = { coordinates: activeRoute.coordinates };
+        this.currentRouteData = {
+            coordinates: activeRoute.coordinates,
+            voiceHints: Array.isArray(activeRoute.voiceHints) ? activeRoute.voiceHints : []
+        };
 
         this.updateStats(activeRoute.distKm, activeRoute.timeStr, activeRoute.ascent, activeRoute.descent);
         this.paintAllRoutes();
@@ -1292,13 +1355,14 @@ const RoutePlanner = {
         }
     },
 
-    _executeLayerPainting() {
+       _executeLayerPainting() {
         if (!map || this.routesList.length === 0) return;
 
         this.clearRoute();
 
         const altColors = ['#ff9800', '#ab47bc', '#4caf50'];
 
+        // 1. Rutas alternativas no seleccionadas
         this.routesList.forEach((route, idx) => {
             if (idx === this.currentRouteIndex) return;
 
@@ -1331,62 +1395,96 @@ const RoutePlanner = {
         });
 
         const activeRoute = this.routesList[this.currentRouteIndex];
-        this.syncSegmentsArray();
+        if (!activeRoute || !activeRoute.coordinates || activeRoute.coordinates.length < 2) return;
 
-        if (this.segments.length > 0 && this.points.length >= 2) {
-            this.segments.forEach((seg, sIdx) => {
-                const pStart = this.points[sIdx]?.coords;
-                const pEnd = this.points[sIdx + 1]?.coords;
-                if (!pStart || !pEnd) return;
+        // 2. Ruta activa en cian (#00e5ff)
+        const activeGeojson = {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: activeRoute.coordinates }
+        };
 
-                const isManual = seg.profile === "manual-straight";
-                
-                const subCoords = isManual 
-                    ? [pStart, pEnd] 
-                    : (seg.coordinates && seg.coordinates.length >= 2 ? seg.coordinates : [pStart, pEnd]);
+        if (this.routesList.length > 1) {
+            const activeSourceId = 'active-alt-route-source';
+            if (!map.getSource(activeSourceId)) {
+                map.addSource(activeSourceId, { type: 'geojson', data: activeGeojson });
+            } else {
+                map.getSource(activeSourceId).setData(activeGeojson);
+            }
 
-                const segSourceId = `active-segment-source-${sIdx}`;
-                if (!map.getSource(segSourceId)) {
-                    map.addSource(segSourceId, {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: subCoords } }
-                    });
-                }
+            if (!map.getLayer('active-alt-route-casing')) {
+                map.addLayer({
+                    id: 'active-alt-route-casing',
+                    type: 'line',
+                    source: activeSourceId,
+                    paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.9 }
+                });
+            }
 
-                if (!isManual && !map.getLayer(`active-segment-casing-${sIdx}`)) {
-                    map.addLayer({
-                        id: `active-segment-casing-${sIdx}`,
-                        type: 'line',
-                        source: segSourceId,
-                        paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
-                    });
-                }
+            if (!map.getLayer('active-alt-route-solid')) {
+                map.addLayer({
+                    id: 'active-alt-route-solid',
+                    type: 'line',
+                    source: activeSourceId,
+                    paint: { 'line-color': '#00e5ff', 'line-width': 5 }
+                });
+            }
+        } else {
+            this.syncSegmentsArray();
 
-                if (!map.getLayer(`active-segment-solid-${sIdx}`)) {
-                    map.addLayer({
-                        id: `active-segment-solid-${sIdx}`,
-                        type: 'line',
-                        source: segSourceId,
-                        paint: { 
-                            'line-color': seg.color || '#00e5ff', 
-                            'line-width': isManual ? 4 : 4.5,
-                            ...(isManual ? { 'line-dasharray': [3, 3] } : {})
-                        }
-                    });
-                }
-            });
+            if (this.segments.length > 0 && this.points.length >= 2) {
+                this.segments.forEach((seg, sIdx) => {
+                    const pStart = this.points[sIdx]?.coords;
+                    const pEnd = this.points[sIdx + 1]?.coords;
+                    if (!pStart || !pEnd) return;
+
+                    const isManual = seg.profile === "manual-straight";
+                    const subCoords = isManual
+                        ? [pStart, pEnd]
+                        : (seg.coordinates && seg.coordinates.length >= 2 ? seg.coordinates : [pStart, pEnd]);
+
+                    const segSourceId = `active-segment-source-${sIdx}`;
+                    if (!map.getSource(segSourceId)) {
+                        map.addSource(segSourceId, {
+                            type: 'geojson',
+                            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: subCoords } }
+                        });
+                    }
+
+                    if (!isManual && !map.getLayer(`active-segment-casing-${sIdx}`)) {
+                        map.addLayer({
+                            id: `active-segment-casing-${sIdx}`,
+                            type: 'line',
+                            source: segSourceId,
+                            paint: { 'line-color': '#121212', 'line-width': 7.5, 'line-opacity': 0.85 }
+                        });
+                    }
+
+                    if (!map.getLayer(`active-segment-solid-${sIdx}`)) {
+                        map.addLayer({
+                            id: `active-segment-solid-${sIdx}`,
+                            type: 'line',
+                            source: segSourceId,
+                            paint: {
+                                'line-color': seg.color || '#00e5ff',
+                                'line-width': isManual ? 4 : 4.5,
+                                ...(isManual ? { 'line-dasharray': [3, 3] } : {})
+                            }
+                        });
+                    }
+                });
+            }
         }
 
-        const fullGeojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: activeRoute.coordinates } };
+        // 3. Flechas de sentido sobre la ruta activa
         if (!map.getSource('planned-route-arrows-source')) {
-            map.addSource('planned-route-arrows-source', { type: 'geojson', data: fullGeojson });
+            map.addSource('planned-route-arrows-source', { type: 'geojson', data: activeGeojson });
         } else {
-            map.getSource('planned-route-arrows-source').setData(fullGeojson);
+            map.getSource('planned-route-arrows-source').setData(activeGeojson);
         }
 
         if (!map.getLayer('planned-route-arrows')) {
             map.addLayer({
-                id: `planned-route-arrows`,
+                id: 'planned-route-arrows',
                 type: 'symbol',
                 source: 'planned-route-arrows-source',
                 layout: {
@@ -1401,11 +1499,18 @@ const RoutePlanner = {
         }
     },
 
-    clearRoute() {
+
+       
+
+       clearRoute() {
         if (!map) return;
         try {
             if (map.getLayer('planned-route-arrows')) map.removeLayer('planned-route-arrows');
             if (map.getSource('planned-route-arrows-source')) map.removeSource('planned-route-arrows-source');
+
+            if (map.getLayer('active-alt-route-solid')) map.removeLayer('active-alt-route-solid');
+            if (map.getLayer('active-alt-route-casing')) map.removeLayer('active-alt-route-casing');
+            if (map.getSource('active-alt-route-source')) map.removeSource('active-alt-route-source');
 
             for (let i = 0; i < 10; i++) {
                 if (map.getLayer(`inactive-alt-line-${i}`)) map.removeLayer(`inactive-alt-line-${i}`);
@@ -1635,6 +1740,7 @@ const RoutePlanner = {
             });
             nameInput.addEventListener("input", (e) => {
                 this.points[index].name = e.target.value;
+                this.points[index].isCustomName = e.target.value.trim().length > 0;
             });
 
             const actionsDiv = document.createElement("div");

@@ -68,8 +68,8 @@ window.PLANNER_GUIDE_DATA = {
     },
     {
       "icon": "ui-icons/fi-rr-list-timeline.svg",
-      "title": "Gestión de Puntos, Tramos y POIs",
-      "desc": "Accede a la lista lateral para gestionar tus Puntos, Tramos y POIs: renombrar marcadores, reordenar su secuencia, cambiar el perfil individual de un tramo, asignar colores o controlar la visibilidad de etiquetas de POIs."
+      "title": "Gestión de Puntos, Tramos, Acciones y POIs",
+      "desc": "Accede a la lista lateral para gestionar tus Puntos, Tramos, Acciones y POIs: renombrar marcadores, reordenar su secuencia, cambiar el perfil individual de un tramo, asignar colores, controlar etiquetas de POIs y usar Acciones rápidas (viaje de ida y vuelta por el mismo camino o final a principio, invertir sentido, y ocultar o eliminar puntos intermedios)."
     },
     {
       "isHeader": true,
@@ -94,7 +94,7 @@ window.PLANNER_GUIDE_DATA = {
     {
       "icon": "ui-icons/fi-rr-file-download.svg",
       "title": "Descargar o Compartir Ruta",
-      "desc": "Exporta tu trazado (y tus POIs) en formatos GPX o KML mediante descarga directa o compartiendo el archivo desde el menú del dispositivo."
+      "desc": "Exporta tu trazado, tus POIs y, si lo activas, los indicadores de giro con iconos SVG en formatos GPX o KML mediante descarga directa o compartiendo el archivo desde el menú del dispositivo."
     },
     {
       "icon": "ui-icons/fi-rr-user-roadmap.svg",

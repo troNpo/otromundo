@@ -1,7 +1,32 @@
 window.PLANNER_CHANGELOG_DATA = {
-    "version": "V1.3.3",
+    "version": "V1.4",
     "title": "Novedades en OtroMundo",
     "sections": [
+        {
+            "isHeader": true,
+            "title": "V1.4 (27/11/26) - Novedades",
+            "icon": "ui-icons/fi-rr-star.svg"
+        },
+        {
+            "title": "Pestaña Acciones en Gestión de Ruta",
+            "desc": "Nueva pestaña Acciones con Viaje de ida y vuelta (mismo camino o final a principio), invertir sentido de la ruta, ocultar puntos intermedios y eliminar puntos intermedios conservando el trazado.",
+            "icon": "ui-icons/fi-rr-route.svg"
+        },
+        {
+            "title": "Indicadores de giro en exportación",
+            "desc": "Opción para incluir indicadores de dirección de BRouter en GPX y KML",
+            "icon": "ui-icons/fi-rr-file-download.svg"
+        },
+        {
+            "isHeader": true,
+            "title": "V1.4 - Corrección de Errores",
+            "icon": "ui-icons/fi-rr-bug.svg"
+        },
+        {
+            "title": "Conmutación de rutas alternativas",
+            "desc": "Corregido el fallo al alternar entre rutas alternativas que provocaba inconsistencias al cambiar de ruta activa.",
+            "icon": "ui-icons/fi-rr-route.svg"
+        },
         {
             "isHeader": true,
             "title": "V1.3.3 (25/11/26) - Novedades",
@@ -27,16 +52,16 @@ window.PLANNER_CHANGELOG_DATA = {
     "desc": "Se añaden las etiquetas de rutas de senderismo a los senderos registrados para  estilo OtroMundo .",
     "icon": "ui-icons/fi-rr-map.svg"
 },
-{
+        {
             "title": "Opción Compartir en exportación de rutas para PC",
             "desc": "Se incorpora el botón Compartir junto a la descarga del archivo para enviar directamente el track generado (KML o GPX)  aplicaciones de mensajería o gestor de archivos mediante el menú nativo del dispositivo.",
             "icon": "ui-icons/fi-rr-share.svg"
-},
-{
-    "title": "Waypoint al importar ruta",
-    "desc": "Al importar un track GPX o KML, los waypoint ya no se interpretan como puntos de ruta ahora se dibujan como marcadores  junto con el trazado original como referencia visual mientras adaptas o editas la ruta.",
-    "icon": "ui-icons/fi-rr-route.svg"
-},
+        },
+        {
+            "title": "Waypoint al importar ruta",
+            "desc": "Al importar un track GPX o KML, los waypoint ya no se interpretan como puntos de ruta ahora se dibujan como marcadores  junto con el trazado original como referencia visual mientras adaptas o editas la ruta.",
+            "icon": "ui-icons/fi-rr-route.svg"
+        },
         
         {
             "isHeader": true,
